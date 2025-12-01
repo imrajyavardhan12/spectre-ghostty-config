@@ -60,7 +60,7 @@ export function ConfigOutput() {
         </Button>
       </SheetTrigger>
       
-      <SheetContent className="w-full sm:max-w-lg flex flex-col p-0">
+      <SheetContent className="w-full sm:max-w-lg flex flex-col p-0 h-full max-h-screen">
         {/* Header */}
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
           <SheetTitle className="flex items-center gap-2">
@@ -104,8 +104,8 @@ export function ConfigOutput() {
         </div>
 
         {/* Config content */}
-        <ScrollArea className="flex-1 px-6">
-          <div className="py-4">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="px-6 py-4">
             {modifiedCount > 0 ? (
               <pre className="text-sm font-mono leading-relaxed">
                 {configString.split('\n').map((line, i) => (
