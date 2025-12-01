@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Spectre - Ghostty Config Generator
+
+<div align="center">
+  <img src="public/ghost.svg" alt="Spectre Logo" width="80" />
+  <h3>A beautiful, modern configuration generator for Ghostty terminal</h3>
+  <p>
+    <a href="https://ghostty.org">Ghostty</a> •
+    <a href="#features">Features</a> •
+    <a href="#getting-started">Getting Started</a> •
+    <a href="#contributing">Contributing</a>
+  </p>
+</div>
+
+---
+
+## Features
+
+- 🎨 **Visual Color Editor** - Pick colors with an intuitive color picker and palette editor
+- 🔤 **Font Configuration** - Configure font families, sizes, styles, and OpenType features
+- ⌨️ **Keybind Manager** - Create and manage custom keyboard shortcuts
+- 📦 **100+ Options** - Support for all Ghostty configuration options
+- 💾 **Import/Export** - Import existing configs and export ready-to-use config files
+- 🌙 **Dark Mode** - Beautiful dark interface that matches your terminal aesthetic
+- 📱 **Responsive** - Works on desktop and mobile devices
+- 💾 **Persistent State** - Your configuration is saved locally in your browser
+
+## Screenshots
+
+_Coming soon_
 
 ## Getting Started
 
-First, run the development server:
+### Online
+
+Visit [spectre-ghostty.vercel.app](https://spectre-ghostty.vercel.app) to use the tool online.
+
+### Local Development
 
 ```bash
+# Clone the repository
+git clone https://github.com/imrajyavardhan12/spectre-ghostty-config.git
+cd spectre-ghostty-config
+
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Build for Production
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm run start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tech Stack
 
-## Learn More
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
+- **State Management**: [Zustand](https://zustand-demo.pmnd.rs/)
+- **Icons**: [Lucide React](https://lucide.dev/)
 
-To learn more about Next.js, take a look at the following resources:
+## Configuration Categories
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Category | Description |
+|----------|-------------|
+| **Fonts** | Font family, size, styles, variations |
+| **Colors** | Theme, palette, background, foreground |
+| **Window** | Decorations, padding, sizing, titlebar |
+| **Cursor** | Style, color, blinking behavior |
+| **Mouse** | Click behavior, scrolling, hiding |
+| **Clipboard** | Copy/paste behavior and protection |
+| **Keybinds** | Custom keyboard shortcuts |
+| **Shell** | Shell integration, command, environment |
+| **Application** | Startup, shutdown, notifications |
+| **Quick Terminal** | Quick terminal dropdown settings |
+| **macOS** | macOS-specific settings |
+| **Linux** | Linux/GTK-specific settings |
+| **Advanced** | Scrollback, shaders, image storage |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Contributing
 
-## Deploy on Vercel
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Related Projects
+
+- [Ghostty](https://github.com/ghostty-org/ghostty) - The Ghostty terminal emulator
+- [zerebos/ghostty-config](https://github.com/zerebos/ghostty-config) - Inspiration for this project
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+  Made with ❤️ for the Ghostty community
+</div>
