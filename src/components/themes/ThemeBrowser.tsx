@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Search, Filter, Palette, Moon, Sun, Loader2 } from "lucide-react";
+import { Search, Palette, Moon, Sun, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,6 @@ import {
   themeToConfig,
 } from "@/lib/utils/themes";
 import { useConfigStore } from "@/lib/store/config-store";
-import { cn } from "@/lib/utils";
 
 type FilterType = "all" | "dark" | "light" | "featured";
 
@@ -155,7 +154,8 @@ export function ThemeBrowser() {
     // Add new theme colors
     Object.assign(newConfig, themeConfig);
     
-    loadConfig(newConfig);
+    // Pass theme name to store for export comment
+    loadConfig(newConfig, theme.name);
     setAppliedTheme(theme.name);
   };
 

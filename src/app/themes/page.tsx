@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Ghost, Palette, ArrowRight, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeBrowser } from "@/components/themes";
+import { ConfigOutput } from "@/components/editor/ConfigOutput";
 
 export default function ThemesPage() {
   return (
@@ -85,6 +86,11 @@ export default function ThemesPage() {
           </p>
         </div>
       </main>
+
+      {/* Floating config output button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <ConfigOutput />
+      </div>
     </div>
   );
 }
