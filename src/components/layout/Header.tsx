@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Ghost, Github, Download, Upload, RotateCcw, Check, Loader2 } from "lucide-react";
+import { Ghost, Github, Download, Upload, RotateCcw, Check, Loader2, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -61,12 +61,9 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full glass border-b border-border/50">
       <div className="container flex h-14 items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="relative">
-            <Ghost className="h-6 w-6 text-primary transition-transform duration-300 group-hover:scale-110" />
-            <div className="absolute inset-0 bg-primary/20 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          </div>
-          <span className="font-semibold tracking-tight">Spectre</span>
+        <Link href="/" className="flex items-center gap-2 group">
+          <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
+          <span className="font-medium">Spectre</span>
           <span className="text-sm text-muted-foreground hidden lg:inline">
             Ghostty Config Generator
           </span>
@@ -163,6 +160,22 @@ export function Header() {
 
           {/* Divider */}
           <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
+
+          {/* Themes */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" asChild className="h-9 w-9">
+                  <Link href="/themes">
+                    <Palette className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Browse Themes</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* GitHub */}
           <TooltipProvider>

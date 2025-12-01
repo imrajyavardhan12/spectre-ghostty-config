@@ -24,7 +24,7 @@ export default function HomePage() {
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
-            <Ghost className="h-6 w-6 text-primary transition-transform group-hover:rotate-12" />
+            <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
             <span className="font-medium">Spectre</span>
           </Link>
           <div className="flex items-center gap-4">
@@ -142,7 +142,7 @@ export default function HomePage() {
       {/* CTA */}
       <section className="py-32 px-6 border-t border-border">
         <div className="max-w-2xl mx-auto text-center">
-          <Ghost className="h-12 w-12 text-primary mx-auto mb-8" />
+          <Ghost className="h-12 w-12 text-primary mx-auto mb-8 transition-transform duration-150 hover:rotate-12" />
           <h2 className="text-3xl sm:text-4xl font-light mb-4">
             Ready to start?
           </h2>
@@ -161,8 +161,8 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-border">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Ghost className="h-4 w-4" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground group cursor-default">
+            <Ghost className="h-4 w-4 transition-transform duration-150 group-hover:rotate-12" />
             <span>Spectre</span>
             <span className="opacity-50">·</span>
             <span>MIT License</span>
@@ -355,6 +355,14 @@ function LargeFeatureCard() {
               />
             ))}
           </div>
+          {/* Browse themes link */}
+          <Link 
+            href="/themes" 
+            className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            Browse all themes
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </div>
     </div>
