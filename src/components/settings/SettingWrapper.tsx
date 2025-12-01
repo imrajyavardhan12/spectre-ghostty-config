@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode } from "react";
-import { RotateCcw } from "lucide-react";
+import { ReactNode, useState } from "react";
+import { RotateCcw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -9,7 +9,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface SettingWrapperProps {
@@ -37,75 +36,118 @@ export function SettingWrapper({
   sinceVersion,
   platform,
 }: SettingWrapperProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative rounded-lg border p-4 transition-colors",
+        "group relative rounded-xl border transition-all duration-300",
         isModified
-          ? "border-primary/50 bg-primary/5"
-          : "border-border bg-card hover:border-border/80"
+          ? "border-primary/30 bg-primary/[0.02] shadow-sm shadow-primary/5"
+          : "border-border bg-card hover:border-border/80 hover:shadow-sm"
       )}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor={id}
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              {name}
-            </label>
-            {isModified && (
-              <Badge variant="secondary" className="text-xs">
-                Modified
-              </Badge>
-            )}
-            {deprecated && (
-              <Badge variant="destructive" className="text-xs">
-                Deprecated
-              </Badge>
-            )}
-            {sinceVersion && (
-              <Badge variant="outline" className="text-xs">
-                v{sinceVersion}+
-              </Badge>
-            )}
-            {platform && platform.length > 0 && (
-              <Badge variant="outline" className="text-xs">
-                {platform.join(", ")}
-              </Badge>
-            )}
+      {/* Modified indicator bar */}
+      <div 
+        className={cn(
+          "absolute left-0 top-4 bottom-4 w-0.5 rounded-full bg-primary transition-all duration-300",
+          isModified ? "opacity-100" : "opacity-0"
+        )} 
+      />
+
+      <div className="p-4 pl-5">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex-1 min-w-0">
+            {/* Title row with badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <label
+                htmlFor={id}
+                className={cn(
+                  "text-sm font-medium transition-colors duration-200",
+                  isModified && "text-primary"
+                )}
+              >
+                {name}
+              </label>
+              
+              {/* Inline badges */}
+              <div className="flex items-center gap-1.5">
+                {isModified && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-primary/10 text-primary animate-scale-in">
+                    Modified
+                  </span>
+                )}
+                {deprecated && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-destructive/10 text-destructive">
+                    Deprecated
+                  </span>
+                )}
+                {sinceVersion && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-muted text-muted-foreground">
+                    v{sinceVersion}+
+                  </span>
+                )}
+                {platform && platform.length > 0 && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-muted text-muted-foreground">
+                    {platform.join(", ")}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Description with info tooltip */}
+            <div className="flex items-start gap-1.5 mt-1">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {description}
+              </p>
+              {note && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="text-xs">{note}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">{description}</p>
-          {note && (
-            <p className="text-xs text-amber-500 dark:text-amber-400">
-              Note: {note}
-            </p>
-          )}
+
+          {/* Reset button */}
+          <div 
+            className={cn(
+              "transition-all duration-200",
+              isModified && isHovered ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none"
+            )}
+          >
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    onClick={onReset}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>Reset to default</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
-        {isModified && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
-                  onClick={onReset}
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Reset to default</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+        {/* Input area */}
+        <div className="relative">{children}</div>
       </div>
-
-      <div className="mt-3">{children}</div>
     </div>
   );
 }

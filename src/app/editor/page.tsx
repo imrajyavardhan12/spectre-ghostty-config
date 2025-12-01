@@ -20,7 +20,7 @@ export default function EditorPage() {
           onCategoryChange={setActiveCategory}
         />
 
-        <main className="flex-1">
+        <main className="flex-1 animate-fade-in">
           <MobileCategoryBar
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
