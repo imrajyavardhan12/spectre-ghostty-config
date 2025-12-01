@@ -1,7 +1,7 @@
 # Spectre - Ghostty Config Generator
 
 <div align="center">
-  <img src="public/ghost.svg" alt="Spectre Logo" width="80" />
+  <h1>👻</h1>
   <h3>A beautiful, modern configuration generator for Ghostty terminal</h3>
   <p>
     <a href="https://ghostty.org">Ghostty</a> •
