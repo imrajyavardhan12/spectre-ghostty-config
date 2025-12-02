@@ -328,7 +328,7 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
             {commandHistory.map((item, index) => (
               <div key={index} className="mb-1">
                 {/* Command line */}
-                <div className="flex flex-wrap">
+                <div>
                   <span style={{ color: colors.green }}>user</span>
                   <span style={{ color: foreground }}>@</span>
                   <span style={{ color: colors.blue }}>ghostty</span>
@@ -345,7 +345,7 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
             ))}
 
             {/* Active prompt with input */}
-            <div className="flex flex-wrap items-center">
+            <div>
               <span style={{ color: colors.green }}>user</span>
               <span style={{ color: foreground }}>@</span>
               <span style={{ color: colors.blue }}>ghostty</span>
@@ -355,7 +355,7 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
               <span style={{ color: colors.yellow }}>{inputValue}</span>
               {/* Cursor */}
               <span
-                className={cn("inline-block ml-px", shouldCursorBlink && "animate-pulse")}
+                className={cn("inline-block align-middle", shouldCursorBlink && "animate-pulse")}
                 style={getCursorStyle()}
               />
             </div>
