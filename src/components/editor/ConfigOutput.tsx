@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Code, Download, FileText } from "lucide-react";
+import { Copy, Check, Code, Download, FileText, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -12,12 +12,20 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useConfigStore } from "@/lib/store/config-store";
+import { generateShareUrl } from "@/lib/utils/url-share";
 import { cn } from "@/lib/utils";
 
 export function ConfigOutput() {
-  const { exportConfig, config } = useConfigStore();
+  const { exportConfig, config, appliedTheme } = useConfigStore();
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   const configString = exportConfig();
@@ -39,6 +47,13 @@ export function ConfigOutput() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async () => {
+    const shareUrl = generateShareUrl(config, appliedTheme);
+    await navigator.clipboard.writeText(shareUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   return (
@@ -68,39 +83,81 @@ export function ConfigOutput() {
             Generated Config
           </SheetTitle>
           <SheetDescription>
-            Copy or download your Ghostty configuration
+            Copy, download, or share your Ghostty configuration
           </SheetDescription>
         </SheetHeader>
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 px-6 py-3 bg-muted/30 border-b border-border">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleCopy}
-            className="gap-2 flex-1 sm:flex-none"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4 text-green-500" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy
-              </>
-            )}
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleDownload}
-            className="gap-2 flex-1 sm:flex-none"
-          >
-            <Download className="h-4 w-4" />
-            Download
-          </Button>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCopy}
+                  className="gap-2 flex-1 sm:flex-none"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4 text-green-500" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy config to clipboard</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleDownload}
+                  className="gap-2 flex-1 sm:flex-none"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Download as config file</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleShare}
+                  disabled={modifiedCount === 0}
+                  className="gap-2 flex-1 sm:flex-none"
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check className="h-4 w-4 text-green-500" />
+                      Link Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="h-4 w-4" />
+                      Share
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {modifiedCount === 0 
+                  ? "Add some settings to share" 
+                  : "Copy shareable link"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Config content */}

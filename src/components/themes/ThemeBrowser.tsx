@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Search, Palette, Moon, Sun, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,23 @@ export function ThemeBrowser() {
   
   const { loadConfig, config } = useConfigStore();
 
+  // Load a batch of themes
+  const loadThemeBatch = useCallback(async (names: string[]) => {
+    setLoadingMore(true);
+    const results = await Promise.allSettled(names.map(fetchTheme));
+    
+    setLoadedThemes((prev) => {
+      const next = new Map(prev);
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled" && !prev.has(names[index])) {
+          next.set(names[index], result.value);
+        }
+      });
+      return next;
+    });
+    setLoadingMore(false);
+  }, []);
+
   // Fetch theme list on mount
   useEffect(() => {
     async function loadThemeList() {
@@ -54,29 +71,7 @@ export function ThemeBrowser() {
     }
     
     loadThemeList();
-  }, []);
-
-  // Load a batch of themes
-  async function loadThemeBatch(names: string[]) {
-    const unloaded = names.filter((name) => !loadedThemes.has(name));
-    if (unloaded.length === 0) return;
-
-    setLoadingMore(true);
-    
-    const results = await Promise.allSettled(unloaded.map(fetchTheme));
-    
-    setLoadedThemes((prev) => {
-      const next = new Map(prev);
-      results.forEach((result, index) => {
-        if (result.status === "fulfilled") {
-          next.set(unloaded[index], result.value);
-        }
-      });
-      return next;
-    });
-    
-    setLoadingMore(false);
-  }
+  }, [loadThemeBatch]);
 
   // Filter and search themes
   const filteredThemes = useMemo(() => {
@@ -121,7 +116,7 @@ export function ThemeBrowser() {
       .slice(0, 20);
     
     loadThemeBatch(matchingNames);
-  }, [searchQuery, themeList]);
+  }, [searchQuery, themeList, loadThemeBatch]);
 
   // Load all themes button
   const handleLoadAll = async () => {
