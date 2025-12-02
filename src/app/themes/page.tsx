@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Ghost, Palette, ArrowRight, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeBrowser } from "@/components/themes";
 import { ConfigOutput } from "@/components/editor/ConfigOutput";
+import { TerminalPreview, PreviewToggleButton } from "@/components/preview";
 
 export default function ThemesPage() {
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header - consistent with editor */}
@@ -87,8 +91,18 @@ export default function ThemesPage() {
         </div>
       </main>
 
-      {/* Floating config output button */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* Terminal Preview */}
+      <TerminalPreview
+        isOpen={previewOpen}
+        onToggle={() => setPreviewOpen(false)}
+      />
+
+      {/* Floating buttons */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2">
+        <PreviewToggleButton
+          isOpen={previewOpen}
+          onToggle={() => setPreviewOpen(!previewOpen)}
+        />
         <ConfigOutput />
       </div>
     </div>
