@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Ghost, Github, Download, Upload, RotateCcw, Check, Loader2, Palette } from "lucide-react";
+import { Ghost, Github, Download, Upload, RotateCcw, Check, Loader2, Palette, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useConfigStore } from "@/lib/store/config-store";
+import { PresetsDialog } from "@/components/editor/PresetsDialog";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -160,6 +161,15 @@ export function Header() {
 
           {/* Divider */}
           <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
+
+          {/* Presets */}
+          <PresetsDialog
+            trigger={
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Sparkles className="h-4 w-4" />
+              </Button>
+            }
+          />
 
           {/* Themes */}
           <TooltipProvider>
