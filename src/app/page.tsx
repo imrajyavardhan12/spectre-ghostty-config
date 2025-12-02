@@ -122,7 +122,6 @@ export default function HomePage() {
               icon={<Eye className="h-5 w-5" />}
               title="Live Preview"
               description="See your changes before applying"
-              badge="Soon"
             />
             <FeatureCard
               icon={<Download className="h-5 w-5" />}

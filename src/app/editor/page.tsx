@@ -5,10 +5,12 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar, MobileCategoryBar } from "@/components/layout/Sidebar";
 import { ConfigPanel } from "@/components/editor/ConfigPanel";
 import { ConfigOutput } from "@/components/editor/ConfigOutput";
+import { TerminalPreview, PreviewToggleButton } from "@/components/preview";
 import { Category } from "@/lib/schema/types";
 
 export default function EditorPage() {
   const [activeCategory, setActiveCategory] = useState<Category>("fonts");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,8 +31,18 @@ export default function EditorPage() {
           <div className="relative">
             <ConfigPanel category={activeCategory} />
 
-            {/* Floating config output button */}
-            <div className="fixed bottom-6 right-6 z-40">
+            {/* Terminal Preview */}
+            <TerminalPreview
+              isOpen={previewOpen}
+              onToggle={() => setPreviewOpen(false)}
+            />
+
+            {/* Floating buttons */}
+            <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2">
+              <PreviewToggleButton
+                isOpen={previewOpen}
+                onToggle={() => setPreviewOpen(!previewOpen)}
+              />
               <ConfigOutput />
             </div>
           </div>
