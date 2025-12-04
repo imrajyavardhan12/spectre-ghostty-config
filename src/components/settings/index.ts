@@ -6,5 +6,7 @@ export { ColorInput } from "./ColorInput";
 export { PaletteInput } from "./PaletteInput";
 export { KeybindInput } from "./KeybindInput";
 export { DurationInput } from "./DurationInput";
+export { IconInput } from "./IconInput";
+export { IconPickerDialog } from "./IconPickerDialog";
 export { SettingWrapper } from "./SettingWrapper";
 export { SettingRenderer } from "./SettingRenderer";

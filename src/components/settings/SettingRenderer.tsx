@@ -9,12 +9,18 @@ import { ColorInput } from "./ColorInput";
 import { PaletteInput } from "./PaletteInput";
 import { KeybindInput } from "./KeybindInput";
 import { DurationInput } from "./DurationInput";
+import { IconInput } from "./IconInput";
 
 interface SettingRendererProps {
   option: ConfigOption;
 }
 
 export function SettingRenderer({ option }: SettingRendererProps) {
+  // Special case for macos-icon - use visual picker
+  if (option.id === "macos-icon") {
+    return <IconInput option={option} />;
+  }
+
   switch (option.type) {
     case "string":
       return <TextInput option={option} />;
