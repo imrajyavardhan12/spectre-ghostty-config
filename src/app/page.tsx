@@ -29,6 +29,17 @@ export default function HomePage() {
           </Link>
           <div className="flex items-center gap-4">
             <a
+              href="https://www.buymeacoffee.com/rvs12"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+                alt="Buy Me A Coffee"
+                className="h-8"
+              />
+            </a>
+            <a
               href="https://github.com/imrajyavardhan12/spectre-ghostty-config"
               target="_blank"
               rel="noopener noreferrer"
