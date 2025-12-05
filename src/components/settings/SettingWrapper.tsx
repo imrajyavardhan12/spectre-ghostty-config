@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useState } from "react";
-import { RotateCcw, Info } from "lucide-react";
+import { RotateCcw, Info, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -10,6 +10,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
+const GHOSTTY_DOCS_BASE_URL = "https://ghostty.org/docs/config/reference";
 
 interface SettingWrapperProps {
   id: string;
@@ -63,15 +65,35 @@ export function SettingWrapper({
           <div className="flex-1 min-w-0">
             {/* Title row with badges */}
             <div className="flex items-center gap-2 flex-wrap">
-              <label
-                htmlFor={id}
-                className={cn(
-                  "text-sm font-medium transition-colors duration-200",
-                  isModified && "text-primary"
-                )}
-              >
-                {name}
-              </label>
+              <div className="flex items-center gap-1.5">
+                <label
+                  htmlFor={id}
+                  className={cn(
+                    "text-sm font-medium transition-colors duration-200",
+                    isModified && "text-primary"
+                  )}
+                >
+                  {name}
+                </label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <a
+                        href={`${GHOSTTY_DOCS_BASE_URL}#${id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-primary transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>View in Ghostty docs</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               
               {/* Inline badges */}
               <div className="flex items-center gap-1.5">
