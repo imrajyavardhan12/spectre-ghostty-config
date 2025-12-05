@@ -44,7 +44,6 @@ export function Header() {
   const handleImport = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".txt,.config,*";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
