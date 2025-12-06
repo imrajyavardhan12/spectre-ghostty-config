@@ -41,7 +41,7 @@
 
 ### Online
 
-Visit [spectre-ghostty.vercel.app](https://spectre-ghostty.vercel.app) to use the tool online.
+Visit [spectre-ghostty-config.vercel.app](https://spectre-ghostty-config.vercel.app) to use the tool online.
 
 ### Local Development
 
