@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useState, useEffect } from "react";
 import { allOptions } from "@/data/ghostty-options";
 
 export type ConfigValues = Record<string, unknown>;
@@ -228,6 +229,7 @@ export const useConfigStore = create<ConfigStore>()(
     {
       name: "spectre-config",
       partialize: (state) => ({ config: state.config, appliedTheme: state.appliedTheme }),
+      skipHydration: true,
     }
   )
 );
@@ -242,6 +244,32 @@ export const useConfigValue = (key: string) => {
   });
 };
 
+// Track Zustand persist hydration state
+// With skipHydration: true, store starts empty and hydrates after StoreProvider mounts
+export const useHasHydrated = () => {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    // Subscribe to hydration finish event
+    const unsubscribe = useConfigStore.persist.onFinishHydration(() => {
+      setHydrated(true);
+    });
+
+    // If already hydrated when this hook runs, defer state update to avoid lint error
+    if (useConfigStore.persist.hasHydrated()) {
+      queueMicrotask(() => setHydrated(true));
+    }
+
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return hydrated;
+};
+
 export const useIsModified = (key: string) => {
-  return useConfigStore((state) => key in state.config);
+  const hydrated = useHasHydrated();
+  const isInConfig = useConfigStore((state) => key in state.config);
+  // Only show modified state after hydration to prevent mismatch
+  return hydrated && isInConfig;
 };

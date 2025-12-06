@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SettingWrapper } from "./SettingWrapper";
-import { useConfigStore } from "@/lib/store/config-store";
+import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { EnumOption } from "@/lib/schema/types";
 
 interface SelectInputProps {
@@ -16,9 +16,9 @@ interface SelectInputProps {
 }
 
 export function SelectInput({ option }: SelectInputProps) {
-  const { getValue, setValue, resetValue, isModified } = useConfigStore();
+  const { getValue, setValue, resetValue } = useConfigStore();
   const value = getValue(option.id) as string;
-  const modified = isModified(option.id);
+  const modified = useIsModified(option.id);
 
   return (
     <SettingWrapper

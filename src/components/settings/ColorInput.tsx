@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { SettingWrapper } from "./SettingWrapper";
-import { useConfigStore } from "@/lib/store/config-store";
+import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { ColorOption } from "@/lib/schema/types";
 
 interface ColorInputProps {
@@ -17,9 +17,9 @@ interface ColorInputProps {
 }
 
 export function ColorInput({ option }: ColorInputProps) {
-  const { getValue, setValue, resetValue, isModified } = useConfigStore();
+  const { getValue, setValue, resetValue } = useConfigStore();
   const storeValue = getValue(option.id) as string;
-  const modified = isModified(option.id);
+  const modified = useIsModified(option.id);
   
   const [localValue, setLocalValue] = useState<string | null>(null);
   

@@ -86,7 +86,7 @@ export function generateDemoContent(themeName?: string | null): string {
   lines.push(`  ${FG_RED}Changes not staged for commit:${RESET}`);
   lines.push(`      ${FG_RED}modified:${RESET}   src/config.ts`);
   lines.push("");
-  lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ █`);
+  lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ `);
 
   return lines.join("\r\n");
 }

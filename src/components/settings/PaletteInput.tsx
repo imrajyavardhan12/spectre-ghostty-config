@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { SettingWrapper } from "./SettingWrapper";
-import { useConfigStore } from "@/lib/store/config-store";
+import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { PaletteOption } from "@/lib/schema/types";
 
 interface PaletteInputProps {
@@ -33,9 +33,9 @@ const COLOR_NAMES = [
 ];
 
 export function PaletteInput({ option }: PaletteInputProps) {
-  const { getValue, setValue, resetValue, isModified } = useConfigStore();
+  const { getValue, setValue, resetValue } = useConfigStore();
   const value = (getValue(option.id) as string[]) || [];
-  const modified = isModified(option.id);
+  const modified = useIsModified(option.id);
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 

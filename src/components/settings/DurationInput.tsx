@@ -2,7 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { SettingWrapper } from "./SettingWrapper";
-import { useConfigStore } from "@/lib/store/config-store";
+import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { DurationOption } from "@/lib/schema/types";
 
 interface DurationInputProps {
@@ -10,9 +10,9 @@ interface DurationInputProps {
 }
 
 export function DurationInput({ option }: DurationInputProps) {
-  const { getValue, setValue, resetValue, isModified } = useConfigStore();
+  const { getValue, setValue, resetValue } = useConfigStore();
   const value = getValue(option.id) as string;
-  const modified = isModified(option.id);
+  const modified = useIsModified(option.id);
 
   return (
     <SettingWrapper

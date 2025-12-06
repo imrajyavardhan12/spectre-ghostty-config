@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { SettingWrapper } from "./SettingWrapper";
-import { useConfigStore } from "@/lib/store/config-store";
+import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { NumberOption } from "@/lib/schema/types";
 
 interface NumberInputProps {
@@ -12,9 +12,9 @@ interface NumberInputProps {
 }
 
 export function NumberInput({ option, showSlider = true }: NumberInputProps) {
-  const { getValue, setValue, resetValue, isModified } = useConfigStore();
+  const { getValue, setValue, resetValue } = useConfigStore();
   const value = getValue(option.id) as number;
-  const modified = isModified(option.id);
+  const modified = useIsModified(option.id);
 
   const hasRange = option.min !== undefined && option.max !== undefined;
   const useSlider = showSlider && hasRange;

@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SettingWrapper } from "./SettingWrapper";
 import { IconPickerDialog } from "./IconPickerDialog";
-import { useConfigStore } from "@/lib/store/config-store";
+import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { ConfigOption } from "@/lib/schema/types";
 
 // Icon metadata for display
@@ -26,9 +26,9 @@ interface IconInputProps {
 }
 
 export function IconInput({ option }: IconInputProps) {
-  const { getValue, resetValue, isModified } = useConfigStore();
+  const { getValue, resetValue } = useConfigStore();
   const value = (getValue(option.id) as string) || "official";
-  const modified = isModified(option.id);
+  const modified = useIsModified(option.id);
   
   const iconInfo = ICON_INFO[value] || ICON_INFO.official;
 

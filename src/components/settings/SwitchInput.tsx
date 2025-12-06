@@ -2,7 +2,7 @@
 
 import { Switch } from "@/components/ui/switch";
 import { SettingWrapper } from "./SettingWrapper";
-import { useConfigStore } from "@/lib/store/config-store";
+import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { BooleanOption } from "@/lib/schema/types";
 
 interface SwitchInputProps {
@@ -10,9 +10,9 @@ interface SwitchInputProps {
 }
 
 export function SwitchInput({ option }: SwitchInputProps) {
-  const { getValue, setValue, resetValue, isModified } = useConfigStore();
+  const { getValue, setValue, resetValue } = useConfigStore();
   const value = getValue(option.id) as boolean;
-  const modified = isModified(option.id);
+  const modified = useIsModified(option.id);
 
   return (
     <SettingWrapper

@@ -32,6 +32,16 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
   
   const { config, appliedTheme } = useConfigStore();
 
+  const writeContent = useCallback(() => {
+    if (!terminalRef.current) return;
+    const term = terminalRef.current;
+    term.write("\x1bc");
+    term.write(generateDemoContent(appliedTheme));
+    if (fitAddonRef.current) {
+      setTimeout(() => fitAddonRef.current?.fit(), 10);
+    }
+  }, [appliedTheme]);
+
   const initTerminal = useCallback(async () => {
     if (!containerRef.current || loadingState === "loading") return;
 
@@ -59,22 +69,22 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
 
       term.loadAddon(fitAddon);
       term.open(containerRef.current);
-      
-      setTimeout(() => {
-        fitAddon.fit();
-      }, 50);
-
-      term.write(generateDemoContent(appliedTheme));
 
       terminalRef.current = term;
       fitAddonRef.current = fitAddon;
+      
+      setTimeout(() => {
+        fitAddon.fit();
+        writeContent();
+      }, 50);
+
       setLoadingState("ready");
     } catch (err) {
       console.error("Failed to initialize Ghostty preview:", err);
       setError(err instanceof Error ? err.message : "Failed to load preview");
       setLoadingState("error");
     }
-  }, [config, appliedTheme, loadingState]);
+  }, [config, loadingState, writeContent]);
 
   useEffect(() => {
     if (isOpen && loadingState === "idle") {
@@ -82,20 +92,8 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
     }
   }, [isOpen, loadingState, initTerminal]);
 
-  // Re-render content when preview is reopened
   useEffect(() => {
-    if (isOpen && loadingState === "ready" && terminalRef.current) {
-      const term = terminalRef.current;
-      term.write("\x1b[2J\x1b[H");
-      term.write(generateDemoContent(appliedTheme));
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
-      }
-    }
-  }, [isOpen, appliedTheme, loadingState]);
-
-  useEffect(() => {
-    if (loadingState !== "ready" || !terminalRef.current) return;
+    if (loadingState !== "ready" || !terminalRef.current || !isOpen) return;
 
     const term = terminalRef.current;
     const defaultTheme = getDefaultTheme();
@@ -121,13 +119,8 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
       term.options.cursorBlink = blink === true || blink === "true";
     }
 
-    term.write("\x1b[2J\x1b[H");
-    term.write(generateDemoContent(appliedTheme));
-
-    if (fitAddonRef.current) {
-      fitAddonRef.current.fit();
-    }
-  }, [config, appliedTheme, loadingState]);
+    writeContent();
+  }, [config, appliedTheme, loadingState, isOpen, writeContent]);
 
   useEffect(() => {
     return () => {
@@ -141,6 +134,19 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
       }
     };
   }, []);
+
+  // Reset terminal when closing so it reinitializes on reopen
+  useEffect(() => {
+    if (!isOpen && terminalRef.current) {
+      terminalRef.current.dispose();
+      terminalRef.current = null;
+      if (fitAddonRef.current) {
+        fitAddonRef.current.dispose();
+        fitAddonRef.current = null;
+      }
+      setLoadingState("idle");
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || isMinimized || loadingState !== "ready") return;
@@ -167,7 +173,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
         "fixed z-50 transition-all duration-300 ease-out",
         isMinimized
           ? "bottom-6 right-6 w-auto"
-          : "bottom-6 right-6 w-[720px] max-w-[calc(100vw-3rem)]"
+          : "bottom-6 right-6 w-[800px] max-w-[calc(100vw-3rem)]"
       )}
     >
       <div
@@ -241,7 +247,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
           <div
             className="relative"
             style={{
-              height: "450px",
+              height: "550px",
               backgroundColor: background,
             }}
           >
