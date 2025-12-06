@@ -66,6 +66,7 @@ export function IconInput({ option }: IconInputProps) {
                     ghostColor={ghostColor}
                     screenColor={screenColor}
                     size={40}
+                    fillParent={true}
                   />
                 ) : (
                   <Image

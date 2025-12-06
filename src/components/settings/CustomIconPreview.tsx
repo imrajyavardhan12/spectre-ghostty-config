@@ -7,6 +7,7 @@ interface CustomIconPreviewProps {
     ghostColor: string;
     screenColor: string;
     size?: number;
+    fillParent?: boolean; // If true, fills parent container with absolute positioning
 }
 
 // Load an image and return a promise
@@ -58,6 +59,7 @@ export function CustomIconPreview({
     ghostColor,
     screenColor,
     size = 128,
+    fillParent = false,
 }: CustomIconPreviewProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -152,7 +154,10 @@ export function CustomIconPreview({
     }
 
     return (
-        <div className="absolute inset-0">
+        <div
+            className={fillParent ? "absolute inset-0" : "relative"}
+            style={fillParent ? undefined : { width: size, height: size }}
+        >
             <canvas
                 ref={canvasRef}
                 width={renderSize}
