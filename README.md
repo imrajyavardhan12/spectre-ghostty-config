@@ -31,8 +31,8 @@
 ### Landing Page
 ![Landing Page](screenshots/landing.png)
 
-### Config Editor with Live Preview
-![Editor with Ghostty Preview](screenshots/editor-preview.png)
+### Config Editor with Live libghostty Preview
+![Editor with libghostty Preview](screenshots/editor-preview.png)
 
 ### Theme Browser
 ![Theme Browser](screenshots/themes.png)
@@ -103,6 +103,12 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## Acknowledgements
+
+- [Mitchell Hashimoto](https://github.com/mitchellh) - Creator of Ghostty and libghostty
+- [Coder](https://github.com/coder) - For [ghostty-web](https://github.com/coder/ghostty-web), the WASM build of libghostty that powers our terminal preview
+- [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) - Theme collection
 
 ## Related Projects
 
