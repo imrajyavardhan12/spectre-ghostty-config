@@ -5,6 +5,7 @@ import { Monitor, Minimize2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfigStore } from "@/lib/store/config-store";
 import { cn } from "@/lib/utils";
+import { detectClientOS, type ClientOS } from "@/lib/platform";
 
 interface TerminalPreviewProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
   const [commandHistory, setCommandHistory] = useState<{ cmd: string; output?: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const [clientOS] = useState<ClientOS>(() => detectClientOS());
   const { getValue } = useConfigStore();
 
   // Get config values with defaults
@@ -35,6 +37,8 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
   const windowPaddingX = (getValue("window-padding-x") as number) ?? 2;
   const windowPaddingY = (getValue("window-padding-y") as number) ?? 2;
   const backgroundOpacity = (getValue("background-opacity") as number) ?? 1;
+  const isGtkDecoration = clientOS === "linux";
+  const osLabel = clientOS === "linux" ? "Linux" : clientOS === "windows" ? "Windows" : "macOS";
   
   // Get palette colors
   const palette = getValue("palette") as string[] | undefined;
@@ -196,48 +200,83 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
           className="flex items-center justify-between px-3 py-2.5 border-b border-white/10"
           style={{ backgroundColor: `${background}dd` }}
         >
-          <div className="flex items-center gap-2">
-            <div className="flex gap-2 group/buttons">
-              <button
-                onClick={onToggle}
-                className="w-3.5 h-3.5 rounded-full bg-[#ff5f57] hover:bg-[#ff5f57]/80 transition-colors flex items-center justify-center"
-              >
-                <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">✕</span>
-              </button>
-              <button
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="w-3.5 h-3.5 rounded-full bg-[#febc2e] hover:bg-[#febc2e]/80 transition-colors flex items-center justify-center"
-              >
-                <span className="opacity-0 group-hover/buttons:opacity-100 text-[10px] font-bold text-black/60 transition-opacity leading-none" style={{ marginTop: "-1px" }}>−</span>
-              </button>
-              <button
-                onClick={() => setIsMinimized(false)}
-                className="w-3.5 h-3.5 rounded-full bg-[#28c840] hover:bg-[#28c840]/80 transition-colors flex items-center justify-center"
-              >
-                <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">+</span>
-              </button>
-            </div>
-            <span
-              className="text-xs opacity-60 ml-2"
-              style={{ color: foreground }}
-            >
-              Terminal Preview
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 hover:bg-white/10"
-              onClick={() => setIsMinimized(!isMinimized)}
-            >
-              {isMinimized ? (
-                <Maximize2 className="h-3 w-3" style={{ color: foreground }} />
-              ) : (
-                <Minimize2 className="h-3 w-3" style={{ color: foreground }} />
-              )}
-            </Button>
-          </div>
+          {isGtkDecoration ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium" style={{ color: foreground }}>
+                  Terminal Preview
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  aria-label="Minimize preview"
+                  onClick={() => setIsMinimized(!isMinimized)}
+                  className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
+                >
+                  <Minimize2 className="h-3.5 w-3.5" style={{ color: foreground }} />
+                </button>
+                <button
+                  aria-label="Restore preview"
+                  onClick={() => setIsMinimized(false)}
+                  className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" style={{ color: foreground }} />
+                </button>
+                <button
+                  aria-label="Close preview"
+                  onClick={onToggle}
+                  className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
+                >
+                  <span className="text-sm" style={{ color: foreground }}>×</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-2 group/buttons">
+                  <button
+                    onClick={onToggle}
+                    className="w-3.5 h-3.5 rounded-full bg-[#ff5f57] hover:bg-[#ff5f57]/80 transition-colors flex items-center justify-center"
+                  >
+                    <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">✕</span>
+                  </button>
+                  <button
+                    onClick={() => setIsMinimized(!isMinimized)}
+                    className="w-3.5 h-3.5 rounded-full bg-[#febc2e] hover:bg-[#febc2e]/80 transition-colors flex items-center justify-center"
+                  >
+                    <span className="opacity-0 group-hover/buttons:opacity-100 text-[10px] font-bold text-black/60 transition-opacity leading-none" style={{ marginTop: "-1px" }}>−</span>
+                  </button>
+                  <button
+                    onClick={() => setIsMinimized(false)}
+                    className="w-3.5 h-3.5 rounded-full bg-[#28c840] hover:bg-[#28c840]/80 transition-colors flex items-center justify-center"
+                  >
+                    <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">+</span>
+                  </button>
+                </div>
+                <span
+                  className="text-xs opacity-60 ml-2"
+                  style={{ color: foreground }}
+                >
+                  Terminal Preview
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 hover:bg-white/10"
+                  onClick={() => setIsMinimized(!isMinimized)}
+                >
+                  {isMinimized ? (
+                    <Maximize2 className="h-3 w-3" style={{ color: foreground }} />
+                  ) : (
+                    <Minimize2 className="h-3 w-3" style={{ color: foreground }} />
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Terminal content */}
@@ -283,7 +322,7 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
             {/* Neofetch-style output */}
             <div className="mb-3 flex gap-4">
               {/* ASCII art */}
-              <div className="flex-shrink-0" style={{ color: colors.magenta }}>
+              <div className="shrink-0" style={{ color: colors.magenta }}>
                 <pre className="text-xs leading-tight">
 {`   ▄▄▄▄▄
   ▐█   ▀█▌
@@ -297,7 +336,7 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
               <div className="text-xs space-y-0.5">
                 <div>
                   <span style={{ color: colors.blue }}>OS:</span>
-                  <span style={{ color: foreground }}> macOS 14.0</span>
+                  <span style={{ color: foreground }}> {osLabel}</span>
                 </div>
                 <div>
                   <span style={{ color: colors.blue }}>Terminal:</span>

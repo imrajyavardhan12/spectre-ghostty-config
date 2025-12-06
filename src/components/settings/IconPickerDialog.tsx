@@ -160,7 +160,7 @@ export function IconPickerDialog({ trigger }: IconPickerDialogProps) {
           {/* Current Selection Info */}
           <div className="mt-6 p-4 rounded-lg bg-muted/50 border">
             <div className="flex items-center gap-4">
-              <div className="relative w-16 h-16 flex-shrink-0">
+              <div className="relative w-16 h-16 shrink-0">
                 <Image
                   src={GHOSTTY_ICONS.find(i => i.id === currentIcon)?.image || "/icons/official.png"}
                   alt="Selected icon"

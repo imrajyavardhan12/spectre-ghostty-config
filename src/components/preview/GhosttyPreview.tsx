@@ -12,6 +12,7 @@ import {
 } from "@/lib/ghostty/config-mapper";
 import { generateDemoContent } from "@/lib/ghostty/demo-content";
 import { cn } from "@/lib/utils";
+import { detectClientOS, type ClientOS } from "@/lib/platform";
 import type { Terminal as GhosttyTerminal } from "ghostty-web";
 
 interface GhosttyPreviewProps {
@@ -25,6 +26,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [clientOS] = useState<ClientOS>(() => detectClientOS());
   
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<GhosttyTerminal | null>(null);
@@ -173,6 +175,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
   const background = (config["background"] as string) || "#1a1b26";
   const foreground = (config["foreground"] as string) || "#c0caf5";
   const backgroundOpacity = (config["background-opacity"] as number) ?? 1;
+  const isGtkDecoration = clientOS === "linux";
 
   return (
     <div
@@ -198,55 +201,93 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
           className="flex items-center justify-between px-3 py-2.5 border-b border-white/10"
           style={{ backgroundColor: `${background}dd` }}
         >
-          <div className="flex items-center gap-2">
-            <div className="flex gap-2 group/buttons">
-              <button
-                onClick={onToggle}
-                className="w-3.5 h-3.5 rounded-full bg-[#ff5f57] hover:bg-[#ff5f57]/80 transition-colors flex items-center justify-center"
-              >
-                <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">
-                  ×
+          {isGtkDecoration ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium" style={{ color: foreground }}>
+                  Ghostty Preview
+                  {loadingState === "loading" && " (Loading...)"}
                 </span>
-              </button>
-              <button
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="w-3.5 h-3.5 rounded-full bg-[#febc2e] hover:bg-[#febc2e]/80 transition-colors flex items-center justify-center"
-              >
-                <span
-                  className="opacity-0 group-hover/buttons:opacity-100 text-[10px] font-bold text-black/60 transition-opacity leading-none"
-                  style={{ marginTop: "-1px" }}
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  aria-label="Minimize preview"
+                  onClick={() => setIsMinimized(!isMinimized)}
+                  className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
                 >
-                  −
+                  <Minimize2 className="h-3.5 w-3.5" style={{ color: foreground }} />
+                </button>
+                <button
+                  aria-label="Restore preview"
+                  onClick={() => setIsMinimized(false)}
+                  className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" style={{ color: foreground }} />
+                </button>
+                <button
+                  aria-label="Close preview"
+                  onClick={onToggle}
+                  className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
+                >
+                  <span className="text-sm" style={{ color: foreground }}>
+                    ×
+                  </span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-2 group/buttons">
+                  <button
+                    onClick={onToggle}
+                    className="w-3.5 h-3.5 rounded-full bg-[#ff5f57] hover:bg-[#ff5f57]/80 transition-colors flex items-center justify-center"
+                  >
+                    <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">
+                      ×
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setIsMinimized(!isMinimized)}
+                    className="w-3.5 h-3.5 rounded-full bg-[#febc2e] hover:bg-[#febc2e]/80 transition-colors flex items-center justify-center"
+                  >
+                    <span
+                      className="opacity-0 group-hover/buttons:opacity-100 text-[10px] font-bold text-black/60 transition-opacity leading-none"
+                      style={{ marginTop: "-1px" }}
+                    >
+                      −
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setIsMinimized(false)}
+                    className="w-3.5 h-3.5 rounded-full bg-[#28c840] hover:bg-[#28c840]/80 transition-colors flex items-center justify-center"
+                  >
+                    <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">
+                      +
+                    </span>
+                  </button>
+                </div>
+                <span className="text-xs opacity-60 ml-2" style={{ color: foreground }}>
+                  Ghostty Preview
+                  {loadingState === "loading" && " (Loading...)"}
                 </span>
-              </button>
-              <button
-                onClick={() => setIsMinimized(false)}
-                className="w-3.5 h-3.5 rounded-full bg-[#28c840] hover:bg-[#28c840]/80 transition-colors flex items-center justify-center"
-              >
-                <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">
-                  +
-                </span>
-              </button>
-            </div>
-            <span className="text-xs opacity-60 ml-2" style={{ color: foreground }}>
-              Ghostty Preview
-              {loadingState === "loading" && " (Loading...)"}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 hover:bg-white/10"
-              onClick={() => setIsMinimized(!isMinimized)}
-            >
-              {isMinimized ? (
-                <Maximize2 className="h-3 w-3" style={{ color: foreground }} />
-              ) : (
-                <Minimize2 className="h-3 w-3" style={{ color: foreground }} />
-              )}
-            </Button>
-          </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 hover:bg-white/10"
+                  onClick={() => setIsMinimized(!isMinimized)}
+                >
+                  {isMinimized ? (
+                    <Maximize2 className="h-3 w-3" style={{ color: foreground }} />
+                  ) : (
+                    <Minimize2 className="h-3 w-3" style={{ color: foreground }} />
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Terminal content */}
