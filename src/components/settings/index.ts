@@ -10,5 +10,7 @@ export { IconInput } from "./IconInput";
 export { IconPickerDialog } from "./IconPickerDialog";
 export { FrameInput } from "./FrameInput";
 export { FramePickerDialog } from "./FramePickerDialog";
+export { CustomIconPreview } from "./CustomIconPreview";
+export { CustomIconBuilderDialog } from "./CustomIconBuilderDialog";
 export { SettingWrapper } from "./SettingWrapper";
 export { SettingRenderer } from "./SettingRenderer";

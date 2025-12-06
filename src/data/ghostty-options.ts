@@ -1115,6 +1115,7 @@ const macosOptions: ConfigOption[] = [
     default: "",
     category: "macos",
     platform: ["macos"],
+    hidden: true, // Managed in Custom Icon Builder
   },
   {
     id: "macos-icon-screen-color",
@@ -1124,6 +1125,7 @@ const macosOptions: ConfigOption[] = [
     default: "",
     category: "macos",
     platform: ["macos"],
+    hidden: true, // Managed in Custom Icon Builder
   },
   {
     id: "auto-update",
@@ -1612,9 +1614,9 @@ export const optionGroups: ConfigGroup[] = [
   },
 ];
 
-// Get options by category
+// Get options by category (excluding hidden options)
 export function getOptionsByCategory(category: string): ConfigOption[] {
-  return allOptions.filter((opt) => opt.category === category);
+  return allOptions.filter((opt) => opt.category === category && !opt.hidden);
 }
 
 // Get option by ID

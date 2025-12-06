@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SettingWrapper } from "./SettingWrapper";
 import { IconPickerDialog } from "./IconPickerDialog";
+import { CustomIconPreview } from "./CustomIconPreview";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { ConfigOption } from "@/lib/schema/types";
 
@@ -19,6 +20,7 @@ const ICON_INFO: Record<string, { name: string; image: string }> = {
   paper: { name: "Paper", image: "/icons/paper.png" },
   retro: { name: "Retro", image: "/icons/retro.png" },
   xray: { name: "X-Ray", image: "/icons/xray.png" },
+  "custom-style": { name: "Custom", image: "" },
 };
 
 interface IconInputProps {
@@ -29,8 +31,14 @@ export function IconInput({ option }: IconInputProps) {
   const { getValue, resetValue } = useConfigStore();
   const value = (getValue(option.id) as string) || "official";
   const modified = useIsModified(option.id);
-  
+
   const iconInfo = ICON_INFO[value] || ICON_INFO.official;
+  const isCustom = value === "custom-style";
+
+  // Get custom icon settings for preview
+  const frameId = (getValue("macos-icon-frame") as string) || "aluminum";
+  const ghostColor = (getValue("macos-icon-ghost-color") as string) || "";
+  const screenColor = (getValue("macos-icon-screen-color") as string) || "";
 
   return (
     <SettingWrapper
@@ -52,12 +60,21 @@ export function IconInput({ option }: IconInputProps) {
           >
             <div className="flex items-center gap-3">
               <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-muted">
-                <Image
-                  src={iconInfo.image}
-                  alt={iconInfo.name}
-                  fill
-                  className="object-contain"
-                />
+                {isCustom ? (
+                  <CustomIconPreview
+                    frameId={frameId}
+                    ghostColor={ghostColor}
+                    screenColor={screenColor}
+                    size={40}
+                  />
+                ) : (
+                  <Image
+                    src={iconInfo.image}
+                    alt={iconInfo.name}
+                    fill
+                    className="object-contain"
+                  />
+                )}
               </div>
               <div className="text-left">
                 <div className="font-medium text-sm">{iconInfo.name}</div>

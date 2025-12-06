@@ -39,6 +39,7 @@ export interface BaseConfigOption {
   sinceVersion?: string;
   deprecated?: boolean;
   note?: string;
+  hidden?: boolean; // Hide from settings UI (managed elsewhere)
 }
 
 export interface StringOption extends BaseConfigOption {
