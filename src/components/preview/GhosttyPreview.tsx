@@ -38,11 +38,11 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
     if (!terminalRef.current) return;
     const term = terminalRef.current;
     term.write("\x1bc");
-    term.write(generateDemoContent(appliedTheme));
+    term.write(generateDemoContent(appliedTheme, clientOS));
     if (fitAddonRef.current) {
       setTimeout(() => fitAddonRef.current?.fit(), 10);
     }
-  }, [appliedTheme]);
+  }, [appliedTheme, clientOS]);
 
   const initTerminal = useCallback(async () => {
     if (!containerRef.current || loadingState === "loading") return;

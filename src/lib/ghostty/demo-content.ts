@@ -46,8 +46,9 @@ const BG_BRIGHT_MAGENTA = `${CSI}105m`;
 const BG_BRIGHT_CYAN = `${CSI}106m`;
 const BG_BRIGHT_WHITE = `${CSI}107m`;
 
-export function generateDemoContent(themeName?: string | null): string {
+export function generateDemoContent(themeName?: string | null, os?: string): string {
   const lines: string[] = [];
+  const osLabel = os === "linux" ? "Linux" : os === "windows" ? "Windows" : "macOS";
 
   lines.push(`${CSI}2J${CSI}H`);
 
@@ -55,7 +56,7 @@ export function generateDemoContent(themeName?: string | null): string {
   lines.push(`${BOLD}${FG_MAGENTA}   ▐█   ▀█▌${RESET}   ${BOLD}${FG_CYAN}Ghostty Terminal Preview${RESET}`);
   lines.push(`${BOLD}${FG_MAGENTA}   ▐█▄▄▄█▌${RESET}    ${DIM}Powered by libghostty WASM${RESET}`);
   lines.push(`${BOLD}${FG_MAGENTA}   ▐█   █▌${RESET}    ${DIM}───────────────────────────${RESET}`);
-  lines.push(`${BOLD}${FG_MAGENTA}    ▀▀▀▀▀${RESET}     ${FG_BLUE}OS:${RESET} macOS / Linux`);
+  lines.push(`${BOLD}${FG_MAGENTA}    ▀▀▀▀▀${RESET}     ${FG_BLUE}OS:${RESET} ${osLabel}`);
   lines.push(`               ${FG_BLUE}Terminal:${RESET} Ghostty`);
   
   if (themeName) {
