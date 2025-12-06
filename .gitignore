@@ -43,3 +43,6 @@ next-env.d.ts
 # AI agent instructions
 AGENTS.md
 AGENT.md
+
+# WASM files (copied from node_modules)
+public/ghostty-vt.wasm

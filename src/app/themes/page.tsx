@@ -6,7 +6,7 @@ import { Ghost, Palette, ArrowRight, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeBrowser } from "@/components/themes";
 import { ConfigOutput } from "@/components/editor/ConfigOutput";
-import { TerminalPreview, PreviewToggleButton } from "@/components/preview";
+import { GhosttyPreview, PreviewToggleButton } from "@/components/preview";
 
 export default function ThemesPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -91,8 +91,8 @@ export default function ThemesPage() {
         </div>
       </main>
 
-      {/* Terminal Preview */}
-      <TerminalPreview
+      {/* Ghostty Terminal Preview */}
+      <GhosttyPreview
         isOpen={previewOpen}
         onToggle={() => setPreviewOpen(false)}
       />

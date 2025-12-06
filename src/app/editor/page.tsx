@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar, MobileCategoryBar } from "@/components/layout/Sidebar";
 import { ConfigPanel } from "@/components/editor/ConfigPanel";
 import { ConfigOutput } from "@/components/editor/ConfigOutput";
-import { TerminalPreview, PreviewToggleButton } from "@/components/preview";
+import { GhosttyPreview, PreviewToggleButton } from "@/components/preview";
 import { Category } from "@/lib/schema/types";
 
 export default function EditorPage() {
@@ -31,8 +31,8 @@ export default function EditorPage() {
           <div className="relative">
             <ConfigPanel category={activeCategory} />
 
-            {/* Terminal Preview */}
-            <TerminalPreview
+            {/* Ghostty Terminal Preview */}
+            <GhosttyPreview
               isOpen={previewOpen}
               onToggle={() => setPreviewOpen(false)}
             />

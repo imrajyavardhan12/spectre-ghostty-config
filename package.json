@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "postinstall": "cp node_modules/ghostty-web/ghostty-vt.wasm public/ 2>/dev/null || true"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -27,6 +28,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "ghostty-web": "^0.3.0",
     "lucide-react": "^0.555.0",
     "lz-string": "^1.5.0",
     "next": "^16.0.7",
@@ -41,6 +43,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "copy-webpack-plugin": "^13.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.0.6",
     "tailwindcss": "^4",

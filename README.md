@@ -15,18 +15,27 @@
 
 ## Features
 
+- 👻 **Real Ghostty Preview** - Live terminal preview powered by [libghostty](https://mitchellh.com/writing/libghostty-is-coming) WASM - see exactly how your config will look!
 - 🎨 **Visual Color Editor** - Pick colors with an intuitive color picker and palette editor
+- 🎭 **200+ Themes** - Browse and apply themes from iTerm2 Color Schemes with one click
 - 🔤 **Font Configuration** - Configure font families, sizes, styles, and OpenType features
 - ⌨️ **Keybind Manager** - Create and manage custom keyboard shortcuts
 - 📦 **100+ Options** - Support for all Ghostty configuration options
 - 💾 **Import/Export** - Import existing configs and export ready-to-use config files
+- 🔗 **Shareable URLs** - Share your configuration with others via URL
 - 🌙 **Dark Mode** - Beautiful dark interface that matches your terminal aesthetic
 - 📱 **Responsive** - Works on desktop and mobile devices
-- 💾 **Persistent State** - Your configuration is saved locally in your browser
 
 ## Screenshots
 
-_Coming soon_
+### Landing Page
+![Landing Page](screenshots/landing.png)
+
+### Config Editor with Live Preview
+![Editor with Ghostty Preview](screenshots/editor-preview.png)
+
+### Theme Browser
+![Theme Browser](screenshots/themes.png)
 
 ## Getting Started
 
@@ -61,6 +70,7 @@ npm run start
 
 - **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Terminal Preview**: [ghostty-web](https://github.com/coder/ghostty-web) (libghostty compiled to WASM)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
 - **State Management**: [Zustand](https://zustand-demo.pmnd.rs/)
