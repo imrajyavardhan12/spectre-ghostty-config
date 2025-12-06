@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import { StoreProvider } from "@/components/providers/StoreProvider";
 import "./globals.css";
 
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         <StoreProvider>{children}</StoreProvider>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
