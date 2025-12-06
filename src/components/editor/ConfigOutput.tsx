@@ -15,7 +15,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useConfigStore } from "@/lib/store/config-store";
@@ -27,17 +26,32 @@ export function ConfigOutput() {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Controlled tooltip states to fix Firefox tooltip stuck issue
+  const [copyTooltipOpen, setCopyTooltipOpen] = useState(false);
+  const [downloadTooltipOpen, setDownloadTooltipOpen] = useState(false);
+  const [shareTooltipOpen, setShareTooltipOpen] = useState(false);
+
+  const handleSheetOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    // Reset all tooltip states when sheet opens/closes to prevent stuck tooltips
+    setCopyTooltipOpen(false);
+    setDownloadTooltipOpen(false);
+    setShareTooltipOpen(false);
+  };
 
   const configString = exportConfig();
   const modifiedCount = Object.keys(config).length;
 
   const handleCopy = async () => {
+    setCopyTooltipOpen(false);
     await navigator.clipboard.writeText(configString);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownload = () => {
+    setDownloadTooltipOpen(false);
     const blob = new Blob([configString], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -50,6 +64,7 @@ export function ConfigOutput() {
   };
 
   const handleShare = async () => {
+    setShareTooltipOpen(false);
     const shareUrl = generateShareUrl(config, appliedTheme);
     await navigator.clipboard.writeText(shareUrl);
     setLinkCopied(true);
@@ -57,7 +72,7 @@ export function ConfigOutput() {
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet open={isOpen} onOpenChange={handleSheetOpenChange}>
       <SheetTrigger asChild>
         <Button 
           className={cn(
@@ -89,75 +104,73 @@ export function ConfigOutput() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 px-6 py-3 bg-muted/30 border-b border-border">
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleCopy}
-                  className="gap-2 flex-1 sm:flex-none"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-4 w-4 text-green-500" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </>
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Copy config to clipboard</TooltipContent>
-            </Tooltip>
+          <Tooltip open={copyTooltipOpen} onOpenChange={setCopyTooltipOpen}>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopy}
+                className="gap-2 flex-1 sm:flex-none"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 text-green-500" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copy config to clipboard</TooltipContent>
+          </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleDownload}
-                  className="gap-2 flex-1 sm:flex-none"
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Download as config file</TooltipContent>
-            </Tooltip>
+          <Tooltip open={downloadTooltipOpen} onOpenChange={setDownloadTooltipOpen}>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownload}
+                className="gap-2 flex-1 sm:flex-none"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download as config file</TooltipContent>
+          </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleShare}
-                  disabled={modifiedCount === 0}
-                  className="gap-2 flex-1 sm:flex-none"
-                >
-                  {linkCopied ? (
-                    <>
-                      <Check className="h-4 w-4 text-green-500" />
-                      Link Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="h-4 w-4" />
-                      Share
-                    </>
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {modifiedCount === 0 
-                  ? "Add some settings to share" 
-                  : "Copy shareable link"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip open={shareTooltipOpen} onOpenChange={setShareTooltipOpen}>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleShare}
+                disabled={modifiedCount === 0}
+                className="gap-2 flex-1 sm:flex-none"
+              >
+                {linkCopied ? (
+                  <>
+                    <Check className="h-4 w-4 text-green-500" />
+                    Link Copied!
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-4 w-4" />
+                    Share
+                  </>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {modifiedCount === 0 
+                ? "Add some settings to share" 
+                : "Copy shareable link"}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Config content */}

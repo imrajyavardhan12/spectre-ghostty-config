@@ -161,6 +161,13 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
     return () => window.removeEventListener("resize", handleResize);
   }, [isOpen, isMinimized, loadingState]);
 
+  // Re-fit terminal when unminimizing
+  useEffect(() => {
+    if (!isMinimized && loadingState === "ready" && fitAddonRef.current) {
+      setTimeout(() => fitAddonRef.current?.fit(), 50);
+    }
+  }, [isMinimized, loadingState]);
+
   if (!isOpen) return null;
 
   const background = (config["background"] as string) || "#1a1b26";
@@ -243,62 +250,60 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
         </div>
 
         {/* Terminal content */}
-        {!isMinimized && (
+        <div
+          className={cn("relative", isMinimized && "hidden")}
+          style={{
+            height: "550px",
+            backgroundColor: background,
+          }}
+        >
+          {loadingState === "loading" && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2
+                  className="h-8 w-8 animate-spin"
+                  style={{ color: foreground }}
+                />
+                <span className="text-sm" style={{ color: foreground }}>
+                  Loading Ghostty WASM...
+                </span>
+              </div>
+            </div>
+          )}
+
+          {loadingState === "error" && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3 text-center px-4">
+                <AlertCircle className="h-8 w-8 text-red-500" />
+                <span className="text-sm" style={{ color: foreground }}>
+                  Failed to load preview
+                </span>
+                <span className="text-xs opacity-60" style={{ color: foreground }}>
+                  {error}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setLoadingState("idle");
+                    initTerminal();
+                  }}
+                >
+                  Retry
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div
-            className="relative"
-            style={{
-              height: "550px",
-              backgroundColor: background,
-            }}
-          >
-            {loadingState === "loading" && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2
-                    className="h-8 w-8 animate-spin"
-                    style={{ color: foreground }}
-                  />
-                  <span className="text-sm" style={{ color: foreground }}>
-                    Loading Ghostty WASM...
-                  </span>
-                </div>
-              </div>
+            ref={containerRef}
+            className={cn(
+              "w-full h-full",
+              loadingState !== "ready" && "invisible"
             )}
-
-            {loadingState === "error" && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3 text-center px-4">
-                  <AlertCircle className="h-8 w-8 text-red-500" />
-                  <span className="text-sm" style={{ color: foreground }}>
-                    Failed to load preview
-                  </span>
-                  <span className="text-xs opacity-60" style={{ color: foreground }}>
-                    {error}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setLoadingState("idle");
-                      initTerminal();
-                    }}
-                  >
-                    Retry
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <div
-              ref={containerRef}
-              className={cn(
-                "w-full h-full",
-                loadingState !== "ready" && "invisible"
-              )}
-              style={{ padding: "8px" }}
-            />
-          </div>
-        )}
+            style={{ padding: "8px" }}
+          />
+        </div>
       </div>
     </div>
   );
