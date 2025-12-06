@@ -6,6 +6,9 @@ const BOLD = `${CSI}1m`;
 const DIM = `${CSI}2m`;
 const ITALIC = `${CSI}3m`;
 const UNDERLINE = `${CSI}4m`;
+const BLINK = `${CSI}5m`;
+const INVERSE = `${CSI}7m`;
+const STRIKETHROUGH = `${CSI}9m`;
 
 const FG_BLACK = `${CSI}30m`;
 const FG_RED = `${CSI}31m`;
@@ -34,49 +37,54 @@ const BG_MAGENTA = `${CSI}45m`;
 const BG_CYAN = `${CSI}46m`;
 const BG_WHITE = `${CSI}47m`;
 
-function colorBlock(bg: string): string {
-  return `${bg}  ${RESET}`;
-}
+const BG_BRIGHT_BLACK = `${CSI}100m`;
+const BG_BRIGHT_RED = `${CSI}101m`;
+const BG_BRIGHT_GREEN = `${CSI}102m`;
+const BG_BRIGHT_YELLOW = `${CSI}103m`;
+const BG_BRIGHT_BLUE = `${CSI}104m`;
+const BG_BRIGHT_MAGENTA = `${CSI}105m`;
+const BG_BRIGHT_CYAN = `${CSI}106m`;
+const BG_BRIGHT_WHITE = `${CSI}107m`;
 
 export function generateDemoContent(themeName?: string | null): string {
   const lines: string[] = [];
 
   lines.push(`${CSI}2J${CSI}H`);
 
-  lines.push(`${BOLD}${FG_MAGENTA}   ▄▄▄▄▄${RESET}`);
-  lines.push(`${BOLD}${FG_MAGENTA}  ▐█   ▀█▌${RESET}  ${FG_CYAN}Ghostty Preview${RESET}`);
-  lines.push(`${BOLD}${FG_MAGENTA}  ▐█▄▄▄█▌${RESET}   ${DIM}────────────────${RESET}`);
-  lines.push(`${BOLD}${FG_MAGENTA}  ▐█   █▌${RESET}   ${FG_BLUE}OS:${RESET} macOS / Linux`);
-  lines.push(`${BOLD}${FG_MAGENTA}   ▀▀▀▀▀${RESET}    ${FG_BLUE}Terminal:${RESET} Ghostty`);
+  lines.push(`${BOLD}${FG_MAGENTA}    ▄▄▄▄▄${RESET}`);
+  lines.push(`${BOLD}${FG_MAGENTA}   ▐█   ▀█▌${RESET}   ${BOLD}${FG_CYAN}Ghostty Terminal Preview${RESET}`);
+  lines.push(`${BOLD}${FG_MAGENTA}   ▐█▄▄▄█▌${RESET}    ${DIM}Powered by libghostty WASM${RESET}`);
+  lines.push(`${BOLD}${FG_MAGENTA}   ▐█   █▌${RESET}    ${DIM}───────────────────────────${RESET}`);
+  lines.push(`${BOLD}${FG_MAGENTA}    ▀▀▀▀▀${RESET}     ${FG_BLUE}OS:${RESET} macOS / Linux`);
+  lines.push(`               ${FG_BLUE}Terminal:${RESET} Ghostty`);
   
   if (themeName) {
-    lines.push(`             ${FG_BLUE}Theme:${RESET} ${themeName}`);
+    lines.push(`               ${FG_BLUE}Theme:${RESET} ${FG_GREEN}${themeName}${RESET}`);
   } else {
-    lines.push(`             ${FG_BLUE}Theme:${RESET} Custom`);
+    lines.push(`               ${FG_BLUE}Theme:${RESET} ${FG_YELLOW}Custom${RESET}`);
   }
   
-  lines.push(`             ${FG_BLUE}Shell:${RESET} zsh 5.9`);
+  lines.push(`               ${FG_BLUE}Shell:${RESET} zsh 5.9`);
   lines.push("");
 
-  lines.push(`  ${FG_WHITE}Normal Colors:${RESET}`);
-  lines.push(
-    `  ${colorBlock(BG_BLACK)}${colorBlock(BG_RED)}${colorBlock(BG_GREEN)}${colorBlock(BG_YELLOW)}${colorBlock(BG_BLUE)}${colorBlock(BG_MAGENTA)}${colorBlock(BG_CYAN)}${colorBlock(BG_WHITE)}`
-  );
-  lines.push(`  ${FG_BRIGHT_BLACK}Bright Colors:${RESET}`);
-  lines.push(
-    `  ${FG_BRIGHT_BLACK}██${FG_BRIGHT_RED}██${FG_BRIGHT_GREEN}██${FG_BRIGHT_YELLOW}██${FG_BRIGHT_BLUE}██${FG_BRIGHT_MAGENTA}██${FG_BRIGHT_CYAN}██${FG_BRIGHT_WHITE}██${RESET}`
-  );
+  lines.push(`  ${BOLD}${FG_WHITE}Color Palette${RESET}`);
+  lines.push(`  ${DIM}Normal:${RESET}  ${FG_BLACK}███${FG_RED}███${FG_GREEN}███${FG_YELLOW}███${FG_BLUE}███${FG_MAGENTA}███${FG_CYAN}███${FG_WHITE}███${RESET}`);
+  lines.push(`  ${DIM}Bright:${RESET}  ${FG_BRIGHT_BLACK}███${FG_BRIGHT_RED}███${FG_BRIGHT_GREEN}███${FG_BRIGHT_YELLOW}███${FG_BRIGHT_BLUE}███${FG_BRIGHT_MAGENTA}███${FG_BRIGHT_CYAN}███${FG_BRIGHT_WHITE}███${RESET}`);
   lines.push("");
 
-  lines.push(`  ${FG_WHITE}Text Styles:${RESET}`);
-  lines.push(`  ${BOLD}Bold${RESET}  ${DIM}Dim${RESET}  ${ITALIC}Italic${RESET}  ${UNDERLINE}Underline${RESET}`);
+  lines.push(`  ${BOLD}${FG_WHITE}Text Styles${RESET}`);
+  lines.push(`  ${RESET}Normal${RESET}  ${BOLD}Bold${RESET}  ${DIM}Dim${RESET}  ${ITALIC}Italic${RESET}  ${UNDERLINE}Underline${RESET}  ${STRIKETHROUGH}Strike${RESET}  ${INVERSE}Inverse${RESET}`);
   lines.push("");
 
-  lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ ${FG_YELLOW}neofetch${RESET}`);
-  lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ ${FG_YELLOW}ls -la${RESET}`);
-  lines.push(`  ${FG_BLUE}drwxr-xr-x${RESET}  ${FG_GREEN}user${RESET} ${FG_CYAN}Documents${RESET}`);
-  lines.push(`  ${FG_BLUE}drwxr-xr-x${RESET}  ${FG_GREEN}user${RESET} ${FG_CYAN}Downloads${RESET}`);
-  lines.push(`  ${FG_BLUE}-rw-r--r--${RESET}  ${FG_GREEN}user${RESET} ${FG_WHITE}config${RESET}`);
+  lines.push(`  ${BOLD}${FG_WHITE}Sample Terminal Session${RESET}`);
+  lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ ${FG_YELLOW}echo${RESET} ${FG_GREEN}"Hello, Ghostty!"${RESET}`);
+  lines.push(`  Hello, Ghostty!`);
+  lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ ${FG_YELLOW}ls${RESET} ${FG_CYAN}--color=auto${RESET}`);
+  lines.push(`  ${FG_BLUE}Documents${RESET}  ${FG_BLUE}Downloads${RESET}  ${FG_GREEN}script.sh${RESET}  ${FG_WHITE}config${RESET}  ${FG_MAGENTA}image.png${RESET}`);
+  lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ ${FG_YELLOW}git${RESET} status`);
+  lines.push(`  ${FG_GREEN}On branch main${RESET}`);
+  lines.push(`  ${FG_RED}Changes not staged for commit:${RESET}`);
+  lines.push(`      ${FG_RED}modified:${RESET}   src/config.ts`);
   lines.push("");
   lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ █`);
 

@@ -82,6 +82,18 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
     }
   }, [isOpen, loadingState, initTerminal]);
 
+  // Re-render content when preview is reopened
+  useEffect(() => {
+    if (isOpen && loadingState === "ready" && terminalRef.current) {
+      const term = terminalRef.current;
+      term.write("\x1b[2J\x1b[H");
+      term.write(generateDemoContent(appliedTheme));
+      if (fitAddonRef.current) {
+        fitAddonRef.current.fit();
+      }
+    }
+  }, [isOpen, appliedTheme, loadingState]);
+
   useEffect(() => {
     if (loadingState !== "ready" || !terminalRef.current) return;
 
@@ -154,8 +166,8 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
       className={cn(
         "fixed z-50 transition-all duration-300 ease-out",
         isMinimized
-          ? "bottom-6 right-24 w-auto"
-          : "bottom-6 right-24 w-[620px] max-w-[calc(100vw-8rem)]"
+          ? "bottom-6 right-6 w-auto"
+          : "bottom-6 right-6 w-[720px] max-w-[calc(100vw-3rem)]"
       )}
     >
       <div
@@ -229,7 +241,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
           <div
             className="relative"
             style={{
-              height: "380px",
+              height: "450px",
               backgroundColor: background,
             }}
           >
