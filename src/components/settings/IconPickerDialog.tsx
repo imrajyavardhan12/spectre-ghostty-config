@@ -80,7 +80,7 @@ interface IconPickerDialogProps {
 export function IconPickerDialog({ trigger }: IconPickerDialogProps) {
   const [open, setOpen] = useState(false);
   const { getValue, setValue } = useConfigStore();
-  
+
   const currentIcon = (getValue("macos-icon") as string) || "official";
 
   const handleSelectIcon = (iconId: string) => {
@@ -98,14 +98,14 @@ export function IconPickerDialog({ trigger }: IconPickerDialogProps) {
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-xl">
+      <SheetContent className="w-full sm:max-w-xl p-6">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Monitor className="h-5 w-5 text-primary" />
             App Icon
           </SheetTitle>
           <SheetDescription>
-            Choose an icon style for Ghostty on macOS. The icon appears in the Dock, 
+            Choose an icon style for Ghostty on macOS. The icon appears in the Dock,
             Application Switcher, and Finder.
           </SheetDescription>
         </SheetHeader>
@@ -115,7 +115,7 @@ export function IconPickerDialog({ trigger }: IconPickerDialogProps) {
           <div className="grid grid-cols-3 gap-4">
             {GHOSTTY_ICONS.map((icon) => {
               const isSelected = currentIcon === icon.id;
-              
+
               return (
                 <button
                   key={icon.id}
@@ -134,7 +134,7 @@ export function IconPickerDialog({ trigger }: IconPickerDialogProps) {
                       <Check className="h-3.5 w-3.5 text-primary-foreground" />
                     </div>
                   )}
-                  
+
                   {/* Icon Image */}
                   <div className="relative w-20 h-20 mb-2">
                     <Image
@@ -144,7 +144,7 @@ export function IconPickerDialog({ trigger }: IconPickerDialogProps) {
                       className="object-contain rounded-lg transition-transform duration-200 group-hover:scale-105"
                     />
                   </div>
-                  
+
                   {/* Label */}
                   <span className={cn(
                     "text-sm font-medium transition-colors",

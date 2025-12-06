@@ -8,5 +8,7 @@ export { KeybindInput } from "./KeybindInput";
 export { DurationInput } from "./DurationInput";
 export { IconInput } from "./IconInput";
 export { IconPickerDialog } from "./IconPickerDialog";
+export { FrameInput } from "./FrameInput";
+export { FramePickerDialog } from "./FramePickerDialog";
 export { SettingWrapper } from "./SettingWrapper";
 export { SettingRenderer } from "./SettingRenderer";

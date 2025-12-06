@@ -10,6 +10,7 @@ import { PaletteInput } from "./PaletteInput";
 import { KeybindInput } from "./KeybindInput";
 import { DurationInput } from "./DurationInput";
 import { IconInput } from "./IconInput";
+import { FrameInput } from "./FrameInput";
 
 interface SettingRendererProps {
   option: ConfigOption;
@@ -19,6 +20,11 @@ export function SettingRenderer({ option }: SettingRendererProps) {
   // Special case for macos-icon - use visual picker
   if (option.id === "macos-icon") {
     return <IconInput option={option} />;
+  }
+
+  // Special case for macos-icon-frame - use visual picker
+  if (option.id === "macos-icon-frame") {
+    return <FrameInput option={option} />;
   }
 
   switch (option.type) {
