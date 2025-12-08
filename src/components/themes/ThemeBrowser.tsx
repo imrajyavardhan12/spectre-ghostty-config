@@ -29,7 +29,9 @@ export function ThemeBrowser() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [appliedTheme, setAppliedTheme] = useState<string | null>(null);
   
-  const { loadConfig, config } = useConfigStore();
+  // Use selectors to properly subscribe to config changes
+  const config = useConfigStore((state) => state.config);
+  const loadConfig = useConfigStore((state) => state.loadConfig);
 
   // Load a batch of themes
   const loadThemeBatch = useCallback(async (names: string[]) => {

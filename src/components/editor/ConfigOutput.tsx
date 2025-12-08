@@ -22,7 +22,10 @@ import { generateShareUrl } from "@/lib/utils/url-share";
 import { cn } from "@/lib/utils";
 
 export function ConfigOutput() {
-  const { exportConfig, config, appliedTheme } = useConfigStore();
+  // Use selectors to properly subscribe to config changes
+  const config = useConfigStore((state) => state.config);
+  const appliedTheme = useConfigStore((state) => state.appliedTheme);
+  const exportConfig = useConfigStore((state) => state.exportConfig);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
