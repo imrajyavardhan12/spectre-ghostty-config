@@ -15,7 +15,10 @@ import { PresetsDialog } from "@/components/editor/PresetsDialog";
 import { cn } from "@/lib/utils";
 
 export function Header() {
-  const { exportConfig, resetAll, config } = useConfigStore();
+  // Use selectors to properly subscribe to config changes
+  const config = useConfigStore((state) => state.config);
+  const exportConfig = useConfigStore((state) => state.exportConfig);
+  const resetAll = useConfigStore((state) => state.resetAll);
   const modifiedCount = Object.keys(config).length;
   const [exportState, setExportState] = useState<"idle" | "loading" | "success">("idle");
   const [importState, setImportState] = useState<"idle" | "loading" | "success">("idle");

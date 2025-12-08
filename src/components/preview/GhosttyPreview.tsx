@@ -22,6 +22,8 @@ interface GhosttyPreviewProps {
 
 type LoadingState = "idle" | "loading" | "ready" | "error";
 
+const DEBOUNCE_MS = 300;
+
 export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
@@ -31,8 +33,13 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<GhosttyTerminal | null>(null);
   const fitAddonRef = useRef<{ fit: () => void; dispose: () => void } | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializedRef = useRef(false);
+  const configVersionRef = useRef(0);
   
-  const { config, appliedTheme } = useConfigStore();
+  // Use selectors to properly subscribe to config changes
+  const config = useConfigStore((state) => state.config);
+  const appliedTheme = useConfigStore((state) => state.appliedTheme);
 
   const writeContent = useCallback(() => {
     if (!terminalRef.current) return;
@@ -44,10 +51,27 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
     }
   }, [appliedTheme, clientOS]);
 
-  const initTerminal = useCallback(async () => {
-    if (!containerRef.current || loadingState === "loading") return;
+  const disposeTerminal = useCallback(() => {
+    if (terminalRef.current) {
+      terminalRef.current.dispose();
+      terminalRef.current = null;
+    }
+    if (fitAddonRef.current) {
+      fitAddonRef.current.dispose();
+      fitAddonRef.current = null;
+    }
+    // Clear the container
+    if (containerRef.current) {
+      containerRef.current.innerHTML = "";
+    }
+  }, []);
 
-    setLoadingState("loading");
+  const createTerminal = useCallback(async (showLoading = true) => {
+    if (!containerRef.current) return;
+
+    if (showLoading) {
+      setLoadingState("loading");
+    }
     setError(null);
 
     try {
@@ -55,10 +79,8 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
 
       const { Terminal, FitAddon } = await import("ghostty-web");
 
-      if (terminalRef.current) {
-        terminalRef.current.dispose();
-        terminalRef.current = null;
-      }
+      // Dispose existing terminal first
+      disposeTerminal();
 
       const options = mapConfigToTerminalOptions(config);
       const defaultTheme = getDefaultTheme();
@@ -74,6 +96,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
 
       terminalRef.current = term;
       fitAddonRef.current = fitAddon;
+      isInitializedRef.current = true;
       
       setTimeout(() => {
         fitAddon.fit();
@@ -86,70 +109,67 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
       setError(err instanceof Error ? err.message : "Failed to load preview");
       setLoadingState("error");
     }
-  }, [config, loadingState, writeContent]);
+  }, [config, writeContent, disposeTerminal]);
 
+  // Initial terminal creation when preview opens
   useEffect(() => {
     if (isOpen && loadingState === "idle") {
-      initTerminal();
+      createTerminal(true);
     }
-  }, [isOpen, loadingState, initTerminal]);
+  }, [isOpen, loadingState, createTerminal]);
 
+  // Debounced recreation when config changes (after initial load)
   useEffect(() => {
-    if (loadingState !== "ready" || !terminalRef.current || !isOpen) return;
-
-    const term = terminalRef.current;
-    const defaultTheme = getDefaultTheme();
-    const userTheme = mapConfigToTheme(config);
-    const mergedTheme = { ...defaultTheme, ...userTheme };
-
-    term.options.theme = mergedTheme;
-
-    if (config["font-size"]) {
-      term.options.fontSize = config["font-size"] as number;
+    // Skip if not open or not yet initialized
+    if (!isOpen || !isInitializedRef.current || loadingState !== "ready") {
+      return;
     }
-    if (config["font-family"]) {
-      term.options.fontFamily = config["font-family"] as string;
+
+    // Increment config version
+    configVersionRef.current += 1;
+    const currentVersion = configVersionRef.current;
+
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
-    if (config["cursor-style"]) {
-      const style = config["cursor-style"] as string;
-      if (style === "block" || style === "bar" || style === "underline") {
-        term.options.cursorStyle = style;
+
+    // Debounce the terminal recreation
+    debounceTimerRef.current = setTimeout(() => {
+      // Only recreate if this is still the latest config version
+      if (currentVersion === configVersionRef.current) {
+        createTerminal(false);
       }
-    }
-    if (config["cursor-style-blink"] !== undefined) {
-      const blink = config["cursor-style-blink"];
-      term.options.cursorBlink = blink === true || blink === "true";
-    }
+    }, DEBOUNCE_MS);
 
-    writeContent();
-  }, [config, appliedTheme, loadingState, isOpen, writeContent]);
-
-  useEffect(() => {
     return () => {
-      if (terminalRef.current) {
-        terminalRef.current.dispose();
-        terminalRef.current = null;
-      }
-      if (fitAddonRef.current) {
-        fitAddonRef.current.dispose();
-        fitAddonRef.current = null;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
     };
-  }, []);
+  }, [config, appliedTheme, isOpen, loadingState, createTerminal]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      disposeTerminal();
+    };
+  }, [disposeTerminal]);
 
   // Reset terminal when closing so it reinitializes on reopen
   useEffect(() => {
-    if (!isOpen && terminalRef.current) {
-      terminalRef.current.dispose();
-      terminalRef.current = null;
-      if (fitAddonRef.current) {
-        fitAddonRef.current.dispose();
-        fitAddonRef.current = null;
-      }
+    if (!isOpen && isInitializedRef.current) {
+      disposeTerminal();
       setLoadingState("idle");
+      isInitializedRef.current = false;
+      configVersionRef.current = 0;
     }
-  }, [isOpen]);
+  }, [isOpen, disposeTerminal]);
 
+  // Handle window resize
   useEffect(() => {
     if (!isOpen || isMinimized || loadingState !== "ready") return;
 
@@ -327,7 +347,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
                   size="sm"
                   onClick={() => {
                     setLoadingState("idle");
-                    initTerminal();
+                    createTerminal(true);
                   }}
                 >
                   Retry
