@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, Suspense } from "react";
+import { useMemo, useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Ghost, ArrowRight, Copy, Check, Download, Loader2, AlertCircle } from "lucide-react";
@@ -12,20 +12,28 @@ function SharePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const hasLoadedRef = useRef(false);
   
   const { loadConfig, exportConfig } = useConfigStore();
 
   const { sharedConfig, error } = useMemo(() => {
-    const config = getConfigFromUrl(searchParams);
-    if (config) {
-      loadConfig(config.config, config.theme ?? undefined);
-      return { sharedConfig: config, error: null };
+    const urlConfig = getConfigFromUrl(searchParams);
+    if (urlConfig) {
+      return { sharedConfig: urlConfig, error: null };
     } else if (searchParams.get("c")) {
       return { sharedConfig: null, error: "Invalid or corrupted share link" };
     } else {
       return { sharedConfig: null, error: "No configuration found in URL" };
     }
-  }, [searchParams, loadConfig]);
+  }, [searchParams]);
+
+  // Load config once when sharedConfig is available
+  useEffect(() => {
+    if (sharedConfig && !hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      loadConfig(sharedConfig.config, sharedConfig.theme ?? undefined);
+    }
+  }, [sharedConfig, loadConfig]);
 
   const configString = sharedConfig ? exportConfig() : "";
   const modifiedCount = sharedConfig ? Object.keys(sharedConfig.config).length : 0;
