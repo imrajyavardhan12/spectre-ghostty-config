@@ -5,6 +5,7 @@ import { SettingRenderer } from "@/components/settings";
 import { getOptionsByCategory } from "@/data/ghostty-options";
 import { categories } from "@/data/categories";
 import { Category } from "@/lib/schema/types";
+import { cn } from "@/lib/utils";
 import {
   Type,
   Palette,
@@ -39,9 +40,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 interface ConfigPanelProps {
   category: Category;
+  highlightedOption?: string | null;
 }
 
-export function ConfigPanel({ category }: ConfigPanelProps) {
+export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
   const options = getOptionsByCategory(category);
   const categoryInfo = categories.find((c) => c.id === category);
   const Icon = iconMap[categoryInfo?.icon || "Settings"] || Settings;
@@ -72,8 +74,12 @@ export function ConfigPanel({ category }: ConfigPanelProps) {
         <div className="space-y-3">
           {options.map((option, index) => (
             <div
+              id={`option-${option.id}`}
               key={option.id}
-              className="animate-fade-up [animation-fill-mode:backwards]"
+              className={cn(
+                "animate-fade-up [animation-fill-mode:backwards] rounded-lg transition-all duration-500",
+                highlightedOption === option.id && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+              )}
               style={{ animationDelay: `${Math.min(index * 0.03, 0.3)}s` }}
             >
               <SettingRenderer option={option} />

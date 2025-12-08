@@ -197,6 +197,7 @@ export function CustomIconBuilderDialog({ trigger }: CustomIconBuilderDialogProp
                                                 src={`/icons/frames/${frame.id}.png`}
                                                 alt={frame.name}
                                                 fill
+                                                sizes="48px"
                                                 className="object-contain"
                                             />
                                         </div>

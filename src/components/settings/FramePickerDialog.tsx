@@ -111,6 +111,7 @@ export function FramePickerDialog({ trigger }: FramePickerDialogProps) {
                                             src={frame.image}
                                             alt={frame.name}
                                             fill
+                                            sizes="96px"
                                             className="object-contain rounded-lg transition-transform duration-200 group-hover:scale-105"
                                         />
                                     </div>
@@ -140,6 +141,7 @@ export function FramePickerDialog({ trigger }: FramePickerDialogProps) {
                                     src={GHOSTTY_FRAMES.find(f => f.id === currentFrame)?.image || "/icons/frames/aluminum.png"}
                                     alt="Selected frame"
                                     fill
+                                    sizes="64px"
                                     className="object-contain rounded-lg"
                                 />
                             </div>

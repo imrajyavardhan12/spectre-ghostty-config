@@ -51,6 +51,7 @@ export function FrameInput({ option }: FrameInputProps) {
                                     src={frameInfo.image}
                                     alt={frameInfo.name}
                                     fill
+                                    sizes="40px"
                                     className="object-contain"
                                 />
                             </div>

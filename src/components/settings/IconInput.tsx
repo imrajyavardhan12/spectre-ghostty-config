@@ -73,6 +73,7 @@ export function IconInput({ option }: IconInputProps) {
                     src={iconInfo.image}
                     alt={iconInfo.name}
                     fill
+                    sizes="40px"
                     className="object-contain"
                   />
                 )}
