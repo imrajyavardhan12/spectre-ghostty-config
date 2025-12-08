@@ -149,6 +149,7 @@ export function IconPickerDialog({ trigger }: IconPickerDialogProps) {
                       src={icon.image}
                       alt={icon.name}
                       fill
+                      sizes="80px"
                       className="object-contain rounded-lg transition-transform duration-200 group-hover:scale-105"
                     />
                   </div>
@@ -173,6 +174,7 @@ export function IconPickerDialog({ trigger }: IconPickerDialogProps) {
                   src={GHOSTTY_ICONS.find(i => i.id === currentIcon)?.image || "/icons/official.png"}
                   alt="Selected icon"
                   fill
+                  sizes="64px"
                   className="object-contain rounded-lg"
                 />
               </div>
