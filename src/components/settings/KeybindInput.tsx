@@ -17,11 +17,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { SettingWrapper } from "./SettingWrapper";
+import { ActionCombobox } from "./ActionCombobox";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { KeybindOption } from "@/lib/schema/types";
-import { 
-  validateTrigger, 
-  validateAction, 
+import {
+  validateTriggerSequence,
+  validateAction,
   validateKeybind,
   KEYBIND_ACTIONS,
   KEYBIND_EXAMPLES,
@@ -41,10 +42,10 @@ export function KeybindInput({ option }: KeybindInputProps) {
   const [newAction, setNewAction] = useState("");
   const [showExamples, setShowExamples] = useState(false);
 
-  // Validate trigger input
+  // Validate trigger input (handles sequences like ctrl+x>2)
   const triggerValidation = useMemo(() => {
     if (!newKey) return null;
-    return validateTrigger(newKey);
+    return validateTriggerSequence(newKey);
   }, [newKey]);
 
   // Validate action input
@@ -91,13 +92,15 @@ export function KeybindInput({ option }: KeybindInputProps) {
     }
   };
 
-  // Filter action suggestions based on input
-  const actionSuggestions = useMemo(() => {
-    if (!newAction || newAction.length < 2) return [];
-    const search = newAction.toLowerCase().split(":")[0];
-    return KEYBIND_ACTIONS
-      .filter(a => a.action.includes(search))
-      .slice(0, 8);
+  // Get param description for the current action
+  const actionParamHint = useMemo(() => {
+    if (!newAction) return null;
+    const actionName = newAction.split(":")[0].toLowerCase();
+    const actionDef = KEYBIND_ACTIONS.find(a => a.action === actionName);
+    if (actionDef?.hasParam && newAction.includes(":")) {
+      return actionDef.paramDesc;
+    }
+    return null;
   }, [newAction]);
 
   return (
@@ -127,8 +130,8 @@ export function KeybindInput({ option }: KeybindInputProps) {
                   key={index}
                   className={cn(
                     "flex items-center gap-2 rounded-md border p-2",
-                    hasErrors 
-                      ? "border-destructive/50 bg-destructive/5" 
+                    hasErrors
+                      ? "border-destructive/50 bg-destructive/5"
                       : hasWarnings
                         ? "border-amber-500/50 bg-amber-500/5"
                         : "border-border bg-muted/50"
@@ -140,17 +143,17 @@ export function KeybindInput({ option }: KeybindInputProps) {
                   </Badge>
                   <span className="text-muted-foreground">→</span>
                   <span className="flex-1 font-mono text-sm truncate">{action}</span>
-                  
+
                   {/* Validation indicator */}
                   {(hasErrors || hasWarnings) && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <AlertCircle 
+                          <AlertCircle
                             className={cn(
                               "h-4 w-4 shrink-0",
                               hasErrors ? "text-destructive" : "text-amber-500"
-                            )} 
+                            )}
                           />
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs">
@@ -166,7 +169,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
                       </Tooltip>
                     </TooltipProvider>
                   )}
-                  
+
                   <Button
                     variant="ghost"
                     size="icon"
@@ -215,62 +218,37 @@ export function KeybindInput({ option }: KeybindInputProps) {
                 </div>
               )}
             </div>
-            
+
             <span className="text-muted-foreground">=</span>
-            
-            <div className="relative flex-1 max-w-xs">
-              <Input
-                type="text"
+
+            {/* Action Combobox with searchable dropdown */}
+            <div className="flex-1 max-w-xs flex items-center gap-2">
+              <ActionCombobox
                 value={newAction}
-                onChange={(e) => setNewAction(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="copy_to_clipboard"
-                className={cn(
-                  "font-mono pr-7",
-                  newAction && actionValidation && !actionValidation.valid && "border-destructive"
-                )}
+                onChange={setNewAction}
+                placeholder="Select action..."
+                className="flex-1"
               />
+
+              {/* Validation indicator */}
               {newAction && actionValidation && (
-                <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                  {actionValidation.valid ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertCircle className="h-4 w-4 text-destructive" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p className="text-xs">{actionValidation.error}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-              )}
-              
-              {/* Action suggestions dropdown */}
-              {actionSuggestions.length > 0 && (
-                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 shadow-md">
-                  {actionSuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion.action}
-                      type="button"
-                      className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted flex items-center justify-between"
-                      onClick={() => {
-                        setNewAction(suggestion.hasParam ? `${suggestion.action}:` : suggestion.action);
-                      }}
-                    >
-                      <span className="font-mono">{suggestion.action}</span>
-                      {suggestion.hasParam && (
-                        <span className="text-xs text-muted-foreground">+ param</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                actionValidation.valid ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                ) : (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-xs">{actionValidation.error}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )
               )}
             </div>
-            
+
             <Button
               variant="outline"
               size="icon"
@@ -279,7 +257,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
             >
               <Plus className="h-4 w-4" />
             </Button>
-            
+
             {/* Help / Examples button */}
             <Popover open={showExamples} onOpenChange={setShowExamples}>
               <PopoverTrigger asChild>
@@ -321,19 +299,27 @@ export function KeybindInput({ option }: KeybindInputProps) {
               </PopoverContent>
             </Popover>
           </div>
-          
+
           {/* Validation feedback */}
           {(newKey || newAction) && (
             <div className="text-xs text-muted-foreground">
-              {triggerValidation?.valid && triggerValidation.modifiers.length > 0 && (
+              {triggerValidation?.valid && triggerValidation.sequences.length > 0 && (
                 <span className="mr-3">
-                  Modifiers: {triggerValidation.modifiers.join(" + ")}
-                  {triggerValidation.key && ` + ${triggerValidation.key}`}
+                  Sequence: {triggerValidation.sequences.map((seq, i) => {
+                    const parts = [...seq.modifiers];
+                    if (seq.key) parts.push(seq.key);
+                    return parts.join("+");
+                  }).join(" → ")}
                 </span>
               )}
               {actionValidation?.valid && actionValidation.param && (
                 <span>
                   Action: {actionValidation.action} (param: {actionValidation.param})
+                </span>
+              )}
+              {actionParamHint && (
+                <span className="block mt-1 text-muted-foreground/70">
+                  Parameter: {actionParamHint}
                 </span>
               )}
             </div>

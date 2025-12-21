@@ -49,77 +49,487 @@ const SPECIAL_KEYS = new Set([
 // Physical key codes (W3C specification - KeyA, KeyB, etc.)
 const PHYSICAL_KEY_PATTERN = /^(key_?[a-z]|digit_?[0-9]|numpad_?[0-9]|arrow_?(up|down|left|right))$/i;
 
-// All valid keybind actions with optional parameter indicator
-export const KEYBIND_ACTIONS: { action: string; hasParam: boolean; paramDesc?: string }[] = [
-  // No param actions
-  { action: "ignore", hasParam: false },
-  { action: "unbind", hasParam: false },
-  { action: "reset", hasParam: false },
-  { action: "copy_to_clipboard", hasParam: false },
-  { action: "paste_from_clipboard", hasParam: false },
-  { action: "paste_from_selection", hasParam: false },
-  { action: "copy_url_to_clipboard", hasParam: false },
-  { action: "copy_title_to_clipboard", hasParam: false },
-  { action: "reset_font_size", hasParam: false },
-  { action: "clear_screen", hasParam: false },
-  { action: "select_all", hasParam: false },
-  { action: "scroll_to_top", hasParam: false },
-  { action: "scroll_to_bottom", hasParam: false },
-  { action: "scroll_page_up", hasParam: false },
-  { action: "scroll_page_down", hasParam: false },
-  { action: "new_window", hasParam: false },
-  { action: "new_tab", hasParam: false },
-  { action: "previous_tab", hasParam: false },
-  { action: "next_tab", hasParam: false },
-  { action: "last_tab", hasParam: false },
-  { action: "toggle_tab_overview", hasParam: false },
-  { action: "new_split_right", hasParam: false },
-  { action: "new_split_left", hasParam: false },
-  { action: "new_split_up", hasParam: false },
-  { action: "new_split_down", hasParam: false },
-  { action: "toggle_split_zoom", hasParam: false },
-  { action: "equalize_splits", hasParam: false },
-  { action: "open_config", hasParam: false },
-  { action: "reload_config", hasParam: false },
-  { action: "close_surface", hasParam: false },
-  { action: "close_tab", hasParam: false },
-  { action: "close_window", hasParam: false },
-  { action: "close_all_windows", hasParam: false },
-  { action: "toggle_maximize", hasParam: false },
-  { action: "toggle_fullscreen", hasParam: false },
-  { action: "toggle_window_decorations", hasParam: false },
-  { action: "toggle_window_float_on_top", hasParam: false },
-  { action: "toggle_secure_input", hasParam: false },
-  { action: "toggle_command_palette", hasParam: false },
-  { action: "toggle_quick_terminal", hasParam: false },
-  { action: "toggle_visibility", hasParam: false },
-  { action: "check_for_updates", hasParam: false },
-  { action: "undo", hasParam: false },
-  { action: "redo", hasParam: false },
-  { action: "quit", hasParam: false },
-  
-  // With param actions
-  { action: "csi", hasParam: true, paramDesc: "CSI sequence (e.g., A for cursor up)" },
-  { action: "esc", hasParam: true, paramDesc: "ESC sequence" },
-  { action: "text", hasParam: true, paramDesc: "Text to send (Zig string literal syntax)" },
-  { action: "cursor_key", hasParam: true, paramDesc: "application|normal" },
-  { action: "increase_font_size", hasParam: true, paramDesc: "Amount in points (e.g., 1)" },
-  { action: "decrease_font_size", hasParam: true, paramDesc: "Amount in points (e.g., 1)" },
-  { action: "set_font_size", hasParam: true, paramDesc: "Font size in points (e.g., 14)" },
-  { action: "scroll_page_fractional", hasParam: true, paramDesc: "Fraction (e.g., 0.5 or -0.5)" },
-  { action: "scroll_page_lines", hasParam: true, paramDesc: "Number of lines (e.g., 3 or -3)" },
-  { action: "adjust_selection", hasParam: true, paramDesc: "left|right|up|down|page_up|page_down|home|end" },
-  { action: "jump_to_prompt", hasParam: true, paramDesc: "Number (positive=forward, negative=back)" },
-  { action: "write_scrollback_file", hasParam: true, paramDesc: "copy|paste|open" },
-  { action: "write_screen_file", hasParam: true, paramDesc: "copy|paste|open" },
-  { action: "write_selection_file", hasParam: true, paramDesc: "copy|paste|open" },
-  { action: "goto_tab", hasParam: true, paramDesc: "Tab index (1-based)" },
-  { action: "move_tab", hasParam: true, paramDesc: "Relative offset (e.g., 1 or -1)" },
-  { action: "goto_split", hasParam: true, paramDesc: "previous|next|up|down|left|right" },
-  { action: "focus_split", hasParam: true, paramDesc: "previous|next|up|down|left|right" },
-  { action: "resize_split", hasParam: true, paramDesc: "up|down|left|right" },
-  { action: "inspector", hasParam: true, paramDesc: "toggle|show|hide" },
-  { action: "crash", hasParam: true, paramDesc: "main|io|render (for testing)" },
+// Action categories for grouping in the UI
+export type ActionCategory =
+  | "basic"
+  | "clipboard"
+  | "font"
+  | "scroll"
+  | "selection"
+  | "tab"
+  | "split"
+  | "window"
+  | "system"
+  | "text";
+
+// Enhanced action definition with description and category
+export interface KeybindAction {
+  action: string;
+  description: string;
+  category: ActionCategory;
+  hasParam: boolean;
+  paramDesc?: string;
+  paramOptions?: string[]; // For actions with fixed param options
+  platform?: "macos" | "linux";
+  deprecated?: boolean;
+  deprecatedMessage?: string;
+}
+
+// All valid keybind actions with descriptions from official docs
+// Source: https://ghostty.org/docs/config/keybind/reference
+export const KEYBIND_ACTIONS: KeybindAction[] = [
+  // === Basic ===
+  {
+    action: "ignore",
+    description: "Ignore this key combination (won't process or forward to terminal)",
+    category: "basic",
+    hasParam: false
+  },
+  {
+    action: "unbind",
+    description: "Unbind a previously bound key binding",
+    category: "basic",
+    hasParam: false
+  },
+  {
+    action: "reset",
+    description: "Reset the terminal (fixes broken state, like running 'reset' command)",
+    category: "basic",
+    hasParam: false
+  },
+
+  // === Clipboard ===
+  {
+    action: "copy_to_clipboard",
+    description: "Copy the selected text to the clipboard",
+    category: "clipboard",
+    hasParam: false
+  },
+  {
+    action: "paste_from_clipboard",
+    description: "Paste the contents of the default clipboard",
+    category: "clipboard",
+    hasParam: false
+  },
+  {
+    action: "paste_from_selection",
+    description: "Paste the contents of the selection clipboard",
+    category: "clipboard",
+    hasParam: false
+  },
+  {
+    action: "copy_url_to_clipboard",
+    description: "Copy the URL under the cursor to the clipboard",
+    category: "clipboard",
+    hasParam: false
+  },
+  {
+    action: "copy_title_to_clipboard",
+    description: "Copy the terminal title to the clipboard",
+    category: "clipboard",
+    hasParam: false
+  },
+
+  // === Font ===
+  {
+    action: "increase_font_size",
+    description: "Increase font size by specified points",
+    category: "font",
+    hasParam: true,
+    paramDesc: "Amount in points (e.g., 1 or 1.5)"
+  },
+  {
+    action: "decrease_font_size",
+    description: "Decrease font size by specified points",
+    category: "font",
+    hasParam: true,
+    paramDesc: "Amount in points (e.g., 1 or 1.5)"
+  },
+  {
+    action: "reset_font_size",
+    description: "Reset font size to the original configured size",
+    category: "font",
+    hasParam: false
+  },
+  {
+    action: "set_font_size",
+    description: "Set font size to a specific value in points",
+    category: "font",
+    hasParam: true,
+    paramDesc: "Font size in points (e.g., 14)"
+  },
+
+  // === Scroll ===
+  {
+    action: "scroll_to_top",
+    description: "Scroll to the top of the scrollback buffer",
+    category: "scroll",
+    hasParam: false
+  },
+  {
+    action: "scroll_to_bottom",
+    description: "Scroll to the bottom of the screen",
+    category: "scroll",
+    hasParam: false
+  },
+  {
+    action: "scroll_to_selection",
+    description: "Scroll to the currently selected text",
+    category: "scroll",
+    hasParam: false
+  },
+  {
+    action: "scroll_page_up",
+    description: "Scroll the screen up by one page",
+    category: "scroll",
+    hasParam: false
+  },
+  {
+    action: "scroll_page_down",
+    description: "Scroll the screen down by one page",
+    category: "scroll",
+    hasParam: false
+  },
+  {
+    action: "scroll_page_fractional",
+    description: "Scroll by a fraction of a page (positive=down, negative=up)",
+    category: "scroll",
+    hasParam: true,
+    paramDesc: "Fraction (e.g., 0.5 or -0.5)"
+  },
+  {
+    action: "scroll_page_lines",
+    description: "Scroll by a number of lines (positive=down, negative=up)",
+    category: "scroll",
+    hasParam: true,
+    paramDesc: "Number of lines (e.g., 3 or -3)"
+  },
+  {
+    action: "jump_to_prompt",
+    description: "Jump forward/back by prompts (requires shell integration)",
+    category: "scroll",
+    hasParam: true,
+    paramDesc: "Number (positive=forward, negative=back)"
+  },
+
+  // === Selection ===
+  {
+    action: "select_all",
+    description: "Select all text on the screen",
+    category: "selection",
+    hasParam: false
+  },
+  {
+    action: "adjust_selection",
+    description: "Adjust the current selection in the given direction",
+    category: "selection",
+    hasParam: true,
+    paramDesc: "Direction",
+    paramOptions: ["left", "right", "up", "down", "page_up", "page_down", "home", "end", "beginning_of_line", "end_of_line"]
+  },
+
+  // === Tab ===
+  {
+    action: "new_tab",
+    description: "Open a new tab",
+    category: "tab",
+    hasParam: false
+  },
+  {
+    action: "previous_tab",
+    description: "Go to the previous tab",
+    category: "tab",
+    hasParam: false
+  },
+  {
+    action: "next_tab",
+    description: "Go to the next tab",
+    category: "tab",
+    hasParam: false
+  },
+  {
+    action: "last_tab",
+    description: "Go to the last tab",
+    category: "tab",
+    hasParam: false
+  },
+  {
+    action: "goto_tab",
+    description: "Go to a specific tab by index (1-based)",
+    category: "tab",
+    hasParam: true,
+    paramDesc: "Tab index (e.g., 1, 2, 3)"
+  },
+  {
+    action: "move_tab",
+    description: "Move current tab by relative offset (wraps around)",
+    category: "tab",
+    hasParam: true,
+    paramDesc: "Offset (e.g., 1 or -1)"
+  },
+  {
+    action: "toggle_tab_overview",
+    description: "Toggle the tab overview (Linux with libadwaita 1.4+)",
+    category: "tab",
+    hasParam: false,
+    platform: "linux"
+  },
+  {
+    action: "close_tab",
+    description: "Close the current tab and all its splits",
+    category: "tab",
+    hasParam: false
+  },
+
+  // === Split ===
+  {
+    action: "new_split",
+    description: "Create a new split in the specified direction",
+    category: "split",
+    hasParam: true,
+    paramDesc: "Direction",
+    paramOptions: ["right", "down", "left", "up", "auto"]
+  },
+  {
+    action: "goto_split",
+    description: "Focus on a split in the specified direction or order",
+    category: "split",
+    hasParam: true,
+    paramDesc: "Direction",
+    paramOptions: ["right", "down", "left", "up", "previous", "next"]
+  },
+  {
+    action: "toggle_split_zoom",
+    description: "Zoom in/out of the current split (hides other splits)",
+    category: "split",
+    hasParam: false
+  },
+  {
+    action: "resize_split",
+    description: "Resize the current split in direction by pixels",
+    category: "split",
+    hasParam: true,
+    paramDesc: "direction,pixels (e.g., up,10)"
+  },
+  {
+    action: "equalize_splits",
+    description: "Equalize the size of all splits in the window",
+    category: "split",
+    hasParam: false
+  },
+
+  // === Window ===
+  {
+    action: "new_window",
+    description: "Open a new window (brings app to front if unfocused)",
+    category: "window",
+    hasParam: false
+  },
+  {
+    action: "close_surface",
+    description: "Close the current surface (window, tab, or split)",
+    category: "window",
+    hasParam: false
+  },
+  {
+    action: "close_window",
+    description: "Close the current window and all its tabs/splits",
+    category: "window",
+    hasParam: false
+  },
+  {
+    action: "close_all_windows",
+    description: "Close all windows",
+    category: "window",
+    hasParam: false,
+    deprecated: true,
+    deprecatedMessage: "Use all:close_window instead"
+  },
+  {
+    action: "toggle_fullscreen",
+    description: "Toggle fullscreen mode for the current window",
+    category: "window",
+    hasParam: false
+  },
+  {
+    action: "toggle_maximize",
+    description: "Toggle maximize for the current window (Linux only)",
+    category: "window",
+    hasParam: false,
+    platform: "linux"
+  },
+  {
+    action: "toggle_window_decorations",
+    description: "Toggle window decorations (titlebar, etc.) (Linux only)",
+    category: "window",
+    hasParam: false,
+    platform: "linux"
+  },
+  {
+    action: "toggle_window_float_on_top",
+    description: "Toggle window always-on-top",
+    category: "window",
+    hasParam: false
+  },
+  {
+    action: "reset_window_size",
+    description: "Reset window to default size (macOS only)",
+    category: "window",
+    hasParam: false,
+    platform: "macos"
+  },
+  {
+    action: "prompt_surface_title",
+    description: "Change surface title via popup prompt (Linux libadwaita 1.5+)",
+    category: "window",
+    hasParam: false,
+    platform: "linux"
+  },
+
+  // === System ===
+  {
+    action: "open_config",
+    description: "Open the config file in the default OS editor",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "reload_config",
+    description: "Reload the configuration file",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "toggle_quick_terminal",
+    description: "Toggle the quick terminal dropdown",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "toggle_command_palette",
+    description: "Toggle the command palette",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "toggle_visibility",
+    description: "Toggle application visibility",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "toggle_secure_input",
+    description: "Toggle secure input mode",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "check_for_updates",
+    description: "Check for application updates",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "inspector",
+    description: "Control the terminal inspector visibility",
+    category: "system",
+    hasParam: true,
+    paramDesc: "Mode",
+    paramOptions: ["toggle", "show", "hide"]
+  },
+  {
+    action: "show_gtk_inspector",
+    description: "Show the GTK inspector (Linux only)",
+    category: "system",
+    hasParam: false,
+    platform: "linux"
+  },
+  {
+    action: "show_on_screen_keyboard",
+    description: "Show the on-screen keyboard (Linux GTK only)",
+    category: "system",
+    hasParam: false,
+    platform: "linux"
+  },
+  {
+    action: "undo",
+    description: "Undo the last action",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "redo",
+    description: "Redo the last undone action",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "quit",
+    description: "Quit the application",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "clear_screen",
+    description: "Clear the screen and all scrollback",
+    category: "system",
+    hasParam: false
+  },
+
+  // === Text/Input ===
+  {
+    action: "csi",
+    description: "Send a CSI sequence (without ESC [ prefix)",
+    category: "text",
+    hasParam: true,
+    paramDesc: "CSI sequence (e.g., 0m to reset styles)"
+  },
+  {
+    action: "esc",
+    description: "Send an ESC sequence",
+    category: "text",
+    hasParam: true,
+    paramDesc: "ESC sequence"
+  },
+  {
+    action: "text",
+    description: "Send the specified text (Zig string literal syntax)",
+    category: "text",
+    hasParam: true,
+    paramDesc: "Text to send"
+  },
+  {
+    action: "cursor_key",
+    description: "Send data based on cursor key mode",
+    category: "text",
+    hasParam: true,
+    paramDesc: "Mode",
+    paramOptions: ["application", "normal"]
+  },
+  {
+    action: "write_scrollback_file",
+    description: "Write entire scrollback to a temp file",
+    category: "text",
+    hasParam: true,
+    paramDesc: "Action",
+    paramOptions: ["copy", "paste", "open"]
+  },
+  {
+    action: "write_screen_file",
+    description: "Write screen contents to a temp file",
+    category: "text",
+    hasParam: true,
+    paramDesc: "Action",
+    paramOptions: ["copy", "paste", "open"]
+  },
+  {
+    action: "write_selection_file",
+    description: "Write selected text to a temp file",
+    category: "text",
+    hasParam: true,
+    paramDesc: "Action",
+    paramOptions: ["copy", "paste", "open"]
+  },
 ];
 
 // Build a set of action names for quick lookup
@@ -160,7 +570,7 @@ export function validateTrigger(trigger: string): TriggerValidation {
 
   // Split by + to get parts
   const parts = trigger.toLowerCase().split("+").map(p => p.trim()).filter(p => p);
-  
+
   if (parts.length === 0) {
     return { ...result, valid: false, error: "Invalid trigger format" };
   }
@@ -208,12 +618,12 @@ export function validateTrigger(trigger: string): TriggerValidation {
       if (keyFound) {
         return { ...result, valid: false, error: "Only one key is allowed per trigger (multiple keys found)" };
       }
-      
+
       // Validate the key
       if (!isValidKey(part)) {
         return { ...result, valid: false, error: `Invalid key: "${part}"` };
       }
-      
+
       result.key = part;
       keyFound = true;
     }
@@ -221,6 +631,45 @@ export function validateTrigger(trigger: string): TriggerValidation {
 
   if (!keyFound) {
     return { ...result, valid: false, error: "No key specified in trigger" };
+  }
+
+  return result;
+}
+
+// Validate trigger sequences (handles ">" separator like ctrl+x>2)
+export interface TriggerSequenceValidation {
+  valid: boolean;
+  error?: string;
+  sequences: TriggerValidation[];
+}
+
+export function validateTriggerSequence(triggerSeq: string): TriggerSequenceValidation {
+  const result: TriggerSequenceValidation = {
+    valid: true,
+    sequences: [],
+  };
+
+  if (!triggerSeq || triggerSeq.trim() === "") {
+    return { valid: false, error: "Trigger cannot be empty", sequences: [] };
+  }
+
+  // Split by > to get individual triggers in the sequence
+  const triggerParts = triggerSeq.split(">").map(t => t.trim()).filter(t => t);
+
+  if (triggerParts.length === 0) {
+    return { valid: false, error: "Invalid trigger format", sequences: [] };
+  }
+
+  for (let i = 0; i < triggerParts.length; i++) {
+    const triggerPart = triggerParts[i];
+    const validation = validateTrigger(triggerPart);
+    result.sequences.push(validation);
+
+    if (!validation.valid) {
+      result.valid = false;
+      result.error = `Sequence part ${i + 1}: ${validation.error}`;
+      break;
+    }
   }
 
   return result;
@@ -268,7 +717,7 @@ export function validateAction(actionStr: string): ActionValidation {
 
   // Split by : to separate action from param
   const colonIndex = actionStr.indexOf(":");
-  
+
   if (colonIndex === -1) {
     // No parameter
     result.action = actionStr.trim().toLowerCase();
@@ -279,10 +728,10 @@ export function validateAction(actionStr: string): ActionValidation {
 
   // Check if action exists
   if (!ACTION_NAMES.has(result.action)) {
-    return { 
-      ...result, 
-      valid: false, 
-      error: `Unknown action: "${result.action}"` 
+    return {
+      ...result,
+      valid: false,
+      error: `Unknown action: "${result.action}"`
     };
   }
 
@@ -312,12 +761,12 @@ export function validateKeybind(keybind: string): ValidationResult {
 
   // Split by = to get trigger and action
   const equalsIndex = keybind.indexOf("=");
-  
+
   if (equalsIndex === -1) {
-    return { 
-      valid: false, 
-      errors: ["Invalid format. Expected: trigger=action (e.g., ctrl+c=copy_to_clipboard)"], 
-      warnings: [] 
+    return {
+      valid: false,
+      errors: ["Invalid format. Expected: trigger=action (e.g., ctrl+c=copy_to_clipboard)"],
+      warnings: []
     };
   }
 
@@ -326,7 +775,7 @@ export function validateKeybind(keybind: string): ValidationResult {
 
   // Handle trigger sequences (e.g., ctrl+a>n)
   const triggerParts = trigger.split(">").map(t => t.trim()).filter(t => t);
-  
+
   for (const triggerPart of triggerParts) {
     const triggerValidation = validateTrigger(triggerPart);
     if (!triggerValidation.valid && triggerValidation.error) {

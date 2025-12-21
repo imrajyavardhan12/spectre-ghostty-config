@@ -5,6 +5,7 @@ export { SelectInput } from "./SelectInput";
 export { ColorInput } from "./ColorInput";
 export { PaletteInput } from "./PaletteInput";
 export { KeybindInput } from "./KeybindInput";
+export { ActionCombobox } from "./ActionCombobox";
 export { DurationInput } from "./DurationInput";
 export { IconInput } from "./IconInput";
 export { IconPickerDialog } from "./IconPickerDialog";
