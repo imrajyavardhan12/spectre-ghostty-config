@@ -119,6 +119,16 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 MIT License - see [LICENSE](LICENSE) for details.
 
+## Star History
+
+<a href="https://star-history.com/#imrajyavardhan12/spectre-ghostty-config">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=imrajyavardhan12/spectre-ghostty-config&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=imrajyavardhan12/spectre-ghostty-config&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=imrajyavardhan12/spectre-ghostty-config&type=Date" />
+  </picture>
+</a>
+
 ---
 
 <div align="center">
