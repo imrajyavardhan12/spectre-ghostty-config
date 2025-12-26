@@ -1,7 +1,8 @@
 "use client";
 
-import { ConfigOption } from "@/lib/schema/types";
+import { ConfigOption, StringOption } from "@/lib/schema/types";
 import { TextInput } from "./TextInput";
+import { TextInputWithSuggestions } from "./TextInputWithSuggestions";
 import { NumberInput } from "./NumberInput";
 import { SwitchInput } from "./SwitchInput";
 import { SelectInput } from "./SelectInput";
@@ -29,6 +30,10 @@ export function SettingRenderer({ option }: SettingRendererProps) {
 
   switch (option.type) {
     case "string":
+      // Use TextInputWithSuggestions if validValues is defined
+      if ((option as StringOption).validValues) {
+        return <TextInputWithSuggestions option={option as StringOption} />;
+      }
       return <TextInput option={option} />;
     case "number":
       return <NumberInput option={option} />;

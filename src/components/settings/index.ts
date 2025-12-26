@@ -1,4 +1,5 @@
 export { TextInput } from "./TextInput";
+export { TextInputWithSuggestions } from "./TextInputWithSuggestions";
 export { NumberInput } from "./NumberInput";
 export { SwitchInput } from "./SwitchInput";
 export { SelectInput } from "./SelectInput";

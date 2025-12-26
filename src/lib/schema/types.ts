@@ -47,6 +47,7 @@ export interface StringOption extends BaseConfigOption {
   default: string;
   placeholder?: string;
   repeatable?: boolean;
+  validValues?: { value: string; label: string; description?: string }[];
 }
 
 export interface NumberOption extends BaseConfigOption {
