@@ -26,7 +26,7 @@ export function ThemeBrowser() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [filter, setFilter] = useState<FilterType>("featured");
   const [appliedTheme, setAppliedTheme] = useState<string | null>(null);
   
   // Use selectors to properly subscribe to config changes
@@ -107,6 +107,14 @@ export function ThemeBrowser() {
 
     return themes;
   }, [loadedThemes, searchQuery, filter]);
+
+  // Auto-load all themes when a non-featured filter is selected
+  useEffect(() => {
+    if (filter !== "featured" && themeList.length > 0 && loadedThemes.size < themeList.length) {
+      const allNames = themeList.map((t) => t.name);
+      loadThemeBatch(allNames);
+    }
+  }, [filter, themeList, loadedThemes.size, loadThemeBatch]);
 
   // Load more themes when searching
   useEffect(() => {
