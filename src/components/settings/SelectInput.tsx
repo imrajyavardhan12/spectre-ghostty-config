@@ -15,6 +15,18 @@ interface SelectInputProps {
   option: EnumOption;
 }
 
+// Radix UI Select.Item forbids empty string values (reserved for "clear selection").
+// Use this sentinel to represent an empty-string config value in the UI.
+const EMPTY_SENTINEL = "__empty__";
+
+function toUiValue(v: string) {
+  return v === "" ? EMPTY_SENTINEL : v;
+}
+
+function fromUiValue(v: string) {
+  return v === EMPTY_SENTINEL ? "" : v;
+}
+
 export function SelectInput({ option }: SelectInputProps) {
   const { getValue, setValue, resetValue } = useConfigStore();
   const value = getValue(option.id) as string;
@@ -33,15 +45,15 @@ export function SelectInput({ option }: SelectInputProps) {
       platform={option.platform}
     >
       <Select
-        value={value ?? option.default}
-        onValueChange={(v) => setValue(option.id, v)}
+        value={toUiValue(value ?? option.default)}
+        onValueChange={(v) => setValue(option.id, fromUiValue(v))}
       >
         <SelectTrigger className="max-w-xs">
           <SelectValue placeholder="Select an option" />
         </SelectTrigger>
         <SelectContent>
           {option.options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
+            <SelectItem key={opt.value} value={toUiValue(opt.value)}>
               {opt.label}
             </SelectItem>
           ))}
