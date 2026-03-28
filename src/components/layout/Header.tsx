@@ -184,13 +184,24 @@ export function Header() {
           <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
 
           {/* Presets */}
-          <PresetsDialog
-            trigger={
-              <Button variant="ghost" size="icon" className="h-9 w-9">
-                <Sparkles className="h-4 w-4" />
-              </Button>
-            }
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <PresetsDialog
+                    trigger={
+                      <Button variant="ghost" size="icon" className="h-9 w-9">
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Configuration Presets</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* Themes */}
           <TooltipProvider>
