@@ -33,7 +33,7 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
   const fontFamily = (getValue("font-family") as string) || "monospace";
   const fontSize = (getValue("font-size") as number) || 13;
   const fontThicken = (getValue("font-thicken") as boolean) || false;
-  const boldIsBright = (getValue("bold-is-bright") as boolean) || false;
+  const boldColor = (getValue("bold-color") as string) || "";
   const windowPaddingX = (getValue("window-padding-x") as number) ?? 2;
   const windowPaddingY = (getValue("window-padding-y") as number) ?? 2;
   const backgroundOpacity = (getValue("background-opacity") as number) ?? 1;
@@ -71,9 +71,9 @@ export function TerminalPreview({ isOpen, onToggle }: TerminalPreviewProps) {
     brightWhite: getColor(15, "#c0caf5"),
   };
 
-  // Get bold color (use bright variant if bold-is-bright is enabled)
+  // Get bold color (use bright variant if bold-color is "bright")
   const getBoldColor = (normalColor: string, brightColor: string) => {
-    return boldIsBright ? brightColor : normalColor;
+    return boldColor === "bright" ? brightColor : normalColor;
   };
 
   // Cursor styles

@@ -110,7 +110,7 @@ export const presets: ConfigPreset[] = [
       "cursor-style": "block",
       "cursor-style-blink": false,
       "scrollback-lines": 500000,
-      "bold-is-bright": true,
+      "bold-color": "bright",
       "mouse-hide-while-typing": false,
       "shell-integration": "detect",
     },

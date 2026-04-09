@@ -1,4 +1,4 @@
-import { ConfigOption, ConfigGroup } from "@/lib/schema/types";
+import { ConfigOption } from "@/lib/schema/types";
 
 // Font Options
 const fontOptions: ConfigOption[] = [
@@ -211,17 +211,6 @@ const colorOptions: ConfigOption[] = [
     category: "colors",
   },
   {
-    id: "selection-invert-fg-bg",
-    name: "Invert Selection Colors",
-    description: "If enabled, selection colors are inverted instead of using custom colors.",
-    type: "boolean",
-    default: false,
-    category: "colors",
-    deprecated: true,
-    note: "Not an official Ghostty config option. Use selection-foreground/selection-background instead.",
-    hidden: true,
-  },
-  {
     id: "cursor-color",
     name: "Cursor Color",
     description: "The color of the cursor.",
@@ -236,27 +225,6 @@ const colorOptions: ConfigOption[] = [
     type: "color",
     default: "",
     category: "colors",
-  },
-  {
-    id: "cursor-invert-fg-bg",
-    name: "Invert Cursor Colors",
-    description: "If enabled, cursor colors are inverted instead of using custom colors.",
-    type: "boolean",
-    default: false,
-    category: "colors",
-    deprecated: true,
-    note: "Not an official Ghostty config option. Use cursor-color/cursor-text instead.",
-    hidden: true,
-  },
-  {
-    id: "bold-is-bright",
-    name: "Bold is Bright",
-    description: "Use bright colors for bold text.",
-    type: "boolean",
-    default: false,
-    category: "colors",
-    deprecated: true,
-    note: "Deprecated in Ghostty 1.2.0. Use bold-color instead.",
   },
   {
     id: "bold-color",
@@ -1090,6 +1058,16 @@ const shellOptions: ConfigOption[] = [
     category: "shell",
   },
   {
+    id: "input",
+    name: "Input",
+    description: "Data to send as input to the command on startup. Format: raw:<string> or path:<path>.",
+    type: "string",
+    default: "",
+    category: "shell",
+    placeholder: "raw:Hello",
+    sinceVersion: "1.3.0",
+  },
+  {
     id: "working-directory",
     name: "Working Directory",
     description: "Initial working directory. Special values: 'home', 'inherit'.",
@@ -1182,6 +1160,17 @@ const applicationOptions: ConfigOption[] = [
       { value: "false", label: "Disabled" },
       { value: "osc8", label: "OSC 8 Only" },
     ],
+  },
+  {
+    id: "link",
+    name: "Link Match",
+    description: "Match regex patterns in terminal text and associate with actions (e.g., open URLs). Format: <regex>=<action>. Earlier entries take precedence.",
+    type: "string",
+    default: "",
+    category: "application",
+    repeatable: true,
+    sinceVersion: "1.3.0",
+    placeholder: "https://.*=copy_to_clipboard",
   },
   {
     id: "notify-on-command-finish",
@@ -1984,6 +1973,15 @@ const advancedOptions: ConfigOption[] = [
     ],
   },
   {
+    id: "progress-style",
+    name: "Progress Bars",
+    description: "Allow applications to show graphical progress bars using ConEmu OSC 9;4 escape sequence.",
+    type: "boolean",
+    default: true,
+    category: "advanced",
+    sinceVersion: "1.3.0",
+  },
+  {
     id: "image-storage-limit",
     name: "Image Storage Limit",
     description: "Maximum bytes for image storage.",
@@ -2199,88 +2197,6 @@ export const allOptions: ConfigOption[] = [
   ...macosOptions,
   ...linuxOptions,
   ...advancedOptions,
-];
-
-// Group options by category
-export const optionGroups: ConfigGroup[] = [
-  {
-    id: "fonts-general",
-    name: "Font Settings",
-    category: "fonts",
-    options: fontOptions,
-  },
-  {
-    id: "colors-general",
-    name: "Color Settings",
-    category: "colors",
-    options: colorOptions,
-  },
-  {
-    id: "window-general",
-    name: "Window Settings",
-    category: "window",
-    options: windowOptions,
-  },
-  {
-    id: "cursor-general",
-    name: "Cursor Settings",
-    category: "cursor",
-    options: cursorOptions,
-  },
-  {
-    id: "mouse-general",
-    name: "Mouse Settings",
-    category: "mouse",
-    options: mouseOptions,
-  },
-  {
-    id: "clipboard-general",
-    name: "Clipboard Settings",
-    category: "clipboard",
-    options: clipboardOptions,
-  },
-  {
-    id: "keybinds-general",
-    name: "Keybindings",
-    category: "keybinds",
-    options: keybindOptions,
-  },
-  {
-    id: "shell-general",
-    name: "Shell Settings",
-    category: "shell",
-    options: shellOptions,
-  },
-  {
-    id: "application-general",
-    name: "Application Settings",
-    category: "application",
-    options: applicationOptions,
-  },
-  {
-    id: "quick-terminal-general",
-    name: "Quick Terminal",
-    category: "quick-terminal",
-    options: quickTerminalOptions,
-  },
-  {
-    id: "macos-general",
-    name: "macOS Settings",
-    category: "macos",
-    options: macosOptions,
-  },
-  {
-    id: "linux-general",
-    name: "Linux Settings",
-    category: "linux",
-    options: linuxOptions,
-  },
-  {
-    id: "advanced-general",
-    name: "Advanced Settings",
-    category: "advanced",
-    options: advancedOptions,
-  },
 ];
 
 // Get options by category (excluding hidden options)
