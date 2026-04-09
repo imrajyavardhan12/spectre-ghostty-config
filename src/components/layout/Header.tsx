@@ -187,7 +187,7 @@ export function Header() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div>
+                <span className="inline-flex">
                   <PresetsDialog
                     trigger={
                       <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -195,7 +195,7 @@ export function Header() {
                       </Button>
                     }
                   />
-                </div>
+                </span>
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 <p>Configuration Presets</p>

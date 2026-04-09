@@ -66,11 +66,10 @@ export function PresetsDialog({ trigger }: PresetsDialogProps) {
     loadConfig(preset.config);
     setAppliedPreset(preset.id);
     
-    // Close after a brief delay to show the checkmark
+    // Clear the applied indicator after a delay but keep dialog open
     setTimeout(() => {
-      setOpen(false);
       setAppliedPreset(null);
-    }, 600);
+    }, 2000);
   };
 
   const PresetCard = ({ preset }: { preset: ConfigPreset }) => {
@@ -136,7 +135,7 @@ export function PresetsDialog({ trigger }: PresetsDialogProps) {
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg">
+      <SheetContent className="w-full sm:max-w-lg p-6">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -178,12 +177,12 @@ export function PresetsDialog({ trigger }: PresetsDialogProps) {
           ) : (
             // Show categorized presets
             <Tabs defaultValue="starter" className="w-full">
-              <TabsList className="w-full grid grid-cols-4">
+              <TabsList className="w-full grid grid-cols-4 bg-muted/50 p-1 rounded-xl">
                 {presetCategories.map(cat => (
                   <TabsTrigger 
                     key={cat.id} 
                     value={cat.id}
-                    className="text-xs"
+                    className="text-xs font-medium py-1.5 px-3 rounded-lg transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     {cat.name}
                   </TabsTrigger>
@@ -191,7 +190,7 @@ export function PresetsDialog({ trigger }: PresetsDialogProps) {
               </TabsList>
               
               {presetCategories.map(cat => (
-                <TabsContent key={cat.id} value={cat.id}>
+                <TabsContent key={cat.id} value={cat.id} className="animate-fade-in">
                   <ScrollArea className="h-[calc(100vh-340px)]">
                     <div className="space-y-3 pr-4 pt-2">
                       <p className="text-xs text-muted-foreground mb-3">

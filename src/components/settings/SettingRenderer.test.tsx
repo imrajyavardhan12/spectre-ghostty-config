@@ -236,16 +236,18 @@ describe('SettingRenderer', () => {
   });
 
   it('should show unsupported message for unknown type', () => {
-    const option: ConfigOption = {
+    // Using type assertion to test unknown type handling
+    const option = {
       id: 'unknown',
       name: 'Unknown Option',
       description: 'Unknown type',
-      type: 'unknown' as ConfigOption['type'],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      type: 'unknown' as any,
       default: '',
-      category: 'advanced',
+      category: 'advanced' as const,
     };
 
-    render(<SettingRenderer option={option} />);
+    render(<SettingRenderer option={option as ConfigOption} />);
     expect(screen.getByText(/Unsupported option type/)).toBeTruthy();
   });
 });
