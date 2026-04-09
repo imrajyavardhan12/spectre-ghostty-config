@@ -1,12 +1,12 @@
 const ESC = "\x1b";
 const CSI = `${ESC}[`;
 
+// ANSI escape codes - defined for future use in demo content
 const RESET = `${CSI}0m`;
 const BOLD = `${CSI}1m`;
 const DIM = `${CSI}2m`;
 const ITALIC = `${CSI}3m`;
 const UNDERLINE = `${CSI}4m`;
-const BLINK = `${CSI}5m`;
 const INVERSE = `${CSI}7m`;
 const STRIKETHROUGH = `${CSI}9m`;
 
@@ -27,24 +27,6 @@ const FG_BRIGHT_BLUE = `${CSI}94m`;
 const FG_BRIGHT_MAGENTA = `${CSI}95m`;
 const FG_BRIGHT_CYAN = `${CSI}96m`;
 const FG_BRIGHT_WHITE = `${CSI}97m`;
-
-const BG_BLACK = `${CSI}40m`;
-const BG_RED = `${CSI}41m`;
-const BG_GREEN = `${CSI}42m`;
-const BG_YELLOW = `${CSI}43m`;
-const BG_BLUE = `${CSI}44m`;
-const BG_MAGENTA = `${CSI}45m`;
-const BG_CYAN = `${CSI}46m`;
-const BG_WHITE = `${CSI}47m`;
-
-const BG_BRIGHT_BLACK = `${CSI}100m`;
-const BG_BRIGHT_RED = `${CSI}101m`;
-const BG_BRIGHT_GREEN = `${CSI}102m`;
-const BG_BRIGHT_YELLOW = `${CSI}103m`;
-const BG_BRIGHT_BLUE = `${CSI}104m`;
-const BG_BRIGHT_MAGENTA = `${CSI}105m`;
-const BG_BRIGHT_CYAN = `${CSI}106m`;
-const BG_BRIGHT_WHITE = `${CSI}107m`;
 
 export function generateDemoContent(themeName?: string | null, os?: string): string {
   const lines: string[] = [];

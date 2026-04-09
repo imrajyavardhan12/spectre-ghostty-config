@@ -305,7 +305,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
             <div className="text-xs text-muted-foreground">
               {triggerValidation?.valid && triggerValidation.sequences.length > 0 && (
                 <span className="mr-3">
-                  Sequence: {triggerValidation.sequences.map((seq, i) => {
+                  Sequence: {triggerValidation.sequences.map((seq) => {
                     const parts = [...seq.modifiers];
                     if (seq.key) parts.push(seq.key);
                     return parts.join("+");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Minimize2, Maximize2, Loader2, AlertCircle } from "lucide-react";
+import { Minimize2, Maximize2, Loader2, AlertCircle, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfigStore } from "@/lib/store/config-store";
 import { initGhostty } from "@/lib/ghostty/init";
@@ -367,5 +367,28 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Floating button to toggle preview
+export function PreviewToggleButton({
+  isOpen,
+  onToggle,
+}: {
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Button
+      onClick={onToggle}
+      variant={isOpen ? "secondary" : "outline"}
+      className={cn(
+        "gap-2 shadow-lg transition-all duration-300",
+        isOpen && "bg-primary text-primary-foreground hover:bg-primary/90"
+      )}
+    >
+      <Monitor className="h-4 w-4" />
+      <span className="hidden sm:inline">Preview</span>
+    </Button>
   );
 }

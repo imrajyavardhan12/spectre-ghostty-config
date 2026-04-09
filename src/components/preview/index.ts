@@ -1,2 +1,1 @@
-export { TerminalPreview, PreviewToggleButton } from "./TerminalPreview";
-export { GhosttyPreview } from "./GhosttyPreview";
+export { GhosttyPreview, PreviewToggleButton } from "./GhosttyPreview";

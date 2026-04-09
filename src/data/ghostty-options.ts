@@ -1171,6 +1171,7 @@ const applicationOptions: ConfigOption[] = [
     repeatable: true,
     sinceVersion: "1.3.0",
     placeholder: "https://.*=copy_to_clipboard",
+    note: "Not yet implemented in Ghostty. This feature is documented but cannot be set until Ghostty adds support.",
   },
   {
     id: "notify-on-command-finish",
