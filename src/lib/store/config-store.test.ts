@@ -58,6 +58,25 @@ describe('config-store', () => {
       const state = getStoreState();
       expect(state.config['font-size']).toBeUndefined();
     });
+
+    it('should normalize legacy positional palette values', () => {
+      act(() => {
+        useConfigStore.getState().setValue('palette', ['#000000', '#ff0000']);
+      });
+
+      const state = getStoreState();
+      expect(state.config['palette']).toEqual(['0=#000000', '1=#ff0000']);
+    });
+
+    it('should remove array values if set to an empty default array', () => {
+      act(() => {
+        useConfigStore.getState().setValue('keybind', ['ctrl+shift+t=new_tab']);
+        useConfigStore.getState().setValue('keybind', []);
+      });
+
+      const state = getStoreState();
+      expect(state.config['keybind']).toBeUndefined();
+    });
   });
 
   describe('resetValue', () => {
@@ -158,6 +177,23 @@ keybind = ctrl+shift+v=paste_from_clipboard
       ]);
     });
 
+    it('should handle indexed palette values', () => {
+      const configString = `
+palette = 0=#000000
+palette = 1=ff0000
+`;
+
+      act(() => {
+        useConfigStore.getState().importConfig(configString);
+      });
+
+      const state = getStoreState();
+      expect(state.config['palette']).toEqual([
+        '0=#000000',
+        '1=#ff0000',
+      ]);
+    });
+
     it('should skip comments and empty lines', () => {
       const configString = `
 # This is a comment
@@ -206,6 +242,27 @@ font-size = 16
 
       const output = useConfigStore.getState().exportConfig();
       expect(output).toContain('# Theme: Tokyo Night');
+    });
+
+    it('should export palette values using Ghostty index=color syntax', () => {
+      act(() => {
+        useConfigStore.getState().setValue('palette', ['0=#000000', '1=#ff0000']);
+      });
+
+      const output = useConfigStore.getState().exportConfig();
+      expect(output).toContain('palette = 0=#000000');
+      expect(output).toContain('palette = 1=#ff0000');
+    });
+
+    it('should normalize legacy positional palette values during export', () => {
+      act(() => {
+        useConfigStore.getState().setValue('palette', ['#000000', '#ff0000']);
+      });
+
+      const output = useConfigStore.getState().exportConfig();
+      expect(output).toContain('palette = 0=#000000');
+      expect(output).toContain('palette = 1=#ff0000');
+      expect(output).not.toContain('palette = #000000');
     });
   });
 

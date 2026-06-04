@@ -103,9 +103,15 @@ export function ActionCombobox({
     const handleSelect = (action: KeybindAction) => {
         if (action.hasParam) {
             if (action.paramOptions && action.paramOptions.length > 0) {
-                // Show param options picker
+                // Show param options picker. Optional-param actions include a default/no-param choice.
                 setPendingAction(action);
                 setSearch("");
+            } else if (action.paramRequired === false) {
+                // Optional free-form param: default to no parameter.
+                onChange(action.action);
+                setOpen(false);
+                setSearch("");
+                setPendingAction(null);
             } else {
                 // Free-form param input needed
                 setPendingAction(action);
@@ -192,6 +198,26 @@ export function ActionCombobox({
                                 // Fixed options to choose from
                                 <CommandList className="max-h-[250px]">
                                     <CommandGroup heading={pendingAction.paramDesc || "Select option"}>
+                                        {pendingAction.paramRequired === false && (
+                                            <CommandItem
+                                                value="__default__"
+                                                onSelect={() => {
+                                                    onChange(pendingAction.action);
+                                                    setOpen(false);
+                                                    setPendingAction(null);
+                                                    setSearch("");
+                                                }}
+                                                className="font-mono"
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        value === pendingAction.action ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                />
+                                                default
+                                            </CommandItem>
+                                        )}
                                         {pendingAction.paramOptions.map((option) => (
                                             <CommandItem
                                                 key={option}
@@ -277,7 +303,11 @@ export function ActionCombobox({
                                                     <div className="flex items-center gap-1 ml-auto">
                                                         {action.hasParam && (
                                                             <Badge variant="secondary" className="text-[10px] px-1 py-0 flex items-center gap-0.5">
-                                                                {action.paramOptions ? "options" : "param"}
+                                                                {action.paramRequired === false
+                                                                    ? "optional"
+                                                                    : action.paramOptions
+                                                                        ? "options"
+                                                                        : "param"}
                                                                 <ChevronRight className="h-3 w-3" />
                                                             </Badge>
                                                         )}

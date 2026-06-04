@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useState, useEffect } from "react";
 import { allOptions } from "@/data/ghostty-options";
+import { normalizePaletteEntries } from "@/lib/utils/palette";
 
 export type ConfigValues = Record<string, unknown>;
 
@@ -31,6 +32,32 @@ interface ConfigStore {
 function getDefaultValue(key: string): unknown {
   const option = allOptions.find((opt) => opt.id === key);
   return option?.default;
+}
+
+function normalizeValue(key: string, value: unknown): unknown {
+  if (key === "palette" && Array.isArray(value)) {
+    return normalizePaletteEntries(value as string[]);
+  }
+
+  return value;
+}
+
+function normalizeConfigValues(config: ConfigValues): ConfigValues {
+  const normalized: ConfigValues = { ...config };
+
+  for (const [key, value] of Object.entries(normalized)) {
+    normalized[key] = normalizeValue(key, value);
+  }
+
+  return normalized;
+}
+
+function valuesEqual(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, index) => item === b[index]);
+  }
+
+  return a === b;
 }
 
 // Parse a Ghostty config string into an object
@@ -122,16 +149,17 @@ export const useConfigStore = create<ConfigStore>()(
       appliedTheme: null,
 
       setValue: (key: string, value: unknown) => {
+        const normalizedValue = normalizeValue(key, value);
         const defaultValue = getDefaultValue(key);
 
         set((state) => {
           const newConfig = { ...state.config };
 
           // If value equals default, remove from config
-          if (value === defaultValue || (value === "" && defaultValue === "")) {
+          if (valuesEqual(normalizedValue, defaultValue) || (normalizedValue === "" && defaultValue === "")) {
             delete newConfig[key];
           } else {
-            newConfig[key] = value;
+            newConfig[key] = normalizedValue;
           }
 
           return { config: newConfig };
@@ -172,12 +200,12 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       loadConfig: (newConfig: ConfigValues, themeName?: string) => {
-        set({ config: newConfig, appliedTheme: themeName || null });
+        set({ config: normalizeConfigValues(newConfig), appliedTheme: themeName || null });
       },
 
       importConfig: (configString: string) => {
         const parsed = parseConfig(configString);
-        set({ config: parsed });
+        set({ config: normalizeConfigValues(parsed) });
       },
 
       exportConfig: () => {
@@ -206,7 +234,8 @@ export const useConfigStore = create<ConfigStore>()(
 
           // Handle arrays (keybinds, palette)
           if (Array.isArray(value)) {
-            for (const item of value) {
+            const items = key === "palette" ? normalizePaletteEntries(value as string[]) : value;
+            for (const item of items) {
               categories.get(category)!.push(`${key} = ${formatValue(key, item)}`);
             }
           } else {

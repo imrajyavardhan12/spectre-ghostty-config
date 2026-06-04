@@ -1946,7 +1946,7 @@ const advancedOptions: ConfigOption[] = [
   {
     id: "scrollback-limit",
     name: "Scrollback Limit",
-    description: "Maximum number of lines to keep in scrollback buffer.",
+    description: "Maximum size of the scrollback buffer in bytes, including the active screen.",
     type: "number",
     default: 10000000,
     category: "advanced",
