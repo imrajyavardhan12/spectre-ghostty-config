@@ -1,11 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useState, useEffect } from "react";
-import { allOptions } from "@/data/ghostty-options";
+import type { ConfigValues } from "@/lib/schema/types";
+import { exportGhosttyConfig } from "@/lib/utils/config-export";
+import { getDefaultValue, isRepeatableOption } from "@/lib/utils/config-options";
+import { parseGhosttyConfig } from "@/lib/utils/config-import";
 import { normalizePaletteEntries } from "@/lib/utils/palette";
-import { SPECTRE_VERSION } from "@/lib/version";
 
-export type ConfigValues = Record<string, unknown>;
+export type { ConfigValues };
 
 interface ConfigStore {
   // Current config values (user-modified values only)
@@ -27,84 +29,6 @@ interface ConfigStore {
   isModified: (key: string) => boolean;
   getDiff: () => ConfigValues;
   exportConfig: () => string;
-}
-
-// Get default value for a key
-function getDefaultValue(key: string): unknown {
-  const option = allOptions.find((opt) => opt.id === key);
-  return option?.default;
-}
-
-const PATH_OPTIONS = new Set([
-  "background-image",
-  "bell-audio-path",
-  "config-file",
-  "custom-shader",
-  "gtk-custom-css",
-]);
-
-function isPathOption(key: string): boolean {
-  return PATH_OPTIONS.has(key);
-}
-
-function isRepeatableOption(key: string): boolean {
-  const option = allOptions.find((opt) => opt.id === key);
-  if (!option) return false;
-  return (
-    option.type === "keybind" ||
-    option.type === "palette" ||
-    ("repeatable" in option && option.repeatable === true)
-  );
-}
-
-function stripDoubleQuotes(value: string): string {
-  if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
-    return value.slice(1, -1);
-  }
-
-  return value;
-}
-
-function stripMatchingQuotes(value: string): string {
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value.slice(1, -1);
-  }
-
-  return value;
-}
-
-type ParsedPathValue =
-  | { kind: "reset" }
-  | { kind: "ignore" }
-  | { kind: "value"; value: string };
-
-function parsePathValue(rawValue: string): ParsedPathValue {
-  if (rawValue === "") {
-    return { kind: "reset" };
-  }
-
-  // Ghostty path parsing treats a leading ? as the optional-file marker before
-  // stripping double quotes. Therefore `?"foo"` is optional, while `"?foo"`
-  // is a required literal path beginning with ?.
-  if (rawValue.startsWith("?")) {
-    const path = stripDoubleQuotes(rawValue.slice(1));
-    return path.length === 0
-      ? { kind: "ignore" }
-      : { kind: "value", value: `?${path}` };
-  }
-
-  const unquoted = stripDoubleQuotes(rawValue);
-  if (unquoted.length === 0) {
-    return { kind: "ignore" };
-  }
-
-  return {
-    kind: "value",
-    value: unquoted.startsWith("?") ? `"${unquoted}"` : unquoted,
-  };
 }
 
 function normalizeValue(key: string, value: unknown): unknown {
@@ -154,114 +78,6 @@ function normalizeConfigValues(config: ConfigValues): ConfigValues {
   }
 
   return normalized;
-}
-
-// Parse a Ghostty config string into an object
-function parseConfig(configString: string): ConfigValues {
-  const config: ConfigValues = {};
-  const lines = configString.split("\n");
-
-  const appendValue = (key: string, value: string, alwaysArray = true) => {
-    const existing = config[key];
-    if (Array.isArray(existing)) {
-      existing.push(value);
-    } else if (existing !== undefined) {
-      config[key] = [existing, value];
-    } else {
-      config[key] = alwaysArray ? [value] : value;
-    }
-  };
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-
-    // Parse key = value
-    const equalsIndex = trimmed.indexOf("=");
-    if (equalsIndex === -1) continue;
-
-    const key = trimmed.slice(0, equalsIndex).trim();
-    const rawValue = trimmed.slice(equalsIndex + 1).trim();
-
-    // Find the option to determine proper type
-    const option = allOptions.find((opt) => opt.id === key);
-    const parsedPathValue = option && isPathOption(key) ? parsePathValue(rawValue) : null;
-
-    if (option) {
-      if (parsedPathValue?.kind === "ignore") {
-        continue;
-      }
-
-      // In Ghostty, empty known values reset that key to its default.
-      if (rawValue === "" || parsedPathValue?.kind === "reset") {
-        delete config[key];
-        continue;
-      }
-
-      const value = parsedPathValue?.kind === "value" ? parsedPathValue.value : stripMatchingQuotes(rawValue);
-
-      // Convert value to proper type
-      switch (option.type) {
-        case "boolean":
-          config[key] = value === "true";
-          break;
-        case "number":
-          config[key] = parseFloat(value as string) || 0;
-          break;
-        case "keybind":
-        case "palette":
-          // These are repeatable, accumulate values
-          appendValue(key, value as string);
-          break;
-        case "string":
-          if (option.repeatable) {
-            appendValue(key, value as string, false);
-          } else {
-            config[key] = value;
-          }
-          break;
-        default:
-          config[key] = value;
-      }
-    } else {
-      // Unknown option, store as string
-      config[key] = stripMatchingQuotes(rawValue);
-    }
-  }
-
-  return config;
-}
-
-// Format a value for export
-function formatValue(key: string, value: unknown): string {
-  const option = allOptions.find((opt) => opt.id === key);
-
-  if (value === null || value === undefined) return "";
-
-  // Convert "default" back to empty string for Ghostty config
-  if (value === "default" && option?.type === "enum") {
-    return "";
-  }
-
-  if (option?.type === "boolean") {
-    return value ? "true" : "false";
-  }
-
-  if (typeof value === "string") {
-    if (isPathOption(key) && (value.startsWith("?") || value.startsWith('"?'))) {
-      return value;
-    }
-
-    if (value.includes(" ")) {
-      return `"${value}"`;
-    }
-  }
-
-  return String(value);
 }
 
 export const useConfigStore = create<ConfigStore>()(
@@ -325,55 +141,13 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       importConfig: (configString: string) => {
-        const parsed = parseConfig(configString);
+        const parsed = parseGhosttyConfig(configString);
         set({ config: normalizeConfigValues(parsed) });
       },
 
       exportConfig: () => {
         const { config, appliedTheme } = get();
-        const lines: string[] = [
-          `# Generated by Spectre v${SPECTRE_VERSION} - Ghostty Config Generator`,
-          "# https://github.com/imrajyavardhan12/spectre-ghostty-config",
-        ];
-        
-        if (appliedTheme) {
-          lines.push(`# Theme: ${appliedTheme}`);
-        }
-        
-        lines.push("");
-
-        // Group options by category for organized output
-        const categories = new Map<string, string[]>();
-
-        for (const [key, value] of Object.entries(config)) {
-          const option = allOptions.find((opt) => opt.id === key);
-          const category = option?.category || "other";
-
-          if (!categories.has(category)) {
-            categories.set(category, []);
-          }
-
-          // Handle arrays (keybinds, palette)
-          if (Array.isArray(value)) {
-            const items = key === "palette" ? normalizePaletteEntries(value as string[]) : value;
-            for (const item of items) {
-              categories.get(category)!.push(`${key} = ${formatValue(key, item)}`);
-            }
-          } else {
-            categories.get(category)!.push(`${key} = ${formatValue(key, value)}`);
-          }
-        }
-
-        // Output grouped by category
-        for (const [category, configLines] of categories) {
-          if (configLines.length > 0) {
-            lines.push(`# ${category.charAt(0).toUpperCase() + category.slice(1)}`);
-            lines.push(...configLines);
-            lines.push("");
-          }
-        }
-
-        return lines.join("\n");
+        return exportGhosttyConfig(config, appliedTheme);
       },
     }),
     {
