@@ -18,6 +18,10 @@ const TRIGGER_PREFIXES = new Set([
   "physical",
 ]);
 
+// Special keybind values accepted by Ghostty in place of trigger=action.
+// Source: Ghostty Config.zig documents `keybind=clear` to clear all keybindings.
+const SPECIAL_KEYBIND_VALUES = new Set(["clear"]);
+
 // Common function/special keys (from W3C spec)
 const SPECIAL_KEYS = new Set([
   // Function keys
@@ -806,8 +810,13 @@ export function validateKeybind(keybind: string): ValidationResult {
     return { valid: false, errors: ["Keybind cannot be empty"], warnings: [] };
   }
 
+  const trimmedKeybind = keybind.trim();
+  if (SPECIAL_KEYBIND_VALUES.has(trimmedKeybind)) {
+    return result;
+  }
+
   // Split by = to get trigger and action
-  const equalsIndex = keybind.indexOf("=");
+  const equalsIndex = trimmedKeybind.indexOf("=");
 
   if (equalsIndex === -1) {
     return {
@@ -817,8 +826,8 @@ export function validateKeybind(keybind: string): ValidationResult {
     };
   }
 
-  const trigger = keybind.slice(0, equalsIndex).trim();
-  const action = keybind.slice(equalsIndex + 1).trim();
+  const trigger = trimmedKeybind.slice(0, equalsIndex).trim();
+  const action = trimmedKeybind.slice(equalsIndex + 1).trim();
 
   // Handle trigger sequences (e.g., ctrl+a>n)
   const triggerParts = trigger.split(">").map(t => t.trim()).filter(t => t);

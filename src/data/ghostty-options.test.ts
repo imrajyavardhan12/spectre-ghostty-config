@@ -73,6 +73,15 @@ describe('ghostty-options', () => {
       expect(option).toBeDefined();
       expect(option?.type).toBe('enum');
     });
+
+    it('should mark official repeatable path options as repeatable', () => {
+      for (const id of ['config-file', 'custom-shader', 'gtk-custom-css']) {
+        const option = getOptionById(id);
+        expect(option, `${id} should exist`).toBeDefined();
+        expect(option?.type, `${id} should be string-backed in Spectre`).toBe('string');
+        expect('repeatable' in option! && option.repeatable, `${id} should be repeatable`).toBe(true);
+      }
+    });
   });
 
   describe('getOptionsByCategory', () => {

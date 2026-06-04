@@ -1854,11 +1854,12 @@ const linuxOptions: ConfigOption[] = [
   {
     id: "gtk-custom-css",
     name: "Custom CSS",
-    description: "Path to custom GTK CSS file.",
+    description: "Path to custom GTK CSS file. Can be repeated to load multiple files.",
     type: "string",
     default: "",
     category: "linux",
     platform: ["linux"],
+    repeatable: true,
     sinceVersion: "1.1.0",
   },
   {
@@ -1955,10 +1956,11 @@ const advancedOptions: ConfigOption[] = [
   {
     id: "custom-shader",
     name: "Custom Shader",
-    description: "Path to custom GLSL shader file (Shadertoy compatible).",
+    description: "Path to custom GLSL shader file (Shadertoy compatible). Can be repeated to load multiple shaders in order.",
     type: "string",
     default: "",
     category: "advanced",
+    repeatable: true,
   },
   {
     id: "custom-shader-animation",
