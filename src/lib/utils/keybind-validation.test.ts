@@ -262,6 +262,12 @@ describe('keybind-validation', () => {
       const result = validateKeybind('global:ctrl+shift+n=new_window');
       expect(result.valid).toBe(true);
     });
+
+    it('should allow Ghostty special keybind reset values', () => {
+      const result = validateKeybind('clear');
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
   });
 
   describe('KEYBIND_ACTIONS', () => {

@@ -26,19 +26,20 @@ Track Ghostty compatibility separately from the Spectre app version.
    ```
 
 3. Update `CHANGELOG.md`.
-4. Bump `package.json` version.
-5. Commit the release change:
+4. Bump `package.json` version and `src/lib/version.ts` together.
+5. Run the version sync test (`src/lib/version.test.ts`) as part of the full test suite.
+6. Commit the release change:
 
    ```bash
-   git add package.json CHANGELOG.md
+   git add package.json src/lib/version.ts CHANGELOG.md
    git commit -m "chore: release vX.Y.Z"
    ```
 
-6. Tag and push:
+7. Tag and push:
 
    ```bash
    git tag vX.Y.Z
    git push origin main --tags
    ```
 
-7. Draft a GitHub Release using the changelog notes.
+8. Draft a GitHub Release using the changelog notes.

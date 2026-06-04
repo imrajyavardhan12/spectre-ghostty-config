@@ -13,6 +13,7 @@ import {
 import { useConfigStore } from "@/lib/store/config-store";
 import { PresetsDialog } from "@/components/editor/PresetsDialog";
 import { cn } from "@/lib/utils";
+import { SPECTRE_VERSION } from "@/lib/version";
 
 export function Header() {
   // Use selectors to properly subscribe to config changes
@@ -67,6 +68,9 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2 group">
           <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
           <span className="font-medium">Spectre</span>
+          <span className="hidden sm:inline text-xs text-muted-foreground">
+            v{SPECTRE_VERSION}
+          </span>
           <span className="text-sm text-muted-foreground hidden lg:inline">
             Ghostty Config Generator
           </span>

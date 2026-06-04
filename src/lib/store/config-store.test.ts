@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useConfigStore } from '@/lib/store/config-store';
+import { SPECTRE_VERSION } from '@/lib/version';
 import { act } from '@testing-library/react';
 
 // Helper to run hooks inside a test
@@ -164,6 +165,8 @@ cursor-style-blink = true
       const configString = `
 keybind = ctrl+shift+c=copy_to_clipboard
 keybind = ctrl+shift+v=paste_from_clipboard
+keybind = ctrl+shift+e=text:FOO=bar
+keybind = clear
 `;
 
       act(() => {
@@ -174,13 +177,143 @@ keybind = ctrl+shift+v=paste_from_clipboard
       expect(state.config['keybind']).toEqual([
         'ctrl+shift+c=copy_to_clipboard',
         'ctrl+shift+v=paste_from_clipboard',
+        'ctrl+shift+e=text:FOO=bar',
+        'clear',
       ]);
+
+      const output = useConfigStore.getState().exportConfig();
+      expect(output).toContain('keybind = ctrl+shift+e=text:FOO=bar');
+      expect(output).toContain('keybind = clear');
+    });
+
+    it('should round-trip quoted strings with spaces and equals signs', () => {
+      const configString = `
+title = "Spectre = Ghostty Config"
+command = "zsh -lc echo=hello"
+unknown-option = "raw = value with spaces"
+`;
+
+      act(() => {
+        useConfigStore.getState().importConfig(configString);
+      });
+
+      const state = getStoreState();
+      expect(state.config['title']).toBe('Spectre = Ghostty Config');
+      expect(state.config['command']).toBe('zsh -lc echo=hello');
+      expect(state.config['unknown-option']).toBe('raw = value with spaces');
+
+      const output = useConfigStore.getState().exportConfig();
+      expect(output).toContain('title = "Spectre = Ghostty Config"');
+      expect(output).toContain('command = "zsh -lc echo=hello"');
+      expect(output).toContain('unknown-option = "raw = value with spaces"');
+    });
+
+    it('should round-trip repeatable string options', () => {
+      const configString = `
+font-family = JetBrains Mono
+font-family = Symbols Nerd Font
+env = PATH=/usr/local/bin
+env = EDITOR=nvim
+config-file = ?local
+config-file = /etc/ghostty/config
+custom-shader = shaders/crt.glsl
+custom-shader = shaders/glow.glsl
+gtk-custom-css = gtk/base.css
+gtk-custom-css = gtk/overrides.css
+`;
+
+      act(() => {
+        useConfigStore.getState().importConfig(configString);
+      });
+
+      const state = getStoreState();
+      expect(state.config['font-family']).toEqual([
+        'JetBrains Mono',
+        'Symbols Nerd Font',
+      ]);
+      expect(state.config['env']).toEqual([
+        'PATH=/usr/local/bin',
+        'EDITOR=nvim',
+      ]);
+      expect(state.config['config-file']).toEqual([
+        '?local',
+        '/etc/ghostty/config',
+      ]);
+      expect(state.config['custom-shader']).toEqual([
+        'shaders/crt.glsl',
+        'shaders/glow.glsl',
+      ]);
+      expect(state.config['gtk-custom-css']).toEqual([
+        'gtk/base.css',
+        'gtk/overrides.css',
+      ]);
+
+      const output = useConfigStore.getState().exportConfig();
+      expect(output).toContain('font-family = "JetBrains Mono"');
+      expect(output).toContain('font-family = "Symbols Nerd Font"');
+      expect(output).toContain('env = PATH=/usr/local/bin');
+      expect(output).toContain('env = EDITOR=nvim');
+      expect(output).toContain('config-file = ?local');
+      expect(output).toContain('config-file = /etc/ghostty/config');
+      expect(output).toContain('custom-shader = shaders/crt.glsl');
+      expect(output).toContain('custom-shader = shaders/glow.glsl');
+      expect(output).toContain('gtk-custom-css = gtk/base.css');
+      expect(output).toContain('gtk-custom-css = gtk/overrides.css');
+    });
+
+    it('should preserve Ghostty path optional marker semantics', () => {
+      const configString = `
+config-file = first
+config-file = ""
+config-file = second
+config-file =
+config-file = after-reset
+gtk-custom-css = "?required.css"
+gtk-custom-css = ?optional.css
+custom-shader = first.glsl
+custom-shader = ""
+custom-shader = second.glsl
+custom-shader = reset
+custom-shader = ignore
+`;
+
+      act(() => {
+        useConfigStore.getState().importConfig(configString);
+      });
+
+      const state = getStoreState();
+      expect(state.config['config-file']).toBe('after-reset');
+      expect(state.config['gtk-custom-css']).toEqual([
+        '"?required.css"',
+        '?optional.css',
+      ]);
+      expect(state.config['custom-shader']).toEqual([
+        'first.glsl',
+        'second.glsl',
+        'reset',
+        'ignore',
+      ]);
+
+      const output = useConfigStore.getState().exportConfig();
+      expect(output).not.toContain('config-file = first');
+      expect(output).not.toContain('config-file = second');
+      expect(output).toContain('config-file = after-reset');
+      expect(output).toContain('gtk-custom-css = "?required.css"');
+      expect(output).toContain('gtk-custom-css = ?optional.css');
+      expect(output).toContain('custom-shader = first.glsl');
+      expect(output).toContain('custom-shader = second.glsl');
+      expect(output).toContain('custom-shader = reset');
+      expect(output).toContain('custom-shader = ignore');
+      expect(output).not.toContain('custom-shader = ""');
     });
 
     it('should handle indexed palette values', () => {
       const configString = `
 palette = 0=#000000
 palette = 1=ff0000
+palette = 0b10=red
+palette = 0o10=#111111
+palette = 0xF=ffffff
 `;
 
       act(() => {
@@ -191,7 +324,15 @@ palette = 1=ff0000
       expect(state.config['palette']).toEqual([
         '0=#000000',
         '1=#ff0000',
+        '2=red',
+        '8=#111111',
+        '15=#ffffff',
       ]);
+
+      const output = useConfigStore.getState().exportConfig();
+      expect(output).toContain('palette = 2=red');
+      expect(output).toContain('palette = 8=#111111');
+      expect(output).toContain('palette = 15=#ffffff');
     });
 
     it('should skip comments and empty lines', () => {
@@ -209,6 +350,61 @@ font-size = 16
       const state = getStoreState();
       expect(state.config['font-size']).toBe(16);
     });
+
+    it('should treat empty known values as resets to Ghostty defaults', () => {
+      const configString = `
+font-size = 18
+font-size =
+cursor-style = bar
+cursor-style =
+font-family = JetBrains Mono
+font-family =
+keybind = ctrl+shift+t=new_tab
+keybind =
+`;
+
+      act(() => {
+        useConfigStore.getState().importConfig(configString);
+      });
+
+      const state = getStoreState();
+      expect(state.config).not.toHaveProperty('font-size');
+      expect(state.config).not.toHaveProperty('cursor-style');
+      expect(state.config).not.toHaveProperty('font-family');
+      expect(state.config).not.toHaveProperty('keybind');
+
+      const output = useConfigStore.getState().exportConfig();
+      expect(output).not.toContain('font-size');
+      expect(output).not.toContain('cursor-style');
+      expect(output).not.toContain('font-family');
+      expect(output).not.toContain('keybind');
+    });
+
+    it('should omit imported known values that match Ghostty defaults', () => {
+      const configString = `
+font-size = 13
+desktop-notifications = true
+cursor-style = block
+font-synthetic-style = bold,italic,bold-italic
+unknown-option = true
+`;
+
+      act(() => {
+        useConfigStore.getState().importConfig(configString);
+      });
+
+      const state = getStoreState();
+      expect(state.config).toEqual({
+        'unknown-option': 'true',
+      });
+
+      const output = useConfigStore.getState().exportConfig();
+      expect(output).not.toContain('font-size');
+      expect(output).not.toContain('desktop-notifications');
+      expect(output).not.toContain('cursor-style');
+      expect(output).not.toContain('font-synthetic-style');
+      expect(output).toContain('unknown-option = true');
+    });
   });
 
   describe('exportConfig', () => {
@@ -222,7 +418,7 @@ font-size = 16
 
       expect(output).toContain('font-size = 16');
       expect(output).toContain('font-family = "JetBrains Mono"');
-      expect(output).toContain('# Generated by Spectre');
+      expect(output).toContain(`# Generated by Spectre v${SPECTRE_VERSION}`);
     });
 
     it('should not export default values', () => {

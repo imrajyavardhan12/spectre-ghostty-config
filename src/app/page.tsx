@@ -17,6 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SPECTRE_VERSION } from "@/lib/version";
 
 export default function HomePage() {
   return (
@@ -185,7 +186,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground group cursor-default">
             <Ghost className="h-4 w-4 transition-transform duration-150 group-hover:rotate-12" />
-            <span>Spectre</span>
+            <span>Spectre v{SPECTRE_VERSION}</span>
             <span className="opacity-50">·</span>
             <span>MIT License</span>
           </div>
