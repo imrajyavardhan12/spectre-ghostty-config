@@ -68,6 +68,7 @@ export interface KeybindAction {
   description: string;
   category: ActionCategory;
   hasParam: boolean;
+  paramRequired?: boolean; // Defaults to true when hasParam is true
   paramDesc?: string;
   paramOptions?: string[]; // For actions with fixed param options
   platform?: "macos" | "linux";
@@ -104,6 +105,7 @@ export const KEYBIND_ACTIONS: KeybindAction[] = [
     description: "Copy the selected text to the clipboard. Optional format param added in 1.3.0.",
     category: "clipboard",
     hasParam: true,
+    paramRequired: false,
     paramDesc: "Format (optional): mixed (default), text, html, vt",
     paramOptions: ["mixed", "text", "html", "vt"]
   },
@@ -281,6 +283,7 @@ export const KEYBIND_ACTIONS: KeybindAction[] = [
     description: "Close the current tab and all its splits. Use 'right' param to close all tabs to the right.",
     category: "tab",
     hasParam: true,
+    paramRequired: false,
     paramDesc: "Optional: 'right' to close all tabs to the right",
     paramOptions: ["right"]
   },
@@ -780,7 +783,8 @@ export function validateAction(actionStr: string): ActionValidation {
 
   // Check if action requires param
   const actionDef = KEYBIND_ACTIONS.find(a => a.action === result.action);
-  if (actionDef?.hasParam && !result.param) {
+  const requiresParam = actionDef?.hasParam && actionDef.paramRequired !== false;
+  if (requiresParam && !result.param) {
     return {
       ...result,
       valid: false,

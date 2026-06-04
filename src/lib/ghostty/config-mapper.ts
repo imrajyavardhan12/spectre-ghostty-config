@@ -1,5 +1,6 @@
 import type { ITerminalOptions, ITheme } from "ghostty-web";
 import type { ConfigValues } from "@/lib/store/config-store";
+import { normalizePaletteEntries, parsePaletteEntry } from "@/lib/utils/palette";
 
 const ANSI_COLOR_NAMES = [
   "black",
@@ -22,24 +23,10 @@ const ANSI_COLOR_NAMES = [
 
 type AnsiColorName = (typeof ANSI_COLOR_NAMES)[number];
 
-function parsePaletteEntry(entry: string): { index: number; color: string } | null {
-  const match = entry.match(/^(\d+)=(.+)$/);
-  if (!match) return null;
-  
-  const index = parseInt(match[1], 10);
-  let color = match[2].trim();
-  
-  if (!color.startsWith("#")) {
-    color = `#${color}`;
-  }
-  
-  return { index, color };
-}
-
 function mapPaletteToTheme(palette: string[]): Partial<ITheme> {
   const theme: Partial<ITheme> = {};
   
-  for (const entry of palette) {
+  for (const entry of normalizePaletteEntries(palette)) {
     const parsed = parsePaletteEntry(entry);
     if (!parsed) continue;
     

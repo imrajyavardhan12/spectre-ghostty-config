@@ -1,5 +1,44 @@
 import { describe, it, expect } from 'vitest';
 import { presets, getPresetsByCategory, searchPresets, presetCategories, type ConfigPreset } from '@/data/presets';
+import { allOptions } from '@/data/ghostty-options';
+import type { ConfigOption, StringOption } from '@/lib/schema/types';
+import { validateKeybind } from '@/lib/utils/keybind-validation';
+
+function getPresetValueValidationError(option: ConfigOption, value: unknown): string | null {
+  const typeName = Array.isArray(value) ? 'array' : typeof value;
+
+  switch (option.type) {
+    case 'string': {
+      if (typeof value === 'string') return null;
+      const stringOption = option as StringOption;
+      if (stringOption.repeatable && Array.isArray(value) && value.every(item => typeof item === 'string')) {
+        return null;
+      }
+      return `expected string${stringOption.repeatable ? ' or string[]' : ''}, received ${typeName}`;
+    }
+    case 'color':
+    case 'duration':
+      return typeof value === 'string' ? null : `expected string, received ${typeName}`;
+    case 'number':
+      return typeof value === 'number' ? null : `expected number, received ${typeName}`;
+    case 'boolean':
+      return typeof value === 'boolean' ? null : `expected boolean, received ${typeName}`;
+    case 'enum': {
+      if (typeof value !== 'string') return `expected string enum value, received ${typeName}`;
+      const allowedValues = new Set(option.options.map(item => item.value));
+      return allowedValues.has(value)
+        ? null
+        : `expected one of ${Array.from(allowedValues).join(', ')}, received ${value}`;
+    }
+    case 'palette':
+    case 'keybind':
+      return Array.isArray(value) && value.every(item => typeof item === 'string')
+        ? null
+        : `expected string[], received ${typeName}`;
+    default:
+      return `unsupported option type ${(option as ConfigOption).type}`;
+  }
+}
 
 describe('presets', () => {
   describe('presets array', () => {
@@ -41,6 +80,33 @@ describe('presets', () => {
     it('should have non-empty tags', () => {
       for (const preset of presets) {
         expect(preset.tags.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('should only use known Ghostty options with schema-compatible values', () => {
+      const optionsById = new Map(allOptions.map(option => [option.id, option]));
+
+      for (const preset of presets) {
+        for (const [key, value] of Object.entries(preset.config)) {
+          const option = optionsById.get(key);
+          expect(option, `${preset.id} uses unknown option "${key}"`).toBeDefined();
+          if (!option) continue;
+
+          const validationError = getPresetValueValidationError(option, value);
+          expect(validationError, `${preset.id}.${key}: ${validationError}`).toBeNull();
+        }
+      }
+    });
+
+    it('should contain valid keybind definitions', () => {
+      for (const preset of presets) {
+        const keybinds = preset.config.keybind;
+        if (!Array.isArray(keybinds)) continue;
+
+        for (const keybind of keybinds) {
+          const result = validateKeybind(keybind);
+          expect(result.errors, `${preset.id} keybind "${keybind}" should be valid`).toEqual([]);
+        }
       }
     });
   });
@@ -164,7 +230,7 @@ describe('presets integration with config store', () => {
     // Verify config structure matches what config-store expects
     const config = minimal!.config;
     expect(typeof config['font-size']).toBe('number');
-    expect(typeof config['window-padding-x']).toBe('number');
+    expect(typeof config['window-padding-x']).toBe('string');
   });
 
   it('poweruser keybinds should be valid keybind format', () => {

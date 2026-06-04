@@ -69,6 +69,19 @@ palette = 1=f7768e
       expect(colors.palette[1]).toBe('#f7768e');
     });
 
+    it('should parse non-decimal palette indexes from Ghostty syntax', () => {
+      const content = `
+palette = 0b10=111111
+palette = 0o10=222222
+palette = 0xF=333333
+`;
+      const colors = parseThemeContent(content);
+
+      expect(colors.palette[2]).toBe('#111111');
+      expect(colors.palette[8]).toBe('#222222');
+      expect(colors.palette[15]).toBe('#333333');
+    });
+
     it('should skip comments', () => {
       const content = `
 # This is a comment

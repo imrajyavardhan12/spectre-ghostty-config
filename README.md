@@ -51,10 +51,10 @@ git clone https://github.com/imrajyavardhan12/spectre-ghostty-config.git
 cd spectre-ghostty-config
 
 # Install dependencies
-npm install
+bun install
 
 # Start development server
-npm run dev
+bun run dev
 
 # Open http://localhost:3000
 ```
@@ -62,19 +62,30 @@ npm run dev
 ### Build for Production
 
 ```bash
-npm run build
-npm run start
+bun run build
+bun run start
 ```
 
 ## Tech Stack
 
-- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Terminal Preview**: [ghostty-web](https://github.com/coder/ghostty-web) (libghostty compiled to WASM)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
-- **State Management**: [Zustand](https://zustand-demo.pmnd.rs/)
+- **State Management**: [Zustand 5](https://zustand-demo.pmnd.rs/)
+- **Package Manager**: [Bun](https://bun.sh/)
 - **Icons**: [Lucide React](https://lucide.dev/)
+
+## Ghostty Source of Truth
+
+Spectre treats the official Ghostty project as the source of truth for configuration behavior:
+
+1. [Ghostty Config Reference](https://ghostty.org/docs/config/reference) for option names, descriptions, defaults, types, platforms, and availability.
+2. [Ghostty Official Docs](https://ghostty.org/docs) for broader behavior and release notes.
+3. [Ghostty GitHub/source](https://github.com/ghostty-org/ghostty) when documentation is ambiguous or needs source-level confirmation.
+
+Schema changes should be traceable to these upstream sources.
 
 ## Configuration Categories
 

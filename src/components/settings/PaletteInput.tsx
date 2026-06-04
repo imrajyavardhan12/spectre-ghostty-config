@@ -11,6 +11,7 @@ import {
 import { SettingWrapper } from "./SettingWrapper";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { PaletteOption } from "@/lib/schema/types";
+import { getPaletteColor, normalizePaletteEntries, setPaletteColor } from "@/lib/utils/palette";
 
 interface PaletteInputProps {
   option: PaletteOption;
@@ -34,23 +35,22 @@ const COLOR_NAMES = [
 
 export function PaletteInput({ option }: PaletteInputProps) {
   const { getValue, setValue, resetValue } = useConfigStore();
-  const value = (getValue(option.id) as string[]) || [];
+  const value = normalizePaletteEntries((getValue(option.id) as string[]) || []);
   const modified = useIsModified(option.id);
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const getColor = (index: number): string => {
-    return value[index] || DEFAULT_PALETTE[index] || "#000000";
+    return getPaletteColor(value, index) || DEFAULT_PALETTE[index] || "#000000";
   };
 
   const setColor = (index: number, color: string) => {
-    const newPalette = [...value];
-    // Ensure array is long enough
-    while (newPalette.length <= index) {
-      newPalette.push("");
+    const newPalette = setPaletteColor(value, index, color);
+    if (newPalette.length === 0) {
+      resetValue(option.id);
+    } else {
+      setValue(option.id, newPalette);
     }
-    newPalette[index] = color;
-    setValue(option.id, newPalette);
   };
 
   return (
@@ -151,7 +151,7 @@ function PaletteColorButton({
           <p className="text-xs text-muted-foreground">Palette index: {index}</p>
           <input
             type="color"
-            value={color}
+            value={/^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#000000"}
             onChange={(e) => onChange(e.target.value)}
             className="h-24 w-24 cursor-pointer rounded border-0"
           />

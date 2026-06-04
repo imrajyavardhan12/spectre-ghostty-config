@@ -151,10 +151,10 @@ describe('keybind-validation', () => {
       expect(result.action).toBe('copy_to_clipboard');
     });
 
-    it('should reject copy_to_clipboard without required param', () => {
+    it('should validate copy_to_clipboard without optional param', () => {
       const result = validateAction('copy_to_clipboard');
-      expect(result.valid).toBe(false);
-      expect(result.error).toContain('requires a parameter');
+      expect(result.valid).toBe(true);
+      expect(result.action).toBe('copy_to_clipboard');
     });
 
     it('should validate action with param', () => {
@@ -193,6 +193,12 @@ describe('keybind-validation', () => {
       const result = validateAction('paste_from_clipboard');
       expect(result.valid).toBe(true);
     });
+
+    it('should validate close_tab without optional param', () => {
+      const result = validateAction('close_tab');
+      expect(result.valid).toBe(true);
+      expect(result.action).toBe('close_tab');
+    });
   });
 
   describe('validateKeybind', () => {
@@ -206,6 +212,12 @@ describe('keybind-validation', () => {
     it('should validate keybind with no param action', () => {
       // Use new_tab which doesn't require a param
       const result = validateKeybind('ctrl+shift+t=new_tab');
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should validate keybind with optional param action omitted', () => {
+      const result = validateKeybind('ctrl+shift+c=copy_to_clipboard');
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
@@ -305,9 +317,7 @@ describe('keybind-validation', () => {
     it('all examples should have valid actions', () => {
       for (const example of KEYBIND_EXAMPLES) {
         const actionResult = validateAction(example.action);
-        // Actions with params like increase_font_size:1 are valid
-        // Actions like copy_to_clipboard without param may fail - check valid or has error
-        expect(actionResult.valid || actionResult.error?.includes('requires a parameter')).toBeTruthy();
+        expect(actionResult.valid).toBe(true);
       }
     });
   });
