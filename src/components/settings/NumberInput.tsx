@@ -3,8 +3,11 @@
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { SettingWrapper } from "./SettingWrapper";
+import { ValidationMessages } from "./ValidationMessages";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { NumberOption } from "@/lib/schema/types";
+import { hasValidationErrors, hasValidationWarnings, validateConfigValue } from "@/lib/utils/config-validation";
+import { cn } from "@/lib/utils";
 
 interface NumberInputProps {
   option: NumberOption;
@@ -18,6 +21,16 @@ export function NumberInput({ option, showSlider = true }: NumberInputProps) {
 
   const hasRange = option.min !== undefined && option.max !== undefined;
   const useSlider = showSlider && hasRange;
+  const validation = validateConfigValue(option, value ?? option.default);
+  const hasErrors = hasValidationErrors(validation);
+  const hasWarnings = hasValidationWarnings(validation);
+  const sliderValue = hasRange
+    ? Math.min(option.max!, Math.max(option.min!, value ?? option.default))
+    : value ?? option.default;
+  const inputClassName = cn(
+    hasErrors && "border-destructive focus-visible:ring-destructive/40",
+    !hasErrors && hasWarnings && "border-amber-500 focus-visible:ring-amber-500/40"
+  );
 
   return (
     <SettingWrapper
@@ -36,7 +49,7 @@ export function NumberInput({ option, showSlider = true }: NumberInputProps) {
           <>
             <Slider
               id={option.id}
-              value={[value ?? option.default]}
+              value={[sliderValue]}
               onValueChange={([v]) => setValue(option.id, v)}
               min={option.min}
               max={option.max}
@@ -50,7 +63,8 @@ export function NumberInput({ option, showSlider = true }: NumberInputProps) {
               min={option.min}
               max={option.max}
               step={option.step || 1}
-              className="w-24"
+              aria-invalid={hasErrors}
+              className={cn("w-24", inputClassName)}
             />
           </>
         ) : (
@@ -62,10 +76,12 @@ export function NumberInput({ option, showSlider = true }: NumberInputProps) {
             min={option.min}
             max={option.max}
             step={option.step || 1}
-            className="max-w-32"
+            aria-invalid={hasErrors}
+            className={cn("max-w-32", inputClassName)}
           />
         )}
       </div>
+      <ValidationMessages result={validation} />
     </SettingWrapper>
   );
 }

@@ -9,8 +9,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { SettingWrapper } from "./SettingWrapper";
+import { ValidationMessages } from "./ValidationMessages";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { ColorOption } from "@/lib/schema/types";
+import { hasValidationErrors, validateConfigValue } from "@/lib/utils/config-validation";
+import { cn } from "@/lib/utils";
 
 interface ColorInputProps {
   option: ColorOption;
@@ -28,11 +31,12 @@ export function ColorInput({ option }: ColorInputProps) {
 
   const handleInputChange = useCallback((newValue: string) => {
     setLocalValue(newValue);
-    // Only update store if it's a valid hex color or empty
-    if (newValue === "" || /^#[0-9A-Fa-f]{6}$/.test(newValue)) {
-      setValue(option.id, newValue);
+    const validation = validateConfigValue(option, newValue);
+
+    if (!hasValidationErrors(validation)) {
+      setValue(option.id, validation.normalizedValue ?? newValue);
     }
-  }, [option.id, setValue]);
+  }, [option, setValue]);
 
   const handleInputBlur = useCallback(() => {
     // Reset local value on blur to sync with store
@@ -44,8 +48,12 @@ export function ColorInput({ option }: ColorInputProps) {
     setValue(option.id, newValue);
   }, [option.id, setValue]);
 
-  const displayColor = displayValue || "#000000";
-  const isValidColor = /^#[0-9A-Fa-f]{6}$/.test(displayValue);
+  const validation = validateConfigValue(option, displayValue);
+  const hasErrors = hasValidationErrors(validation);
+  const hexColor = /^#?(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(displayValue)
+    ? displayValue.startsWith("#") ? displayValue : `#${displayValue}`
+    : null;
+  const isDisplayableColor = Boolean(hexColor);
 
   return (
     <SettingWrapper
@@ -66,10 +74,10 @@ export function ColorInput({ option }: ColorInputProps) {
               variant="outline"
               className="h-10 w-14 p-1"
               style={{
-                backgroundColor: isValidColor ? displayColor : "transparent",
+                backgroundColor: isDisplayableColor ? hexColor! : "transparent",
               }}
             >
-              {!isValidColor && (
+              {!isDisplayableColor && (
                 <span className="text-xs text-muted-foreground">Pick</span>
               )}
             </Button>
@@ -78,7 +86,7 @@ export function ColorInput({ option }: ColorInputProps) {
             <div className="space-y-3">
               <input
                 type="color"
-                value={isValidColor ? displayColor : "#000000"}
+                value={isDisplayableColor ? hexColor! : "#000000"}
                 onChange={(e) => handleColorPickerChange(e.target.value)}
                 className="h-32 w-32 cursor-pointer rounded border-0"
               />
@@ -108,9 +116,11 @@ export function ColorInput({ option }: ColorInputProps) {
           onChange={(e) => handleInputChange(e.target.value)}
           onBlur={handleInputBlur}
           placeholder="#000000"
-          className="max-w-32 font-mono"
+          aria-invalid={hasErrors}
+          className={cn("max-w-32 font-mono", hasErrors && "border-destructive focus-visible:ring-destructive/40")}
         />
       </div>
+      <ValidationMessages result={validation} />
     </SettingWrapper>
   );
 }

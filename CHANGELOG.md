@@ -14,6 +14,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 ### Added
 
 - Added a repeatable text input for Ghostty string options that can be specified multiple times, such as `font-family`, `env`, `config-file`, `custom-shader`, and `gtk-custom-css`.
+- Added source-backed inline validation diagnostics for Ghostty color, duration, and number settings.
 
 ### Changed
 
@@ -23,6 +24,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
+- Accepted Ghostty color values that use short hex, hex without `#`, or named X11 colors in color inputs.
 - Cleared stale applied-theme metadata when importing configs or editing theme-derived color values.
 - Ignored generated coverage output in ESLint and replaced the landing page coffee button image with `next/image`.
 
