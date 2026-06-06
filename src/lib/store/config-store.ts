@@ -6,6 +6,7 @@ import { exportGhosttyConfig } from "@/lib/utils/config-export";
 import { getDefaultValue, isRepeatableOption } from "@/lib/utils/config-options";
 import { parseGhosttyConfig } from "@/lib/utils/config-import";
 import { normalizePaletteEntries } from "@/lib/utils/palette";
+import { isThemeConfigKey } from "@/lib/utils/theme-config";
 
 export type { ConfigValues };
 
@@ -99,7 +100,10 @@ export const useConfigStore = create<ConfigStore>()(
             delete newConfig[key];
           }
 
-          return { config: newConfig };
+          return {
+            config: newConfig,
+            appliedTheme: isThemeConfigKey(key) ? null : state.appliedTheme,
+          };
         });
       },
 
@@ -107,7 +111,10 @@ export const useConfigStore = create<ConfigStore>()(
         set((state) => {
           const newConfig = { ...state.config };
           delete newConfig[key];
-          return { config: newConfig };
+          return {
+            config: newConfig,
+            appliedTheme: isThemeConfigKey(key) ? null : state.appliedTheme,
+          };
         });
       },
 
@@ -142,7 +149,7 @@ export const useConfigStore = create<ConfigStore>()(
 
       importConfig: (configString: string) => {
         const parsed = parseGhosttyConfig(configString);
-        set({ config: normalizeConfigValues(parsed) });
+        set({ config: normalizeConfigValues(parsed), appliedTheme: null });
       },
 
       exportConfig: () => {

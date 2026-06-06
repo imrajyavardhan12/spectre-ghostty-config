@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import {
@@ -35,10 +36,13 @@ export default function HomePage() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <img
+              <Image
                 src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
                 alt="Buy Me A Coffee"
-                className="h-8"
+                width={116}
+                height={32}
+                unoptimized
+                className="h-8 w-auto"
               />
             </a>
             <a

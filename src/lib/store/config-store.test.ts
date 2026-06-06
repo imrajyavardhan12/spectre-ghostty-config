@@ -78,6 +78,28 @@ describe('config-store', () => {
       const state = getStoreState();
       expect(state.config['keybind']).toBeUndefined();
     });
+
+    it('should clear applied theme when a theme color value changes', () => {
+      act(() => {
+        useConfigStore.getState().loadConfig({ background: '#000000' }, 'Dracula');
+        useConfigStore.getState().setValue('foreground', '#ffffff');
+      });
+
+      const state = getStoreState();
+      expect(state.appliedTheme).toBeNull();
+      expect(state.config.foreground).toBe('#ffffff');
+    });
+
+    it('should keep applied theme when a non-theme value changes', () => {
+      act(() => {
+        useConfigStore.getState().loadConfig({ background: '#000000' }, 'Dracula');
+        useConfigStore.getState().setValue('font-size', 16);
+      });
+
+      const state = getStoreState();
+      expect(state.appliedTheme).toBe('Dracula');
+      expect(state.config['font-size']).toBe(16);
+    });
   });
 
   describe('resetValue', () => {
@@ -144,6 +166,17 @@ describe('config-store', () => {
   });
 
   describe('importConfig', () => {
+    it('should clear applied theme when importing a config string', () => {
+      act(() => {
+        useConfigStore.getState().loadConfig({ background: '#000000' }, 'Dracula');
+        useConfigStore.getState().importConfig('font-size = 16');
+      });
+
+      const state = getStoreState();
+      expect(state.appliedTheme).toBeNull();
+      expect(state.config['font-size']).toBe(16);
+    });
+
     it('should parse a simple config string', () => {
       const configString = `
 font-size = 16

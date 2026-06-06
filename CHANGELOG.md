@@ -11,7 +11,20 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
-_No unreleased changes._
+### Added
+
+- Added a repeatable text input for Ghostty string options that can be specified multiple times, such as `font-family`, `env`, `config-file`, `custom-shader`, and `gtk-custom-css`.
+
+### Changed
+
+- Updated Next.js, React, Vitest, Tailwind, Zustand, and related tooling dependencies.
+- Added dependency overrides for vulnerable transitive packages and removed unused `copy-webpack-plugin`.
+- Shared configuration pages now preview/export the shared config without overwriting the user's persisted editor state; the config is only loaded when the user opens it in the editor.
+
+### Fixed
+
+- Cleared stale applied-theme metadata when importing configs or editing theme-derived color values.
+- Ignored generated coverage output in ESLint and replaced the landing page coffee button image with `next/image`.
 
 ## [0.2.0] - 2026-06-04
 

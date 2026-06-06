@@ -16,6 +16,12 @@ vi.mock('./TextInputWithSuggestions', () => ({
   ),
 }));
 
+vi.mock('./RepeatableTextInput', () => ({
+  RepeatableTextInput: ({ option }: { option: StringOption }) => (
+    <div data-testid="repeatable-text-input">{option.name}</div>
+  ),
+}));
+
 vi.mock('./NumberInput', () => ({
   NumberInput: ({ option }: { option: ConfigOption }) => (
     <div data-testid="number-input">{option.name}</div>
@@ -101,6 +107,21 @@ describe('SettingRenderer', () => {
 
     render(<SettingRenderer option={option} />);
     expect(screen.getByTestId('text-input-suggestions')).toBeTruthy();
+  });
+
+  it('should render repeatable string type with RepeatableTextInput', () => {
+    const option = {
+      id: 'font-family',
+      name: 'Font Family',
+      description: 'Font family',
+      type: 'string' as const,
+      default: '',
+      category: 'fonts' as const,
+      repeatable: true,
+    };
+
+    render(<SettingRenderer option={option} />);
+    expect(screen.getByTestId('repeatable-text-input')).toBeTruthy();
   });
 
   it('should render number type with NumberInput', () => {

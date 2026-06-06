@@ -3,6 +3,7 @@
 import { ConfigOption, StringOption } from "@/lib/schema/types";
 import { TextInput } from "./TextInput";
 import { TextInputWithSuggestions } from "./TextInputWithSuggestions";
+import { RepeatableTextInput } from "./RepeatableTextInput";
 import { NumberInput } from "./NumberInput";
 import { SwitchInput } from "./SwitchInput";
 import { SelectInput } from "./SelectInput";
@@ -29,12 +30,20 @@ export function SettingRenderer({ option }: SettingRendererProps) {
   }
 
   switch (option.type) {
-    case "string":
+    case "string": {
+      const stringOption = option as StringOption;
+
       // Use TextInputWithSuggestions if validValues is defined
-      if ((option as StringOption).validValues) {
-        return <TextInputWithSuggestions option={option as StringOption} />;
+      if (stringOption.validValues) {
+        return <TextInputWithSuggestions option={stringOption} />;
       }
+
+      if (stringOption.repeatable) {
+        return <RepeatableTextInput option={stringOption} />;
+      }
+
       return <TextInput option={option} />;
+    }
     case "number":
       return <NumberInput option={option} />;
     case "boolean":

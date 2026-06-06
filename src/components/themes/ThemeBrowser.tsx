@@ -15,6 +15,7 @@ import {
   FEATURED_THEMES,
   themeToConfig,
 } from "@/lib/utils/themes";
+import { THEME_CONFIG_KEYS } from "@/lib/utils/theme-config";
 import { useConfigStore } from "@/lib/store/config-store";
 
 type FilterType = "all" | "dark" | "light" | "featured";
@@ -138,21 +139,11 @@ export function ThemeBrowser() {
   const handleApplyTheme = (theme: Theme) => {
     const themeConfig = themeToConfig(theme);
     
-    // Merge with existing config (keep non-color settings)
-    const colorKeys = [
-      "background",
-      "foreground",
-      "cursor-color",
-      "cursor-text",
-      "selection-background",
-      "selection-foreground",
-      "palette",
-    ];
-    
+    // Merge with existing config (keep non-theme settings)
     const newConfig = { ...config };
     
-    // Remove old color settings
-    colorKeys.forEach((key) => {
+    // Remove old theme-derived settings
+    THEME_CONFIG_KEYS.forEach((key) => {
       delete newConfig[key];
     });
     
