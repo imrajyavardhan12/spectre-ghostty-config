@@ -1,20 +1,19 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, Suspense } from "react";
+import { useMemo, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Ghost, ArrowRight, Copy, Check, Download, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getConfigFromUrl } from "@/lib/utils/url-share";
+import { exportGhosttyConfig } from "@/lib/utils/config-export";
 import { useConfigStore } from "@/lib/store/config-store";
 
 function SharePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const hasLoadedRef = useRef(false);
-  
-  const { loadConfig, exportConfig } = useConfigStore();
+  const loadConfig = useConfigStore((state) => state.loadConfig);
 
   const { sharedConfig, error } = useMemo(() => {
     const urlConfig = getConfigFromUrl(searchParams);
@@ -27,15 +26,9 @@ function SharePageContent() {
     }
   }, [searchParams]);
 
-  // Load config once when sharedConfig is available
-  useEffect(() => {
-    if (sharedConfig && !hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-      loadConfig(sharedConfig.config, sharedConfig.theme ?? undefined);
-    }
-  }, [sharedConfig, loadConfig]);
-
-  const configString = sharedConfig ? exportConfig() : "";
+  const configString = sharedConfig
+    ? exportGhosttyConfig(sharedConfig.config, sharedConfig.theme)
+    : "";
   const modifiedCount = sharedConfig ? Object.keys(sharedConfig.config).length : 0;
 
   const handleCopy = async () => {
@@ -57,6 +50,9 @@ function SharePageContent() {
   };
 
   const handleOpenInEditor = () => {
+    if (sharedConfig) {
+      loadConfig(sharedConfig.config, sharedConfig.theme ?? undefined);
+    }
     router.push("/editor");
   };
 
@@ -100,11 +96,9 @@ function SharePageContent() {
             <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
             <span className="font-medium">Spectre</span>
           </Link>
-          <Button asChild>
-            <Link href="/editor">
-              Open Editor
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Link>
+          <Button onClick={handleOpenInEditor}>
+            Open Editor
+            <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
       </nav>
