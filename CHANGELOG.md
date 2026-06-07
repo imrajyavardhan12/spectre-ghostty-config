@@ -15,10 +15,12 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 - Added a repeatable text input for Ghostty string options that can be specified multiple times, such as `font-family`, `env`, `config-file`, `custom-shader`, and `gtk-custom-css`.
 - Added source-backed inline validation diagnostics for Ghostty color, duration, and number settings.
+- Added a Ghostty schema drift check script and weekly workflow that compare local option IDs against the official config reference.
 
 ### Changed
 
 - Updated Next.js, React, Vitest, Tailwind, Zustand, and related tooling dependencies.
+- Updated CI checkout actions to `actions/checkout@v5`.
 - Added dependency overrides for vulnerable transitive packages and removed unused `copy-webpack-plugin`.
 - Shared configuration pages now preview/export the shared config without overwriting the user's persisted editor state; the config is only loaded when the user opens it in the editor.
 
