@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "schema:check": "bun run scripts/check-ghostty-schema-drift.ts",
     "format": "prettier --write .",
     "postinstall": "cp node_modules/ghostty-web/ghostty-vt.wasm public/ 2>/dev/null || true",
     "test": "vitest",
