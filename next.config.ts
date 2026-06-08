@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 import { buildSecurityHeaders } from "./src/lib/security/headers";
 
+// SECURITY: `process.env.NODE_ENV` is read at config-evaluation time,
+// which Next.js runs at build time (not per request). That means the
+// dev-vs-prod split below is locked in when the build is produced.
+// `next start` must be invoked with `NODE_ENV=production` (the script
+// in package.json does this) or it will ship the dev CSP.
 const isDev = process.env.NODE_ENV !== "production";
 const { headers: securityHeaders } = buildSecurityHeaders(isDev);
 

@@ -46,11 +46,17 @@ export function decodeConfig(encoded: string): ShareableConfig | null {
 
     const raw = parsed as { config?: unknown; theme?: unknown };
     const { config } = validateSharedConfig(raw.config);
+    const theme = validateSharedThemeName(raw.theme) ?? null;
 
-    return {
-      config,
-      theme: validateSharedThemeName(raw.theme) ?? null,
-    };
+    // If validation stripped every key and there's no usable theme, the
+    // payload is effectively empty. Return null so the share page can
+    // surface its "Invalid or corrupted share link" error instead of
+    // rendering a misleading "0 settings configured" empty config.
+    if (Object.keys(config).length === 0 && theme === null) {
+      return null;
+    }
+
+    return { config, theme };
   } catch {
     return null;
   }

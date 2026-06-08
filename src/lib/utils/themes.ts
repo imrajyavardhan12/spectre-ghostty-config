@@ -20,8 +20,10 @@ const MAX_THEME_BYTES = 256 * 1024;
  * upstream could send HTML / JSON / binary, and our `key = value` line
  * parser would either silently accept garbled values or error in
  * unhelpful ways.
+ *
+ * @internal Exported for unit tests; not part of the public API.
  */
-function ensureTextResponse(
+export function ensureTextResponse(
   response: Response,
   expectedPrefix: string,
   context: string
@@ -39,8 +41,10 @@ function ensureTextResponse(
  * if the body is larger than `MAX_THEME_BYTES`. We stream the response
  * so we can abort as soon as the cap is exceeded rather than waiting
  * for the full body to download.
+ *
+ * @internal Exported for unit tests; not part of the public API.
  */
-async function readBoundedText(
+export async function readBoundedText(
   response: Response,
   context: string
 ): Promise<string> {
@@ -165,6 +169,13 @@ export async function fetchThemeList(): Promise<ThemeListItem[]> {
     name: string;
     download_url: string;
   }>;
+
+  // A misconfigured upstream could return `{}` (e.g. an error payload
+  // with a JSON content-type). Surface that as a hard error instead of
+  // silently producing an empty theme list.
+  if (!Array.isArray(data)) {
+    throw new Error("Unexpected theme list response shape from GitHub");
+  }
 
   return data
     .filter((item) => item.type === "file")

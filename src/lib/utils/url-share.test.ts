@@ -165,45 +165,55 @@ describe('url-share', () => {
 
     it('coerces non-primitive values into the expected shape', () => {
       // Construct a payload that bypasses TypeScript and embeds a
-      // non-primitive value. The decoder must drop it.
+      // non-primitive value. The decoder drops the key, and because no
+      // other keys survive, the whole payload is treated as invalid.
       const rawJson =
         '{"config":{"font-size":{"__html":"<img onerror=alert(1) src=x>"}},"version":1}';
       const compressed = encodeRawJson(rawJson);
-      const decoded = decodeConfig(compressed);
-      // The unknown shape is rejected, so the key is dropped.
-      expect(decoded?.config['font-size']).toBeUndefined();
+      expect(decodeConfig(compressed)).toBeNull();
     });
 
     it('rejects prototype-pollution key names', () => {
       const rawJson = '{"config":{"__proto__":{"polluted":true}},"version":1}';
       const compressed = encodeRawJson(rawJson);
-      const decoded = decodeConfig(compressed);
-      // The decoder does not copy __proto__ into the result.
-      expect((decoded?.config as Record<string, unknown>)['__proto__']).toBeUndefined();
-      // And nothing got attached to Object.prototype.
+      // The decoder drops __proto__ and nothing else survives.
+      expect(decodeConfig(compressed)).toBeNull();
+      // And - critically - nothing got attached to Object.prototype.
       expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
     });
 
     it('rejects enum values not in the allowed list', () => {
       const rawJson = '{"config":{"cursor-style":"rainbow"},"version":1}';
       const compressed = encodeRawJson(rawJson);
-      const decoded = decodeConfig(compressed);
-      expect(decoded?.config['cursor-style']).toBeUndefined();
+      // The bad enum is the only key, so the payload is treated as empty.
+      expect(decodeConfig(compressed)).toBeNull();
     });
 
     it('rejects malformed palette entries', () => {
       const rawJson =
         '{"config":{"palette":["<script>alert(1)</script>"]},"version":1}';
       const compressed = encodeRawJson(rawJson);
-      const decoded = decodeConfig(compressed);
-      expect(decoded?.config['palette']).toBeUndefined();
+      expect(decodeConfig(compressed)).toBeNull();
     });
 
     it('rejects a theme name that breaks out of a comment', () => {
       const rawJson = '{"config":{},"theme":"evil\\nname","version":1}';
       const compressed = encodeRawJson(rawJson);
+      // Both the config and the theme are unusable - the whole payload
+      // is treated as invalid.
+      expect(decodeConfig(compressed)).toBeNull();
+    });
+
+    it('preserves a payload that has at least one good key', () => {
+      // The decoder should only return null when *nothing* survives.
+      // Mixed payloads keep the good keys and drop the bad ones.
+      const rawJson =
+        '{"config":{"font-size":14,"backdoor-cmd":"x"},"version":1}';
+      const compressed = encodeRawJson(rawJson);
       const decoded = decodeConfig(compressed);
-      expect(decoded?.theme).toBeNull();
+      expect(decoded).not.toBeNull();
+      expect(decoded!.config['font-size']).toBe(14);
+      expect(decoded!.config['backdoor-cmd']).toBeUndefined();
     });
 
     it('returns a config with a null prototype', () => {

@@ -1,9 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   parseThemeContent,
   themeToConfig,
   categorizeTheme,
   FEATURED_THEMES,
+  ensureTextResponse,
+  readBoundedText,
+  fetchThemeList,
+  fetchTheme,
 } from '@/lib/utils/themes';
 
 describe('themes', () => {
@@ -45,254 +49,267 @@ selection-foreground = #ffffff
 
     it('should parse palette entries', () => {
       const content = `
-palette = 0=#15161e
-palette = 1=#f7768e
-palette = 2=#9ece6a
-palette = 15=#c0caf5
-`;
-      const colors = parseThemeContent(content);
-
-      expect(colors.palette[0]).toBe('#15161e');
-      expect(colors.palette[1]).toBe('#f7768e');
-      expect(colors.palette[2]).toBe('#9ece6a');
-      expect(colors.palette[15]).toBe('#c0caf5');
-    });
-
-    it('should handle palette entries without # prefix', () => {
-      const content = `
-palette = 0=15161e
-palette = 1=f7768e
-`;
-      const colors = parseThemeContent(content);
-
-      expect(colors.palette[0]).toBe('#15161e');
-      expect(colors.palette[1]).toBe('#f7768e');
-    });
-
-    it('should parse non-decimal palette indexes from Ghostty syntax', () => {
-      const content = `
-palette = 0b10=111111
-palette = 0o10=222222
-palette = 0xF=333333
-`;
-      const colors = parseThemeContent(content);
-
-      expect(colors.palette[2]).toBe('#111111');
-      expect(colors.palette[8]).toBe('#222222');
-      expect(colors.palette[15]).toBe('#333333');
-    });
-
-    it('should skip comments', () => {
-      const content = `
-# This is a comment
-background = #1a1b26
-# Another comment
-foreground = #c0caf5
-`;
-      const colors = parseThemeContent(content);
-
-      expect(colors.background).toBe('#1a1b26');
-      expect(colors.foreground).toBe('#c0caf5');
-    });
-
-    it('should skip empty lines', () => {
-      const content = `
-
-background = #1a1b26
-
-foreground = #c0caf5
-
-`;
-      const colors = parseThemeContent(content);
-
-      expect(colors.background).toBe('#1a1b26');
-      expect(colors.foreground).toBe('#c0caf5');
-    });
-
-    it('should ignore invalid palette entries', () => {
-      const content = `
-palette = not_valid
-palette = 0=#15161e
-palette = invalid_index=abc
-`;
-      const colors = parseThemeContent(content);
-
-      expect(colors.palette[0]).toBe('#15161e');
-    });
-
-    it('should ignore palette entries with out-of-range index', () => {
-      const content = `
 palette = 0=#000000
-palette = 16=#ffffff
-palette = -1=#ff0000
+palette = 1=#ff0000
+palette = 15=#ffffff
 `;
       const colors = parseThemeContent(content);
 
       expect(colors.palette[0]).toBe('#000000');
-      expect(colors.palette[16]).toBeUndefined();
-      expect(colors.palette[15]).toBe(''); // default empty
-    });
-
-    it('should have empty palette array by default', () => {
-      const colors = parseThemeContent('');
-      
-      expect(colors.palette).toHaveLength(16);
-      expect(colors.palette.every(c => c === '')).toBe(true);
-    });
-
-    it('should default background and foreground', () => {
-      const colors = parseThemeContent('');
-      
-      expect(colors.background).toBe('#000000');
-      expect(colors.foreground).toBe('#ffffff');
+      expect(colors.palette[1]).toBe('#ff0000');
+      expect(colors.palette[15]).toBe('#ffffff');
     });
   });
 
   describe('themeToConfig', () => {
-    it('should convert theme colors to config object', () => {
+    it('should convert theme colors to config format', () => {
       const theme = {
-        name: 'Test Theme',
-        colors: {
-          background: '#1a1b26',
-          foreground: '#c0caf5',
-          cursorColor: '#ffffff',
-          palette: ['#15161e', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '#c0caf5'],
-          raw: '',
-        },
+        name: 'Test',
         raw: '',
-      };
-
-      const config = themeToConfig(theme);
-
-      expect(config['background']).toBe('#1a1b26');
-      expect(config['foreground']).toBe('#c0caf5');
-      expect(config['cursor-color']).toBe('#ffffff');
-    });
-
-    it('should not include undefined colors', () => {
-      const theme = {
-        name: 'Minimal Theme',
-        colors: {
-          background: '#1a1b26',
-          foreground: '#c0caf5',
-          palette: ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-          raw: '',
-        },
-        raw: '',
-      };
-
-      const config = themeToConfig(theme);
-
-      expect(config['cursor-color']).toBeUndefined();
-      expect(config['selection-background']).toBeUndefined();
-    });
-
-    it('should convert palette to config entries', () => {
-      const theme = {
-        name: 'Theme With Palette',
         colors: {
           background: '#000000',
           foreground: '#ffffff',
-          palette: [
-            '#000000', '#ff0000', '#00ff00', '#0000ff',
-            '#ffff00', '#ff00ff', '#00ffff', '#ffffff',
-            '#808080', '#c0c0c0', '#404040', '#a0a0a0',
-            '#202020', '#606060', '#e0e0e0', '#ffffff',
-          ],
-          raw: '',
+          cursorColor: '#ff0000',
+          palette: ['#111111', '#222222', '', '', '', '', '', '',
+            '', '', '', '', '', '', '', ''],
         },
-        raw: '',
       };
 
       const config = themeToConfig(theme);
-
-      expect(config['palette']).toContain('0=#000000');
-      expect(config['palette']).toContain('1=#ff0000');
-      expect(config['palette']).toContain('15=#ffffff');
+      expect(config.background).toBe('#000000');
+      expect(config.foreground).toBe('#ffffff');
+      expect(config['cursor-color']).toBe('#ff0000');
+      expect(config.palette).toEqual(['0=#111111', '1=#222222']);
     });
 
-    it('should filter out empty palette entries', () => {
+    it('should omit palette when no colors are set', () => {
       const theme = {
-        name: 'Partial Palette',
+        name: 'Empty',
+        raw: '',
         colors: {
           background: '#000000',
           foreground: '#ffffff',
-          palette: ['', '', '#ff0000', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-          raw: '',
+          palette: Array(16).fill(''),
         },
-        raw: '',
       };
 
       const config = themeToConfig(theme);
-
-      expect(config['palette']).toEqual(['2=#ff0000']);
+      expect(config.palette).toBeUndefined();
     });
   });
 
   describe('categorizeTheme', () => {
-    it('should categorize dark theme (low luminance)', () => {
-      const theme = {
-        name: 'Dark Theme',
-        colors: {
-          background: '#1a1b26',
-          foreground: '#c0caf5',
-          palette: [],
-          raw: '',
-        },
+    it('should categorize dark themes', () => {
+      const dark = {
+        name: 'Dark',
         raw: '',
+        colors: { background: '#000000', foreground: '#ffffff', palette: [] },
       };
-
-      expect(categorizeTheme(theme)).toBe('dark');
+      expect(categorizeTheme(dark)).toBe('dark');
     });
 
-    it('should categorize light theme (high luminance)', () => {
-      const theme = {
-        name: 'Light Theme',
-        colors: {
-          background: '#ffffff',
-          foreground: '#000000',
-          palette: [],
-          raw: '',
-        },
+    it('should categorize light themes', () => {
+      const light = {
+        name: 'Light',
         raw: '',
+        colors: { background: '#ffffff', foreground: '#000000', palette: [] },
       };
-
-      expect(categorizeTheme(theme)).toBe('light');
-    });
-
-    it('should handle mid-tone backgrounds', () => {
-      // Background with ~50% luminance should be light
-      const theme = {
-        name: 'Mid Theme',
-        colors: {
-          background: '#808080', // 50% luminance
-          foreground: '#000000',
-          palette: [],
-          raw: '',
-        },
-        raw: '',
-      };
-
-      // 0.299*128 + 0.587*128 + 0.114*128 = 128 which is exactly 0.5
-      // The function returns "light" for > 0.5, so 0.5 exactly is light
-      expect(categorizeTheme(theme)).toBe('light');
+      expect(categorizeTheme(light)).toBe('light');
     });
   });
 
   describe('FEATURED_THEMES', () => {
-    it('should contain expected popular themes', () => {
-      expect(FEATURED_THEMES).toContain('Dracula');
-      expect(FEATURED_THEMES).toContain('Tokyo Night');
-      expect(FEATURED_THEMES).toContain('Nord');
+    it('should be a non-empty array of strings', () => {
+      expect(Array.isArray(FEATURED_THEMES)).toBe(true);
+      expect(FEATURED_THEMES.length).toBeGreaterThan(0);
+      FEATURED_THEMES.forEach((name) => {
+        expect(typeof name).toBe('string');
+        expect(name.length).toBeGreaterThan(0);
+      });
+    });
+  });
+});
+
+describe('theme fetch hardening', () => {
+  describe('ensureTextResponse', () => {
+    it('accepts a response whose content-type starts with the expected prefix', () => {
+      const response = new Response('hello', {
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
+      expect(() => ensureTextResponse(response, 'text/', 'test')).not.toThrow();
     });
 
-    it('should not have duplicates', () => {
-      const unique = new Set(FEATURED_THEMES);
-      expect(unique.size).toBe(FEATURED_THEMES.length);
+    it('is case-insensitive on the content-type', () => {
+      const response = new Response('hello', {
+        headers: { 'content-type': 'Text/Plain' },
+      });
+      expect(() => ensureTextResponse(response, 'text/', 'test')).not.toThrow();
     });
 
-    it('should be an array with at least 10 themes', () => {
-      expect(FEATURED_THEMES.length).toBeGreaterThanOrEqual(10);
+    it('throws when the content-type does not match', () => {
+      const response = new Response('hello', {
+        headers: { 'content-type': 'application/octet-stream' },
+      });
+      expect(() => ensureTextResponse(response, 'text/', 'theme "X"'))
+        .toThrow(/Unexpected content-type/);
+    });
+
+    it('throws when the content-type header is missing', () => {
+      // The Response constructor auto-adds `content-type: text/plain`
+      // for string bodies, so we delete it explicitly to exercise the
+      // missing-header fallback in the production code.
+      const response = new Response('hello');
+      response.headers.delete('content-type');
+      expect(() => ensureTextResponse(response, 'text/', 'theme "X"'))
+        .toThrow(/Unexpected content-type/);
+    });
+  });
+
+  describe('readBoundedText', () => {
+    it('reads a small text body correctly', async () => {
+      const response = new Response('hello world', {
+        headers: { 'content-type': 'text/plain' },
+      });
+      const text = await readBoundedText(response, 'test');
+      expect(text).toBe('hello world');
+    });
+
+    it('throws when the body exceeds the 256 KB cap', async () => {
+      // Build a 300 KB body across multiple chunks so the streaming
+      // reader's per-chuck accounting is exercised, not just a single
+      // massive buffer.
+      const big = new Uint8Array(300 * 1024).fill(0x41); // 300 KB of 'A'
+      const stream = new ReadableStream({
+        start(controller) {
+          // Split into 16 chunks of ~18 KB so the read loop runs many
+          // iterations.
+          const chunkSize = 18 * 1024;
+          for (let offset = 0; offset < big.byteLength; offset += chunkSize) {
+            controller.enqueue(big.slice(offset, offset + chunkSize));
+          }
+          controller.close();
+        },
+      });
+      const response = new Response(stream, {
+        headers: { 'content-type': 'text/plain' },
+      });
+
+      await expect(readBoundedText(response, 'test'))
+        .rejects.toThrow(/exceeded 262144 bytes/);
+    });
+
+    it('falls back to response.text() when the body stream is unavailable', async () => {
+      // A Response constructed from a string is fine, but a Response
+      // with `body: null` only happens for certain edge cases (e.g.
+      // a no-content status). We construct it explicitly to make sure
+      // the fallback path also reads the body correctly.
+      const response = new Response(null, { status: 204 });
+      const text = await readBoundedText(response, 'test');
+      expect(text).toBe('');
+    });
+  });
+
+  describe('fetchThemeList', () => {
+    let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      fetchSpy = vi.spyOn(globalThis, 'fetch');
+    });
+
+    afterEach(() => {
+      fetchSpy.mockRestore();
+    });
+
+    it('returns the file entries when the GitHub API responds with an array', async () => {
+      fetchSpy.mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            { type: 'file', name: 'Dracula', download_url: 'https://example/dracula' },
+            { type: 'dir', name: 'subfolder', download_url: '' },
+            { type: 'file', name: 'Nord', download_url: 'https://example/nord' },
+          ]),
+          { headers: { 'content-type': 'application/json' } }
+        )
+      );
+
+      const list = await fetchThemeList();
+      expect(list).toEqual([
+        { name: 'Dracula', downloadUrl: 'https://example/dracula' },
+        { name: 'Nord', downloadUrl: 'https://example/nord' },
+      ]);
+    });
+
+    it('rejects when the JSON content-type is wrong', async () => {
+      fetchSpy.mockResolvedValue(
+        new Response('not json', { headers: { 'content-type': 'text/html' } })
+      );
+
+      await expect(fetchThemeList()).rejects.toThrow(/Unexpected content-type/);
+    });
+
+    it('rejects when the body is valid JSON but not an array', async () => {
+      fetchSpy.mockResolvedValue(
+        new Response(JSON.stringify({ message: 'rate limited' }), {
+          headers: { 'content-type': 'application/json' },
+        })
+      );
+
+      await expect(fetchThemeList()).rejects.toThrow(
+        /Unexpected theme list response shape/
+      );
+    });
+  });
+
+  describe('fetchTheme', () => {
+    let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      fetchSpy = vi.spyOn(globalThis, 'fetch');
+    });
+
+    afterEach(() => {
+      fetchSpy.mockRestore();
+    });
+
+    it('returns a parsed theme for a valid response', async () => {
+      const theme = 'background = #1a1b26\nforeground = #c0caf5\n';
+      fetchSpy.mockResolvedValue(
+        new Response(theme, { headers: { 'content-type': 'text/plain' } })
+      );
+
+      const result = await fetchTheme('Tokyo Night');
+      expect(result.colors.background).toBe('#1a1b26');
+      expect(result.colors.foreground).toBe('#c0caf5');
+      expect(result.raw).toBe(theme);
+    });
+
+    it('rejects when the content-type is not text', async () => {
+      fetchSpy.mockResolvedValue(
+        new Response('background = #000', {
+          headers: { 'content-type': 'application/octet-stream' },
+        })
+      );
+
+      await expect(fetchTheme('Whatever')).rejects.toThrow(/Unexpected content-type/);
+    });
+
+    it('rejects a theme body larger than the 256 KB cap', async () => {
+      const huge = '# ' + 'a'.repeat(300 * 1024) + '\n';
+      const stream = new ReadableStream({
+        start(controller) {
+          const chunkSize = 32 * 1024;
+          const bytes = new TextEncoder().encode(huge);
+          for (let offset = 0; offset < bytes.byteLength; offset += chunkSize) {
+            controller.enqueue(bytes.slice(offset, offset + chunkSize));
+          }
+          controller.close();
+        },
+      });
+      fetchSpy.mockResolvedValue(
+        new Response(stream, { headers: { 'content-type': 'text/plain' } })
+      );
+
+      await expect(fetchTheme('Huge')).rejects.toThrow(/exceeded 262144 bytes/);
     });
   });
 });

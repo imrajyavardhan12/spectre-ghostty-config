@@ -69,7 +69,7 @@ export function buildSecurityHeaders(isDev: boolean): SecurityHeaderSet {
     // HSTS: 2 years, include subdomains, eligible for preload. Vercel
     // already sets HSTS by default, but we set it explicitly so the
     // policy is auditable in this file. Safe to ship in dev as well -
-    // browsers only honour HSTS over HTTPS.
+    // browsers ignore HSTS over plain HTTP.
     "Strict-Transport-Security":
       "max-age=63072000; includeSubDomains; preload",
 

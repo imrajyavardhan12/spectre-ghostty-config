@@ -25,8 +25,9 @@
  *     https://*.vercel.com blob::
  *     - 'unsafe-inline' is currently required by Next.js' inline hydration
  *       scripts and by dynamically-injected styles for the WASM-backed
- *       terminal preview. Upgrading to nonce-based scripts is tracked as
- *       follow-up work; see TODO in headers.ts.
+ *       terminal preview. Upgrading to nonce-based scripts is a known
+ *       follow-up; left as a future task because it requires middleware
+ *       changes.
  *     - blob: is required for the libghostty WASM module which loads its
  *       helpers via blob URLs.
  *     - Vercel Analytics + Speed Insights ship tiny inline scripts that
@@ -34,12 +35,11 @@
  *   - style-src 'self' 'unsafe-inline':
  *     - 'unsafe-inline' is required for Tailwind's emitted styles and
  *       shadcn/ui's Radix primitives that set inline styles.
- *   - img-src 'self' data: https: https://cdn.buymeacoffee.com:
+ *   - img-src 'self' data: https://cdn.buymeacoffee.com:
  *     - `data:` is required for the Ghostty preview's binary image data
  *       and for several SVG icons.
- *     - `https:` is broad; the app pulls user-driven screenshots and
- *       theme preview swatches from arbitrary HTTPS origins. Tighten to
- *       a list if a content whitelist is ever desired.
+ *     - The only external image Spectre loads is the Buy Me a Coffee
+ *       button, so the allowlist is explicit rather than `https:`.
  *   - font-src 'self' data::
  *     - `next/font/google` self-hosts Inter at build time, so Google
  *       Fonts domains are NOT required.
@@ -76,7 +76,6 @@ export function buildCsp(isDev: boolean): string {
     "img-src": [
       "'self'",
       "data:",
-      "https:",
       "https://cdn.buymeacoffee.com",
     ],
     "font-src": ["'self'", "data:"],
