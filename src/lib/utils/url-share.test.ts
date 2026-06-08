@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import LZString from 'lz-string';
 import {
   encodeConfig,
   decodeConfig,
   generateShareUrl,
   getConfigFromUrl,
 } from '@/lib/utils/url-share';
+
+function encodeRawJson(json: string): string {
+  return LZString.compressToEncodedURIComponent(json);
+}
 
 describe('url-share', () => {
   describe('encodeConfig', () => {
@@ -31,11 +36,13 @@ describe('url-share', () => {
       expect(decoded?.theme).toBe('Tokyo Night');
     });
 
-    it('should not include theme when null', () => {
+    it('should normalise a null theme to null on decode', () => {
       const config = { 'font-size': 16 };
       const encoded = encodeConfig(config, null);
       const decoded = decodeConfig(encoded);
-      expect(decoded?.theme).toBeUndefined();
+      // The decoder normalises "no theme" to a stable null shape; this
+      // is what the share page and the config store expect.
+      expect(decoded?.theme).toBeNull();
     });
   });
 
@@ -142,6 +149,71 @@ describe('url-share', () => {
       expect(decoded?.config['cursor-style']).toBe('bar');
       expect(decoded?.config['background-opacity']).toBe(0.95);
       expect(decoded?.config['keybind']).toEqual(['ctrl+c=copy', 'ctrl+v=paste']);
+    });
+  });
+
+  describe('security hardening', () => {
+    it('drops unknown option keys', () => {
+      const malicious = encodeConfig({
+        'font-size': 14,
+        'backdoor-cmd': 'rm -rf /',
+      });
+      const decoded = decodeConfig(malicious);
+      expect(decoded?.config['font-size']).toBe(14);
+      expect(decoded?.config['backdoor-cmd']).toBeUndefined();
+    });
+
+    it('coerces non-primitive values into the expected shape', () => {
+      // Construct a payload that bypasses TypeScript and embeds a
+      // non-primitive value. The decoder must drop it.
+      const rawJson =
+        '{"config":{"font-size":{"__html":"<img onerror=alert(1) src=x>"}},"version":1}';
+      const compressed = encodeRawJson(rawJson);
+      const decoded = decodeConfig(compressed);
+      // The unknown shape is rejected, so the key is dropped.
+      expect(decoded?.config['font-size']).toBeUndefined();
+    });
+
+    it('rejects prototype-pollution key names', () => {
+      const rawJson = '{"config":{"__proto__":{"polluted":true}},"version":1}';
+      const compressed = encodeRawJson(rawJson);
+      const decoded = decodeConfig(compressed);
+      // The decoder does not copy __proto__ into the result.
+      expect((decoded?.config as Record<string, unknown>)['__proto__']).toBeUndefined();
+      // And nothing got attached to Object.prototype.
+      expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+    });
+
+    it('rejects enum values not in the allowed list', () => {
+      const rawJson = '{"config":{"cursor-style":"rainbow"},"version":1}';
+      const compressed = encodeRawJson(rawJson);
+      const decoded = decodeConfig(compressed);
+      expect(decoded?.config['cursor-style']).toBeUndefined();
+    });
+
+    it('rejects malformed palette entries', () => {
+      const rawJson =
+        '{"config":{"palette":["<script>alert(1)</script>"]},"version":1}';
+      const compressed = encodeRawJson(rawJson);
+      const decoded = decodeConfig(compressed);
+      expect(decoded?.config['palette']).toBeUndefined();
+    });
+
+    it('rejects a theme name that breaks out of a comment', () => {
+      const rawJson = '{"config":{},"theme":"evil\\nname","version":1}';
+      const compressed = encodeRawJson(rawJson);
+      const decoded = decodeConfig(compressed);
+      expect(decoded?.theme).toBeNull();
+    });
+
+    it('returns a config with a null prototype', () => {
+      const decoded = decodeConfig(encodeConfig({ 'font-size': 14 }));
+      expect(Object.getPrototypeOf(decoded!.config)).toBeNull();
+    });
+
+    it('still returns null for outright garbage', () => {
+      expect(decodeConfig('not-valid-base64!@#$')).toBeNull();
+      expect(decodeConfig('')).toBeNull();
     });
   });
 });

@@ -1,5 +1,9 @@
 import LZString from "lz-string";
 import { ConfigValues } from "@/lib/store/config-store";
+import {
+  validateSharedConfig,
+  validateSharedThemeName,
+} from "@/lib/security/validate-shared-config";
 
 export interface ShareableConfig {
   config: ConfigValues;
@@ -28,14 +32,25 @@ export function decodeConfig(encoded: string): ShareableConfig | null {
   try {
     const json = LZString.decompressFromEncodedURIComponent(encoded);
     if (!json) return null;
-    
-    const data = JSON.parse(json) as ShareableConfig;
-    
-    if (!data.config || typeof data.config !== "object") {
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
       return null;
     }
-    
-    return data;
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const raw = parsed as { config?: unknown; theme?: unknown };
+    const { config } = validateSharedConfig(raw.config);
+
+    return {
+      config,
+      theme: validateSharedThemeName(raw.theme) ?? null,
+    };
   } catch {
     return null;
   }
