@@ -239,6 +239,29 @@ describe('theme fetch hardening', () => {
       ]);
     });
 
+    it('accepts a valid GitHub API list larger than the individual theme-file cap', async () => {
+      const entries = Array.from({ length: 3000 }, (_, index) => ({
+        type: 'file',
+        name: `Theme ${index.toString().padStart(4, '0')}`,
+        download_url: `https://example.test/theme-${index.toString().padStart(4, '0')}`,
+        path: `ghostty/theme-${index.toString().padStart(4, '0')}`,
+        sha: 'a'.repeat(40),
+      }));
+      const payload = JSON.stringify(entries);
+      expect(new TextEncoder().encode(payload).byteLength).toBeGreaterThan(256 * 1024);
+
+      fetchSpy.mockResolvedValue(
+        new Response(payload, { headers: { 'content-type': 'application/json' } })
+      );
+
+      const list = await fetchThemeList();
+      expect(list).toHaveLength(3000);
+      expect(list[0]).toEqual({
+        name: 'Theme 0000',
+        downloadUrl: 'https://example.test/theme-0000',
+      });
+    });
+
     it('rejects when the JSON content-type is wrong', async () => {
       fetchSpy.mockResolvedValue(
         new Response('not json', { headers: { 'content-type': 'text/html' } })

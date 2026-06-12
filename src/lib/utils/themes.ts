@@ -13,6 +13,7 @@ const RAW_CONTENT_BASE = "https://raw.githubusercontent.com/mbadolato/iTerm2-Col
  * exceeded, so the cost is bounded regardless of upstream behaviour.
  */
 const MAX_THEME_BYTES = 256 * 1024;
+const MAX_THEME_LIST_BYTES = 2 * 1024 * 1024;
 
 /**
  * Asserts that a fetch response is a textual payload before we hand it
@@ -46,7 +47,8 @@ export function ensureTextResponse(
  */
 export async function readBoundedText(
   response: Response,
-  context: string
+  context: string,
+  maxBytes = MAX_THEME_BYTES
 ): Promise<string> {
   if (!response.body) {
     return response.text();
@@ -61,10 +63,10 @@ export async function readBoundedText(
     const { value, done } = await reader.read();
     if (done) break;
     received += value.byteLength;
-    if (received > MAX_THEME_BYTES) {
+    if (received > maxBytes) {
       try { await reader.cancel(); } catch { /* noop */ }
       throw new Error(
-        `Theme payload exceeded ${MAX_THEME_BYTES} bytes while fetching ${context}`
+        `Theme payload exceeded ${maxBytes} bytes while fetching ${context}`
       );
     }
     text += decoder.decode(value, { stream: true });
@@ -164,7 +166,7 @@ export async function fetchThemeList(): Promise<ThemeListItem[]> {
   // The theme list is small (a few hundred entries) but we still cap it
   // defensively in case a future migration brings the list to a different
   // host with looser limits.
-  const data = JSON.parse(await readBoundedText(response, "theme list")) as Array<{
+  const data = JSON.parse(await readBoundedText(response, "theme list", MAX_THEME_LIST_BYTES)) as Array<{
     type: string;
     name: string;
     download_url: string;
