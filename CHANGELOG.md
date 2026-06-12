@@ -16,6 +16,9 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Added a repeatable text input for Ghostty string options that can be specified multiple times, such as `font-family`, `env`, `config-file`, `custom-shader`, and `gtk-custom-css`.
 - Added source-backed inline validation diagnostics for Ghostty color, duration, and number settings.
 - Added a Ghostty schema drift check script and weekly workflow that compare local option IDs against the official config reference.
+- Added a `src/lib/security/` module that builds a strict Content Security Policy and a full security header set, with separate dev and prod variants.
+- Added a runtime shape validator for shared configuration URLs that drops unknown option keys, coerces values to their schema type, rejects prototype-pollution payloads, and bounds payload size.
+- Added unit tests covering the new CSP, headers, and shared-config validators.
 
 ### Changed
 
@@ -23,6 +26,9 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Updated CI checkout actions to `actions/checkout@v5`.
 - Added dependency overrides for vulnerable transitive packages and removed unused `copy-webpack-plugin`.
 - Shared configuration pages now preview/export the shared config without overwriting the user's persisted editor state; the config is only loaded when the user opens it in the editor.
+- `next.config.ts` now applies a strict set of security headers to every route: `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, and `Cross-Origin-Embedder-Policy` (prod only).
+- `decodeConfig` now normalises share payloads to a known shape (no prototype chain, no unknown keys, no non-primitive values); a missing theme is now `null` everywhere instead of `undefined`.
+- `fetchThemeList` and `fetchTheme` now assert a textual `content-type` and stream the response with a 256 KB byte cap to prevent hostile or compromised upstreams from streaming arbitrary content into the parser.
 
 ### Fixed
 

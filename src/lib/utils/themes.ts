@@ -5,6 +5,77 @@ import { parsePaletteEntry } from "@/lib/utils/palette";
 const GITHUB_API_BASE = "https://api.github.com/repos/mbadolato/iTerm2-Color-Schemes/contents/ghostty";
 const RAW_CONTENT_BASE = "https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/ghostty";
 
+/**
+ * Hard cap on theme payload size. A real Ghostty theme file is well under
+ * 10 KB; 256 KB leaves generous headroom for future expansion while
+ * preventing a hostile origin from streaming gigabytes into the browser
+ * and forcing the parser to OOM. Fetch is aborted as soon as the cap is
+ * exceeded, so the cost is bounded regardless of upstream behaviour.
+ */
+const MAX_THEME_BYTES = 256 * 1024;
+const MAX_THEME_LIST_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Asserts that a fetch response is a textual payload before we hand it
+ * to the parser. Without this, a misconfigured proxy or a compromised
+ * upstream could send HTML / JSON / binary, and our `key = value` line
+ * parser would either silently accept garbled values or error in
+ * unhelpful ways.
+ *
+ * @internal Exported for unit tests; not part of the public API.
+ */
+export function ensureTextResponse(
+  response: Response,
+  expectedPrefix: string,
+  context: string
+): void {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().startsWith(expectedPrefix)) {
+    throw new Error(
+      `Unexpected content-type "${contentType}" while fetching ${context}`
+    );
+  }
+}
+
+/**
+ * Read a fetch response body as text, enforcing a hard byte cap. Throws
+ * if the body is larger than `MAX_THEME_BYTES`. We stream the response
+ * so we can abort as soon as the cap is exceeded rather than waiting
+ * for the full body to download.
+ *
+ * @internal Exported for unit tests; not part of the public API.
+ */
+export async function readBoundedText(
+  response: Response,
+  context: string,
+  maxBytes = MAX_THEME_BYTES
+): Promise<string> {
+  if (!response.body) {
+    return response.text();
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8", { fatal: false });
+  let received = 0;
+  let text = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > maxBytes) {
+      try { await reader.cancel(); } catch { /* noop */ }
+      throw new Error(
+        `Theme payload exceeded ${maxBytes} bytes while fetching ${context}`
+      );
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+
+  text += decoder.decode();
+  return text;
+}
+
 export interface ThemeColors {
   background: string;
   foreground: string;
@@ -90,11 +161,27 @@ export async function fetchThemeList(): Promise<ThemeListItem[]> {
     throw new Error(`Failed to fetch theme list: ${response.statusText}`);
   }
 
-  const data = await response.json();
-  
+  ensureTextResponse(response, "application/json", "theme list");
+
+  // The theme list is small (a few hundred entries) but we still cap it
+  // defensively in case a future migration brings the list to a different
+  // host with looser limits.
+  const data = JSON.parse(await readBoundedText(response, "theme list", MAX_THEME_LIST_BYTES)) as Array<{
+    type: string;
+    name: string;
+    download_url: string;
+  }>;
+
+  // A misconfigured upstream could return `{}` (e.g. an error payload
+  // with a JSON content-type). Surface that as a hard error instead of
+  // silently producing an empty theme list.
+  if (!Array.isArray(data)) {
+    throw new Error("Unexpected theme list response shape from GitHub");
+  }
+
   return data
-    .filter((item: { type: string }) => item.type === "file")
-    .map((item: { name: string; download_url: string }) => ({
+    .filter((item) => item.type === "file")
+    .map((item) => ({
       name: item.name,
       downloadUrl: item.download_url,
     }));
@@ -104,7 +191,7 @@ export async function fetchThemeList(): Promise<ThemeListItem[]> {
 export async function fetchTheme(name: string): Promise<Theme> {
   const encodedName = encodeURIComponent(name);
   const url = `${RAW_CONTENT_BASE}/${encodedName}`;
-  
+
   const response = await fetch(url, {
     next: { revalidate: 86400 }, // Cache for 24 hours
   });
@@ -113,7 +200,9 @@ export async function fetchTheme(name: string): Promise<Theme> {
     throw new Error(`Failed to fetch theme "${name}": ${response.statusText}`);
   }
 
-  const content = await response.text();
+  ensureTextResponse(response, "text/", `theme "${name}"`);
+
+  const content = await readBoundedText(response, `theme "${name}"`);
   const colors = parseThemeContent(content);
 
   return {
