@@ -21,13 +21,15 @@
  *
  *   - default-src 'self': baseline; everything not explicitly allowed is
  *     blocked.
- *   - script-src 'self' 'unsafe-inline' https://*.vercel-insights.com
- *     https://*.vercel.com blob::
+ *   - script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'
+ *     https://*.vercel-insights.com https://*.vercel.com blob::
  *     - 'unsafe-inline' is currently required by Next.js' inline hydration
  *       scripts and by dynamically-injected styles for the WASM-backed
  *       terminal preview. Upgrading to nonce-based scripts is a known
  *       follow-up; left as a future task because it requires middleware
  *       changes.
+ *     - 'wasm-unsafe-eval' allows libghostty's same-origin WebAssembly
+ *       module to compile without reopening broad JavaScript eval.
  *     - blob: is required for the libghostty WASM module which loads its
  *       helpers via blob URLs.
  *     - Vercel Analytics + Speed Insights ship tiny inline scripts that
@@ -68,6 +70,7 @@ export function buildCsp(isDev: boolean): string {
     "script-src": [
       "'self'",
       "'unsafe-inline'",
+      "'wasm-unsafe-eval'",
       "https://*.vercel-insights.com",
       "https://*.vercel.com",
       "blob:",

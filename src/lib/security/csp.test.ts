@@ -66,6 +66,12 @@ describe("buildCsp", () => {
     expect(styleSrc).not.toContain("fonts.googleapis.com");
   });
 
+  it("allows WASM compilation without reopening broad JavaScript eval in production", () => {
+    const parsed = parseCsp(buildCsp(false));
+    expect(parsed["script-src"]).toContain("'wasm-unsafe-eval'");
+    expect(parsed["script-src"]).not.toContain("'unsafe-eval'");
+  });
+
   it("allows WASM helpers via blob: in script-src and worker-src", () => {
     const parsed = parseCsp(buildCsp(false));
     expect(parsed["script-src"]).toContain("blob:");

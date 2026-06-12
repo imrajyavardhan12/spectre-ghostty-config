@@ -70,12 +70,36 @@ describe('url-share', () => {
 
     it('should handle arrays in config', () => {
       const config = {
-        keybind: ['ctrl+c=copy', 'ctrl+v=paste'],
+        keybind: ['ctrl+c=copy', 'ctrl+v=paste', 'clear'],
       };
       const encoded = encodeConfig(config);
       const decoded = decodeConfig(encoded);
 
-      expect(decoded?.config['keybind']).toEqual(['ctrl+c=copy', 'ctrl+v=paste']);
+      expect(decoded?.config['keybind']).toEqual(['ctrl+c=copy', 'ctrl+v=paste', 'clear']);
+    });
+
+    it('should preserve repeatable string arrays in shared configs', () => {
+      const config = {
+        'font-family': ['JetBrains Mono', 'Symbols Nerd Font'],
+        env: ['PATH=/usr/local/bin', 'EDITOR=nvim'],
+        'config-file': ['?local', '/etc/ghostty/config'],
+      };
+      const encoded = encodeConfig(config);
+      const decoded = decodeConfig(encoded);
+
+      expect(decoded?.config['font-family']).toEqual([
+        'JetBrains Mono',
+        'Symbols Nerd Font',
+      ]);
+      expect(decoded?.config.env).toEqual(['PATH=/usr/local/bin', 'EDITOR=nvim']);
+      expect(decoded?.config['config-file']).toEqual(['?local', '/etc/ghostty/config']);
+    });
+
+    it('should preserve editor-valid duration whitespace forms', () => {
+      const encoded = encodeConfig({ 'resize-overlay-duration': '1 h 30 m' });
+      const decoded = decodeConfig(encoded);
+
+      expect(decoded?.config['resize-overlay-duration']).toBe('1 h 30 m');
     });
 
     it('should preserve theme name', () => {

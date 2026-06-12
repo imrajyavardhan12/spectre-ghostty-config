@@ -12,6 +12,32 @@ describe("validateSharedConfig", () => {
     expect(result.dropped).toEqual([]);
   });
 
+  it("accepts string arrays for repeatable string options", () => {
+    const result = validateSharedConfig({
+      "font-family": ["JetBrains Mono", "Symbols Nerd Font"],
+      env: ["PATH=/usr/local/bin", "EDITOR=nvim"],
+      "config-file": ["?local", "/etc/ghostty/config"],
+    });
+
+    expect(result.config).toEqual({
+      "font-family": ["JetBrains Mono", "Symbols Nerd Font"],
+      env: ["PATH=/usr/local/bin", "EDITOR=nvim"],
+      "config-file": ["?local", "/etc/ghostty/config"],
+    });
+    expect(result.dropped).toEqual([]);
+  });
+
+  it("rejects string arrays for non-repeatable string options", () => {
+    const result = validateSharedConfig({
+      title: ["not", "repeatable"],
+    });
+
+    expect(result.config).toEqual({});
+    expect(result.dropped).toEqual([
+      { key: "title", reason: "invalid value shape" },
+    ]);
+  });
+
   it("accepts a known number option", () => {
     const result = validateSharedConfig({ "font-size": 14 });
     expect(result.config).toEqual({ "font-size": 14 });
@@ -59,8 +85,13 @@ describe("validateSharedConfig", () => {
     expect(result.config).toEqual({ background: "#fff" });
   });
 
-  it("rejects a color value that is neither hex nor an X11 name", () => {
-    const result = validateSharedConfig({ background: "<script>alert(1)</script>" });
+  it("accepts Ghostty X11 color names through the shared editor validator", () => {
+    const result = validateSharedConfig({ background: "medium spring green" });
+    expect(result.config).toEqual({ background: "medium spring green" });
+  });
+
+  it("rejects a color value that is neither hex nor a Ghostty X11 name", () => {
+    const result = validateSharedConfig({ background: "not a real color" });
     expect(result.config).toEqual({});
     expect(result.dropped).toEqual([
       { key: "background", reason: "invalid value shape" },
@@ -101,6 +132,11 @@ describe("validateSharedConfig", () => {
     expect(result.config).toEqual({
       keybind: ["ctrl+c=copy_to_clipboard", "ctrl+v=paste_from_clipboard"],
     });
+  });
+
+  it("accepts Ghostty's special keybind clear value", () => {
+    const result = validateSharedConfig({ keybind: ["clear"] });
+    expect(result.config).toEqual({ keybind: ["clear"] });
   });
 
   it("rejects a keybind entry with no '=' separator", () => {
@@ -166,6 +202,13 @@ describe("validateSharedConfig", () => {
       "resize-overlay-duration": "1h30m",
     });
     expect(result.config).toEqual({ "resize-overlay-duration": "1h30m" });
+  });
+
+  it("accepts duration whitespace forms supported by the editor validator", () => {
+    const result = validateSharedConfig({
+      "resize-overlay-duration": "1 h 30 m",
+    });
+    expect(result.config).toEqual({ "resize-overlay-duration": "1 h 30 m" });
   });
 
   it("rejects a duration with no unit", () => {

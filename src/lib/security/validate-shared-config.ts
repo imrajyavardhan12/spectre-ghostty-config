@@ -16,6 +16,7 @@
 
 import type { ConfigOption } from "@/lib/schema/types";
 import { allOptions } from "@/data/ghostty-options";
+import { validateConfigValue } from "@/lib/utils/config-validation";
 
 /** Hard caps applied during validation. Generous enough for any realistic
  *  hand-crafted config, small enough to bound memory and render cost. */
@@ -25,9 +26,6 @@ export const SHARED_CONFIG_LIMITS = {
   maxArrayLength: 1024,
   maxThemeNameLength: 256,
 } as const;
-
-const HEX_COLOR_PATTERN = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
-const X11_NAME_PATTERN = /^[a-z][a-z0-9 _-]*$/i;
 
 type ValidatedKey =
   | { kind: "ok"; key: string }
@@ -48,12 +46,12 @@ function validateValueForOption(
 ): unknown | null {
   switch (option.type) {
     case "string":
-      return validateStringValue(rawValue);
+      return option.repeatable
+        ? validateRepeatableStringValue(rawValue)
+        : validateStringValue(rawValue);
 
-    case "number": {
-      const n = coerceFiniteNumber(rawValue);
-      return n === null ? null : n;
-    }
+    case "number":
+      return validateValueUsingEditorRules(option, rawValue);
 
     case "boolean":
       if (typeof rawValue === "boolean") return rawValue;
@@ -67,8 +65,7 @@ function validateValueForOption(
       return rawValue;
 
     case "color":
-      if (typeof rawValue !== "string") return null;
-      return validateColorValue(rawValue) ? rawValue : null;
+      return validateValueUsingEditorRules(option, rawValue);
 
     case "palette":
       return validateStringArray(rawValue, (entry) =>
@@ -81,8 +78,7 @@ function validateValueForOption(
       );
 
     case "duration":
-      if (typeof rawValue !== "string") return null;
-      return validateDurationValue(rawValue) ? rawValue : null;
+      return validateValueUsingEditorRules(option, rawValue);
 
     default:
       // Exhaustiveness check - if a new option type is added without
@@ -97,30 +93,36 @@ function validateStringValue(rawValue: unknown): string | null {
   return rawValue;
 }
 
-function coerceFiniteNumber(rawValue: unknown): number | null {
-  if (typeof rawValue === "number" && Number.isFinite(rawValue)) {
-    return rawValue;
-  }
+function validateRepeatableStringValue(rawValue: unknown): string | string[] | null {
   if (typeof rawValue === "string") {
-    const parsed = Number(rawValue);
-    if (Number.isFinite(parsed)) return parsed;
+    return validateStringValue(rawValue);
   }
-  return null;
+
+  if (!Array.isArray(rawValue)) return null;
+  if (rawValue.length > SHARED_CONFIG_LIMITS.maxArrayLength) return null;
+
+  const cleaned: string[] = [];
+  for (const entry of rawValue) {
+    const cleanedEntry = validateStringValue(entry);
+    if (cleanedEntry === null) return null;
+    cleaned.push(cleanedEntry);
+  }
+
+  return cleaned;
 }
 
-function validateColorValue(value: string): boolean {
-  if (value.length > SHARED_CONFIG_LIMITS.maxStringLength) return false;
-  if (HEX_COLOR_PATTERN.test(value)) return true;
-  return X11_NAME_PATTERN.test(value);
-}
+function validateValueUsingEditorRules(
+  option: ConfigOption,
+  rawValue: unknown
+): unknown | null {
+  if (typeof rawValue === "string" && rawValue.length > SHARED_CONFIG_LIMITS.maxStringLength) {
+    return null;
+  }
 
-function validateDurationValue(value: string): boolean {
-  if (value.length > SHARED_CONFIG_LIMITS.maxStringLength) return false;
-  if (value === "0") return true;
-  // Match a sequence of `N{unit}` parts separated by whitespace. Mirrors
-  // the rules in lib/utils/config-validation.ts so a value the editor
-  // would accept is also a value the share loader accepts.
-  return /^(\d+(y|w|d|h|m|s|ms|us|µs|ns)\s*)+$/.test(value);
+  const validation = validateConfigValue(option, rawValue);
+  if (!validation.valid) return null;
+
+  return validation.normalizedValue ?? rawValue;
 }
 
 function validateStringArray(
@@ -161,6 +163,9 @@ function validatePaletteEntry(entry: string): boolean {
 }
 
 function validateKeybindEntry(entry: string): boolean {
+  // Ghostty also accepts `keybind = clear` to clear all default bindings.
+  if (entry === "clear") return true;
+
   // A keybind is `trigger=action`. Don't try to fully parse the trigger
   // / action grammar here - the editor's own validator will surface
   // problems at the row level, and we don't want to reject legacy or
