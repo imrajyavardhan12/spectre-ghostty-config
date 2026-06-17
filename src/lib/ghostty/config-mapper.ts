@@ -61,9 +61,57 @@ function mapCursorBlink(blink: unknown): boolean {
   return false;
 }
 
+const CSS_GENERIC_FONT_FAMILIES = new Set([
+  "serif",
+  "sans-serif",
+  "monospace",
+  "cursive",
+  "fantasy",
+  "system-ui",
+  "ui-serif",
+  "ui-sans-serif",
+  "ui-monospace",
+  "ui-rounded",
+  "emoji",
+  "math",
+  "fangsong",
+]);
+
+function formatCssFontFamily(family: string): string {
+  const trimmed = family.trim();
+
+  if (CSS_GENERIC_FONT_FAMILIES.has(trimmed.toLowerCase())) {
+    return trimmed;
+  }
+
+  if (/^[a-zA-Z_][\w-]*$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `"${trimmed.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function mapFontFamily(fontFamily: unknown): string {
+  if (Array.isArray(fontFamily)) {
+    const families = fontFamily
+      .filter((family): family is string => typeof family === "string")
+      .map((family) => family.trim())
+      .filter(Boolean)
+      .map(formatCssFontFamily);
+
+    return families.length > 0 ? [...families, "monospace"].join(", ") : "monospace";
+  }
+
+  if (typeof fontFamily === "string" && fontFamily.trim() !== "") {
+    return fontFamily;
+  }
+
+  return "monospace";
+}
+
 export function mapConfigToTerminalOptions(config: ConfigValues): ITerminalOptions {
   const fontSize = (config["font-size"] as number) || 13;
-  const fontFamily = (config["font-family"] as string) || "monospace";
+  const fontFamily = mapFontFamily(config["font-family"]);
   const cursorStyle = mapCursorStyle((config["cursor-style"] as string) || "block");
   const cursorBlink = mapCursorBlink(config["cursor-style-blink"]);
 
