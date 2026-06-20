@@ -268,6 +268,54 @@ describe('keybind-validation', () => {
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
     });
+
+    it('should validate Ghostty chained actions', () => {
+      const result = validateKeybind('chain=goto_split:left');
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should reject prefixed chained actions', () => {
+      const result = validateKeybind('global:chain=goto_split:left');
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('Chained actions cannot have prefixes');
+    });
+
+    it('should validate key table bindings', () => {
+      const result = validateKeybind('resize/ctrl+h=resize_split:left,10');
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should validate prefixed key table bindings', () => {
+      const result = validateKeybind('copy-mode/global:ctrl+a=new_window');
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should validate key sequences within key tables', () => {
+      const result = validateKeybind('copy-mode/ctrl+a>ctrl+b=new_window');
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should validate key table clears', () => {
+      const result = validateKeybind('resize/');
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should preserve slash key triggers instead of treating them as key tables', () => {
+      const result = validateKeybind('ctrl+/=new_tab');
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should reject chain entries prefixed with a key table', () => {
+      const result = validateKeybind('resize/chain=goto_split:left');
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('Chained actions cannot be prefixed with a key table');
+    });
   });
 
   describe('KEYBIND_ACTIONS', () => {
@@ -285,6 +333,13 @@ describe('keybind-validation', () => {
       expect(action?.hasParam).toBe(true);
       expect(action?.paramOptions).toContain('text');
       expect(action?.paramOptions).toContain('html');
+    });
+
+    it('should include confirmed key table actions', () => {
+      expect(KEYBIND_ACTIONS.some(a => a.action === 'activate_key_table')).toBe(true);
+      expect(KEYBIND_ACTIONS.some(a => a.action === 'activate_key_table_once')).toBe(true);
+      expect(KEYBIND_ACTIONS.some(a => a.action === 'deactivate_key_table')).toBe(true);
+      expect(KEYBIND_ACTIONS.some(a => a.action === 'deactivate_all_key_tables')).toBe(true);
     });
   });
 
