@@ -139,8 +139,41 @@ describe("validateSharedConfig", () => {
     expect(result.config).toEqual({ keybind: ["clear"] });
   });
 
+  it("accepts Ghostty keybind table clears", () => {
+    const result = validateSharedConfig({ keybind: ["resize/"] });
+    expect(result.config).toEqual({ keybind: ["resize/"] });
+  });
+
+  it("accepts a single Ghostty keybind table clear string", () => {
+    const result = validateSharedConfig({ keybind: "resize/" });
+    expect(result.config).toEqual({ keybind: ["resize/"] });
+  });
+
+  it("accepts Ghostty keybind chains and table bindings", () => {
+    const result = validateSharedConfig({
+      keybind: [
+        "chain=goto_split:left",
+        "resize/ctrl+h=resize_split:left,10",
+        "ctrl+/=new_tab",
+      ],
+    });
+
+    expect(result.config).toEqual({
+      keybind: [
+        "chain=goto_split:left",
+        "resize/ctrl+h=resize_split:left,10",
+        "ctrl+/=new_tab",
+      ],
+    });
+  });
+
   it("rejects a keybind entry with no '=' separator", () => {
     const result = validateSharedConfig({ keybind: ["ctrl+c"] });
+    expect(result.config).toEqual({});
+  });
+
+  it("rejects malformed keybind table clears", () => {
+    const result = validateSharedConfig({ keybind: ["bad+table/"] });
     expect(result.config).toEqual({});
   });
 

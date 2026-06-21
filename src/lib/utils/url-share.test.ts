@@ -102,6 +102,19 @@ describe('url-share', () => {
       expect(decoded?.config['resize-overlay-duration']).toBe('1 h 30 m');
     });
 
+    it('should preserve Ghostty keybind chains and key table forms', () => {
+      const keybind = [
+        'chain=goto_split:left',
+        'resize/ctrl+h=resize_split:left,10',
+        'resize/',
+        'ctrl+/=new_tab',
+      ];
+      const encoded = encodeConfig({ keybind });
+      const decoded = decodeConfig(encoded);
+
+      expect(decoded?.config.keybind).toEqual(keybind);
+    });
+
     it('should preserve theme name', () => {
       const config = { 'font-size': 14 };
       const encoded = encodeConfig(config, 'Dracula');
