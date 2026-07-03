@@ -1,9 +1,13 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { SettingWrapper } from "./SettingWrapper";
+import { ValidationMessages } from "./ValidationMessages";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { DurationOption } from "@/lib/schema/types";
+import { hasValidationErrors, validateConfigValue } from "@/lib/utils/config-validation";
+import { cn } from "@/lib/utils";
 
 interface DurationInputProps {
   option: DurationOption;
@@ -11,8 +15,25 @@ interface DurationInputProps {
 
 export function DurationInput({ option }: DurationInputProps) {
   const { getValue, setValue, resetValue } = useConfigStore();
-  const value = getValue(option.id) as string;
+  const storeValue = getValue(option.id) as string;
   const modified = useIsModified(option.id);
+  const [localValue, setLocalValue] = useState<string | null>(null);
+  const displayValue = localValue ?? storeValue ?? "";
+  const validation = validateConfigValue(option, displayValue);
+  const hasErrors = hasValidationErrors(validation);
+
+  const handleInputChange = useCallback((newValue: string) => {
+    setLocalValue(newValue);
+    const nextValidation = validateConfigValue(option, newValue);
+
+    if (!hasValidationErrors(nextValidation)) {
+      setValue(option.id, nextValidation.normalizedValue ?? newValue);
+    }
+  }, [option, setValue]);
+
+  const handleInputBlur = useCallback(() => {
+    setLocalValue(null);
+  }, []);
 
   return (
     <SettingWrapper
@@ -29,14 +50,17 @@ export function DurationInput({ option }: DurationInputProps) {
       <Input
         id={option.id}
         type="text"
-        value={value || ""}
-        onChange={(e) => setValue(option.id, e.target.value)}
+        value={displayValue}
+        onChange={(e) => handleInputChange(e.target.value)}
+        onBlur={handleInputBlur}
         placeholder={option.placeholder || option.default || "e.g., 750ms, 1s, 1h30m"}
-        className="max-w-xs font-mono"
+        aria-invalid={hasErrors}
+        className={cn("max-w-xs font-mono", hasErrors && "border-destructive focus-visible:ring-destructive/40")}
       />
       <p className="mt-1 text-xs text-muted-foreground">
         Format: 1h, 30m, 45s, 750ms, 100us, 50ns
       </p>
+      <ValidationMessages result={validation} />
     </SettingWrapper>
   );
 }

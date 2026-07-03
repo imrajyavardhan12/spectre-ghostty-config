@@ -1,6 +1,6 @@
 {
   "name": "spectre-ghostty-config",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A beautiful, modern configuration generator for Ghostty terminal",
   "author": "imrajyavardhan12",
   "license": "MIT",
@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "schema:check": "bun run scripts/check-ghostty-schema-drift.ts",
     "format": "prettier --write .",
     "postinstall": "cp node_modules/ghostty-web/ghostty-vt.wasm public/ 2>/dev/null || true",
     "test": "vitest",

@@ -1,5 +1,9 @@
 import LZString from "lz-string";
 import { ConfigValues } from "@/lib/store/config-store";
+import {
+  validateSharedConfig,
+  validateSharedThemeName,
+} from "@/lib/security/validate-shared-config";
 
 export interface ShareableConfig {
   config: ConfigValues;
@@ -28,14 +32,31 @@ export function decodeConfig(encoded: string): ShareableConfig | null {
   try {
     const json = LZString.decompressFromEncodedURIComponent(encoded);
     if (!json) return null;
-    
-    const data = JSON.parse(json) as ShareableConfig;
-    
-    if (!data.config || typeof data.config !== "object") {
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
       return null;
     }
-    
-    return data;
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const raw = parsed as { config?: unknown; theme?: unknown };
+    const { config } = validateSharedConfig(raw.config);
+    const theme = validateSharedThemeName(raw.theme) ?? null;
+
+    // If validation stripped every key and there's no usable theme, the
+    // payload is effectively empty. Return null so the share page can
+    // surface its "Invalid or corrupted share link" error instead of
+    // rendering a misleading "0 settings configured" empty config.
+    if (Object.keys(config).length === 0 && theme === null) {
+      return null;
+    }
+
+    return { config, theme };
   } catch {
     return null;
   }

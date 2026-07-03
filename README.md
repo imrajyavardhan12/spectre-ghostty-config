@@ -85,7 +85,13 @@ Spectre treats the official Ghostty project as the source of truth for configura
 2. [Ghostty Official Docs](https://ghostty.org/docs) for broader behavior and release notes.
 3. [Ghostty GitHub/source](https://github.com/ghostty-org/ghostty) when documentation is ambiguous or needs source-level confirmation.
 
-Schema changes should be traceable to these upstream sources.
+Schema changes should be traceable to these upstream sources. Maintainers can run:
+
+```bash
+bun run schema:check
+```
+
+to compare Spectre's local option IDs against the official Ghostty config reference.
 
 ## Configuration Categories
 

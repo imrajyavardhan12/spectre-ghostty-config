@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import LZString from 'lz-string';
 import {
   encodeConfig,
   decodeConfig,
   generateShareUrl,
   getConfigFromUrl,
 } from '@/lib/utils/url-share';
+
+function encodeRawJson(json: string): string {
+  return LZString.compressToEncodedURIComponent(json);
+}
 
 describe('url-share', () => {
   describe('encodeConfig', () => {
@@ -31,11 +36,13 @@ describe('url-share', () => {
       expect(decoded?.theme).toBe('Tokyo Night');
     });
 
-    it('should not include theme when null', () => {
+    it('should normalise a null theme to null on decode', () => {
       const config = { 'font-size': 16 };
       const encoded = encodeConfig(config, null);
       const decoded = decodeConfig(encoded);
-      expect(decoded?.theme).toBeUndefined();
+      // The decoder normalises "no theme" to a stable null shape; this
+      // is what the share page and the config store expect.
+      expect(decoded?.theme).toBeNull();
     });
   });
 
@@ -63,12 +70,49 @@ describe('url-share', () => {
 
     it('should handle arrays in config', () => {
       const config = {
-        keybind: ['ctrl+c=copy', 'ctrl+v=paste'],
+        keybind: ['ctrl+c=copy', 'ctrl+v=paste', 'clear'],
       };
       const encoded = encodeConfig(config);
       const decoded = decodeConfig(encoded);
 
-      expect(decoded?.config['keybind']).toEqual(['ctrl+c=copy', 'ctrl+v=paste']);
+      expect(decoded?.config['keybind']).toEqual(['ctrl+c=copy', 'ctrl+v=paste', 'clear']);
+    });
+
+    it('should preserve repeatable string arrays in shared configs', () => {
+      const config = {
+        'font-family': ['JetBrains Mono', 'Symbols Nerd Font'],
+        env: ['PATH=/usr/local/bin', 'EDITOR=nvim'],
+        'config-file': ['?local', '/etc/ghostty/config'],
+      };
+      const encoded = encodeConfig(config);
+      const decoded = decodeConfig(encoded);
+
+      expect(decoded?.config['font-family']).toEqual([
+        'JetBrains Mono',
+        'Symbols Nerd Font',
+      ]);
+      expect(decoded?.config.env).toEqual(['PATH=/usr/local/bin', 'EDITOR=nvim']);
+      expect(decoded?.config['config-file']).toEqual(['?local', '/etc/ghostty/config']);
+    });
+
+    it('should preserve editor-valid duration whitespace forms', () => {
+      const encoded = encodeConfig({ 'resize-overlay-duration': '1 h 30 m' });
+      const decoded = decodeConfig(encoded);
+
+      expect(decoded?.config['resize-overlay-duration']).toBe('1 h 30 m');
+    });
+
+    it('should preserve Ghostty keybind chains and key table forms', () => {
+      const keybind = [
+        'chain=goto_split:left',
+        'resize/ctrl+h=resize_split:left,10',
+        'resize/',
+        'ctrl+/=new_tab',
+      ];
+      const encoded = encodeConfig({ keybind });
+      const decoded = decodeConfig(encoded);
+
+      expect(decoded?.config.keybind).toEqual(keybind);
     });
 
     it('should preserve theme name', () => {
@@ -142,6 +186,81 @@ describe('url-share', () => {
       expect(decoded?.config['cursor-style']).toBe('bar');
       expect(decoded?.config['background-opacity']).toBe(0.95);
       expect(decoded?.config['keybind']).toEqual(['ctrl+c=copy', 'ctrl+v=paste']);
+    });
+  });
+
+  describe('security hardening', () => {
+    it('drops unknown option keys', () => {
+      const malicious = encodeConfig({
+        'font-size': 14,
+        'backdoor-cmd': 'rm -rf /',
+      });
+      const decoded = decodeConfig(malicious);
+      expect(decoded?.config['font-size']).toBe(14);
+      expect(decoded?.config['backdoor-cmd']).toBeUndefined();
+    });
+
+    it('coerces non-primitive values into the expected shape', () => {
+      // Construct a payload that bypasses TypeScript and embeds a
+      // non-primitive value. The decoder drops the key, and because no
+      // other keys survive, the whole payload is treated as invalid.
+      const rawJson =
+        '{"config":{"font-size":{"__html":"<img onerror=alert(1) src=x>"}},"version":1}';
+      const compressed = encodeRawJson(rawJson);
+      expect(decodeConfig(compressed)).toBeNull();
+    });
+
+    it('rejects prototype-pollution key names', () => {
+      const rawJson = '{"config":{"__proto__":{"polluted":true}},"version":1}';
+      const compressed = encodeRawJson(rawJson);
+      // The decoder drops __proto__ and nothing else survives.
+      expect(decodeConfig(compressed)).toBeNull();
+      // And - critically - nothing got attached to Object.prototype.
+      expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+    });
+
+    it('rejects enum values not in the allowed list', () => {
+      const rawJson = '{"config":{"cursor-style":"rainbow"},"version":1}';
+      const compressed = encodeRawJson(rawJson);
+      // The bad enum is the only key, so the payload is treated as empty.
+      expect(decodeConfig(compressed)).toBeNull();
+    });
+
+    it('rejects malformed palette entries', () => {
+      const rawJson =
+        '{"config":{"palette":["<script>alert(1)</script>"]},"version":1}';
+      const compressed = encodeRawJson(rawJson);
+      expect(decodeConfig(compressed)).toBeNull();
+    });
+
+    it('rejects a theme name that breaks out of a comment', () => {
+      const rawJson = '{"config":{},"theme":"evil\\nname","version":1}';
+      const compressed = encodeRawJson(rawJson);
+      // Both the config and the theme are unusable - the whole payload
+      // is treated as invalid.
+      expect(decodeConfig(compressed)).toBeNull();
+    });
+
+    it('preserves a payload that has at least one good key', () => {
+      // The decoder should only return null when *nothing* survives.
+      // Mixed payloads keep the good keys and drop the bad ones.
+      const rawJson =
+        '{"config":{"font-size":14,"backdoor-cmd":"x"},"version":1}';
+      const compressed = encodeRawJson(rawJson);
+      const decoded = decodeConfig(compressed);
+      expect(decoded).not.toBeNull();
+      expect(decoded!.config['font-size']).toBe(14);
+      expect(decoded!.config['backdoor-cmd']).toBeUndefined();
+    });
+
+    it('returns a config with a null prototype', () => {
+      const decoded = decodeConfig(encodeConfig({ 'font-size': 14 }));
+      expect(Object.getPrototypeOf(decoded!.config)).toBeNull();
+    });
+
+    it('still returns null for outright garbage', () => {
+      expect(decodeConfig('not-valid-base64!@#$')).toBeNull();
+      expect(decodeConfig('')).toBeNull();
     });
   });
 });

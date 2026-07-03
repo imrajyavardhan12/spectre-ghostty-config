@@ -514,8 +514,21 @@ export const KEYBIND_ACTIONS: KeybindAction[] = [
     paramDesc: "Table name (e.g., resize)"
   },
   {
+    action: "activate_key_table_once",
+    description: "Activate a named key table for one binding invocation (1.3.0+)",
+    category: "system",
+    hasParam: true,
+    paramDesc: "Table name (e.g., resize)"
+  },
+  {
     action: "deactivate_key_table",
     description: "Deactivate the currently active key table (1.3.0+)",
+    category: "system",
+    hasParam: false
+  },
+  {
+    action: "deactivate_all_key_tables",
+    description: "Deactivate all active key tables (1.3.0+)",
     category: "system",
     hasParam: false
   },
@@ -799,6 +812,58 @@ export function validateAction(actionStr: string): ActionValidation {
   return result;
 }
 
+interface KeyTableBinding {
+  binding: string;
+  bindingWithAction: string;
+}
+
+function parseKeyTableBinding(input: string, equalsIndex: number): KeyTableBinding | null {
+  const triggerEnd = equalsIndex === -1 ? input.length : equalsIndex;
+  const slashIndex = input.slice(0, triggerEnd).indexOf("/");
+
+  if (slashIndex === -1) return null;
+
+  const tableName = input.slice(0, slashIndex);
+
+  // Ghostty treats an empty table name as a regular slash key binding so
+  // `/=new_tab` and `ctrl+/=new_tab` style bindings continue to work.
+  if (tableName.length === 0) return null;
+
+  // Ghostty intentionally ignores + and > before the slash because those can
+  // be part of normal trigger syntax. This preserves slash-key bindings such
+  // as `ctrl+/=new_tab` instead of treating `ctrl+` as a table name.
+  if (/[+>]/.test(tableName)) return null;
+
+  return {
+    binding: input.slice(slashIndex + 1, triggerEnd),
+    bindingWithAction: input.slice(slashIndex + 1),
+  };
+}
+
+function addTriggerSequenceErrors(result: ValidationResult, trigger: string): void {
+  const triggerValidation = validateTriggerSequence(trigger);
+
+  if (!triggerValidation.valid) {
+    result.valid = false;
+    if (triggerValidation.error) {
+      result.errors.push(triggerValidation.error);
+    }
+  }
+}
+
+function addActionErrorsAndWarnings(result: ValidationResult, action: string): void {
+  const actionValidation = validateAction(action);
+
+  if (!actionValidation.valid && actionValidation.error) {
+    result.errors.push(actionValidation.error);
+    result.valid = false;
+  }
+
+  if (actionValidation.action === "close_all_windows") {
+    result.warnings.push("close_all_windows is deprecated. Use all:close_window instead.");
+  }
+}
+
 export function validateKeybind(keybind: string): ValidationResult {
   const result: ValidationResult = {
     valid: true,
@@ -815,10 +880,14 @@ export function validateKeybind(keybind: string): ValidationResult {
     return result;
   }
 
-  // Split by = to get trigger and action
   const equalsIndex = trimmedKeybind.indexOf("=");
+  const tableBinding = parseKeyTableBinding(trimmedKeybind, equalsIndex);
 
   if (equalsIndex === -1) {
+    if (tableBinding && tableBinding.binding === "") {
+      return result;
+    }
+
     return {
       valid: false,
       errors: ["Invalid format. Expected: trigger=action (e.g., ctrl+c=copy_to_clipboard)"],
@@ -829,28 +898,33 @@ export function validateKeybind(keybind: string): ValidationResult {
   const trigger = trimmedKeybind.slice(0, equalsIndex).trim();
   const action = trimmedKeybind.slice(equalsIndex + 1).trim();
 
-  // Handle trigger sequences (e.g., ctrl+a>n)
-  const triggerParts = trigger.split(">").map(t => t.trim()).filter(t => t);
-
-  for (const triggerPart of triggerParts) {
-    const triggerValidation = validateTrigger(triggerPart);
-    if (!triggerValidation.valid && triggerValidation.error) {
-      result.errors.push(triggerValidation.error);
-      result.valid = false;
-    }
+  if (trigger === "chain") {
+    addActionErrorsAndWarnings(result, action);
+    return result;
   }
 
-  // Validate action
-  const actionValidation = validateAction(action);
-  if (!actionValidation.valid && actionValidation.error) {
-    result.errors.push(actionValidation.error);
+  if (trigger.endsWith(":chain")) {
     result.valid = false;
+    result.errors.push("Chained actions cannot have prefixes");
+    addActionErrorsAndWarnings(result, action);
+    return result;
   }
 
-  // Add warnings for deprecated actions
-  if (actionValidation.action === "close_all_windows") {
-    result.warnings.push("close_all_windows is deprecated. Use all:close_window instead.");
+  if (tableBinding) {
+    if (tableBinding.bindingWithAction.startsWith("chain=")) {
+      result.valid = false;
+      result.errors.push("Chained actions cannot be prefixed with a key table");
+      addActionErrorsAndWarnings(result, action);
+      return result;
+    }
+
+    addTriggerSequenceErrors(result, tableBinding.binding.trim());
+    addActionErrorsAndWarnings(result, action);
+    return result;
   }
+
+  addTriggerSequenceErrors(result, trigger);
+  addActionErrorsAndWarnings(result, action);
 
   return result;
 }
