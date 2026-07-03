@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Ghost, Github, Download, Upload, RotateCcw, Check, Loader2, Palette, Sparkles, Search } from "lucide-react";
+import { Ghost, Code2, Download, Upload, RotateCcw, Check, Loader2, Palette, Sparkles, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -233,7 +233,7 @@ export function Header() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Github className="h-4 w-4" />
+                    <Code2 className="h-4 w-4" />
                   </a>
                 </Button>
               </TooltipTrigger>

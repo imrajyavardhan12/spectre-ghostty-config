@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Ghost, Palette, ArrowRight, Github } from "lucide-react";
+import { Ghost, Palette, ArrowRight, Code2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeBrowser } from "@/components/themes";
 import { ConfigOutput } from "@/components/editor/ConfigOutput";
@@ -35,7 +35,7 @@ export default function ThemesPage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Github className="h-4 w-4" />
+                <Code2 className="h-4 w-4" />
               </a>
             </Button>
             <Button asChild>
