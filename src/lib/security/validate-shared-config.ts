@@ -162,17 +162,30 @@ function validatePaletteEntry(entry: string): boolean {
   return /^(0|[1-9][0-9]*|0x[0-9a-f]+|0o[0-7]+|0b[01]+)=.+$/i.test(entry);
 }
 
+function isKeyTableClear(entry: string): boolean {
+  const slashIndex = entry.indexOf("/");
+
+  if (slashIndex <= 0) return false;
+  if (slashIndex !== entry.length - 1) return false;
+
+  const tableName = entry.slice(0, slashIndex);
+  return !/[=+>]/.test(tableName);
+}
+
 function validateKeybindEntry(entry: string): boolean {
-  // Ghostty also accepts `keybind = clear` to clear all default bindings.
+  // Ghostty accepts `keybind = clear` to clear all default bindings.
   if (entry === "clear") return true;
 
-  // A keybind is `trigger=action`. Don't try to fully parse the trigger
-  // / action grammar here - the editor's own validator will surface
-  // problems at the row level, and we don't want to reject legacy or
-  // future-compatible forms. We just enforce the basic split.
+  // Ghostty 1.3 key tables can be cleared with `<table>/`, with no `=`.
+  if (isKeyTableClear(entry)) return true;
+
+  // For share URLs, keep this intentionally coarse: the editor validator
+  // surfaces row-level keybind errors, while the trust boundary here only
+  // needs to reject values that are not plausibly keybind-shaped. This avoids
+  // dropping future Ghostty actions or older shared links with action names
+  // Spectre does not know yet.
   const eq = entry.indexOf("=");
-  if (eq <= 0 || eq === entry.length - 1) return false;
-  return entry.length <= SHARED_CONFIG_LIMITS.maxStringLength;
+  return eq > 0 && eq !== entry.length - 1;
 }
 
 function validateKey(
