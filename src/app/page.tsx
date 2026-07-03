@@ -10,7 +10,7 @@ import {
   Type,
   Keyboard,
   Download,
-  Github,
+  Code2,
   Eye,
   Share2,
   Command,
@@ -51,7 +51,7 @@ export default function HomePage() {
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Github className="h-5 w-5" />
+              <Code2 className="h-5 w-5" />
             </a>
           </div>
         </div>
