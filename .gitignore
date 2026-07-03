@@ -44,5 +44,8 @@ next-env.d.ts
 AGENTS.md
 AGENT.md
 
+# Factory agent workspace
+.factory/
+
 # WASM files (copied from node_modules)
 public/ghostty-vt.wasm
