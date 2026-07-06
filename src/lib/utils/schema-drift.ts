@@ -8,6 +8,22 @@ export const DOCS_ONLY_REFERENCE_ANCHORS = [
   "key-tables",
 ] as const;
 
+// Ghostty's docs site occasionally disambiguates two headings that share a
+// visible slug by appending a numeric suffix to one heading's anchor `id`,
+// even though the heading text (and the real Ghostty option name) is
+// unaffected. Map the drifted anchor id back to the real option id here.
+// Keep this list intentionally small and documented so it stays reviewable.
+//
+// - "shell-integration-3": the `shell-integration` option heading itself
+//   renders with id="shell-integration-3" upstream, while the page's own
+//   sidecar table of contents still links to "#shell-integration". The
+//   option is unchanged in Ghostty's source
+//   (https://github.com/ghostty-org/ghostty/blob/main/src/config/Config.zig,
+//   `@"shell-integration"`). Verified 2026-07-06.
+export const REFERENCE_ANCHOR_ID_ALIASES: Readonly<Record<string, string>> = {
+  "shell-integration-3": "shell-integration",
+};
+
 const CONFIG_REFERENCE_ID_PATTERN = /^[a-z][a-z0-9-]*$/;
 const HTML_TAG_PATTERN = /<[^>]+>/g;
 const ID_ATTRIBUTE_PATTERN = /\bid=(['"])(.*?)\1/;
@@ -19,6 +35,7 @@ export interface GhosttySchemaDriftReport {
   localOptionIds: string[];
   docsOnlyAnchorIds: string[];
   staleDocsOnlyAnchorIds: string[];
+  staleReferenceAnchorIdAliases: string[];
   missingLocalOptionIds: string[];
   extraLocalOptionIds: string[];
 }
@@ -27,6 +44,7 @@ export interface CreateGhosttySchemaDriftReportInput {
   referenceAnchorIds: string[];
   localOptionIds: string[];
   docsOnlyAnchorIds?: readonly string[];
+  referenceAnchorIdAliases?: Readonly<Record<string, string>>;
 }
 
 function uniqueInOrder(ids: readonly string[]): string[] {
@@ -80,6 +98,7 @@ export function createGhosttySchemaDriftReport({
   referenceAnchorIds,
   localOptionIds,
   docsOnlyAnchorIds = DOCS_ONLY_REFERENCE_ANCHORS,
+  referenceAnchorIdAliases = REFERENCE_ANCHOR_ID_ALIASES,
 }: CreateGhosttySchemaDriftReportInput): GhosttySchemaDriftReport {
   const uniqueReferenceAnchorIds = uniqueInOrder(referenceAnchorIds);
   const uniqueLocalOptionIds = uniqueInOrder(localOptionIds);
@@ -89,9 +108,12 @@ export function createGhosttySchemaDriftReport({
   const docsOnlyReferenceAnchorIds = uniqueReferenceAnchorIds.filter((id) =>
     docsOnlyAnchorSet.has(id)
   );
-  const referenceOptionIds = uniqueReferenceAnchorIds.filter((id) =>
-    !docsOnlyAnchorSet.has(id)
-  );
+  // Resolve known drifted anchor ids (e.g. upstream duplicate-slug
+  // disambiguation) back to the option id they actually represent before
+  // diffing against local option ids.
+  const referenceOptionIds = uniqueReferenceAnchorIds
+    .filter((id) => !docsOnlyAnchorSet.has(id))
+    .map((id) => referenceAnchorIdAliases[id] ?? id);
   const referenceOptionSet = new Set(referenceOptionIds);
   const localOptionSet = new Set(uniqueLocalOptionIds);
 
@@ -104,17 +126,24 @@ export function createGhosttySchemaDriftReport({
   const staleDocsOnlyAnchorIds = docsOnlyAnchorIds.filter((id) =>
     !referenceAnchorSet.has(id)
   );
+  // If an aliased anchor id no longer appears upstream, the alias is stale
+  // (Ghostty likely fixed their anchor) and should be reviewed/removed.
+  const staleReferenceAnchorIdAliases = Object.keys(referenceAnchorIdAliases).filter(
+    (id) => !referenceAnchorSet.has(id)
+  );
 
   return {
     ok:
       missingLocalOptionIds.length === 0 &&
       extraLocalOptionIds.length === 0 &&
-      staleDocsOnlyAnchorIds.length === 0,
+      staleDocsOnlyAnchorIds.length === 0 &&
+      staleReferenceAnchorIdAliases.length === 0,
     referenceAnchorIds: uniqueReferenceAnchorIds,
     referenceOptionIds,
     localOptionIds: uniqueLocalOptionIds,
     docsOnlyAnchorIds: docsOnlyReferenceAnchorIds,
     staleDocsOnlyAnchorIds,
+    staleReferenceAnchorIdAliases,
     missingLocalOptionIds,
     extraLocalOptionIds,
   };
@@ -144,6 +173,14 @@ export function formatGhosttySchemaDriftReport(report: GhosttySchemaDriftReport)
       "",
       "Stale docs-only allowlist entries:",
       formatList(report.staleDocsOnlyAnchorIds)
+    );
+  }
+
+  if (report.staleReferenceAnchorIdAliases.length > 0) {
+    lines.push(
+      "",
+      "Stale reference anchor id aliases:",
+      formatList(report.staleReferenceAnchorIdAliases)
     );
   }
 
