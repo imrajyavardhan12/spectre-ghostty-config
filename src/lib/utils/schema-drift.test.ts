@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DOCS_ONLY_REFERENCE_ANCHORS,
+  REFERENCE_ANCHOR_ID_ALIASES,
   createGhosttySchemaDriftReport,
   extractGhosttyReferenceAnchorIds,
 } from '@/lib/utils/schema-drift';
@@ -45,6 +46,7 @@ describe('Ghostty schema drift utilities', () => {
       referenceAnchorIds: ['font-family', 'theme', 'chained-actions', 'key-tables'],
       localOptionIds: ['theme', 'font-family'],
       docsOnlyAnchorIds: DOCS_ONLY_REFERENCE_ANCHORS,
+      referenceAnchorIdAliases: {},
     });
 
     expect(report.ok).toBe(true);
@@ -62,5 +64,36 @@ describe('Ghostty schema drift utilities', () => {
 
     expect(report.ok).toBe(false);
     expect(report.staleDocsOnlyAnchorIds).toEqual(['removed-docs-section']);
+  });
+
+  it('resolves aliased reference anchor ids back to their real option id', () => {
+    const report = createGhosttySchemaDriftReport({
+      referenceAnchorIds: ['font-family', 'shell-integration-3', 'shell-integration-features'],
+      localOptionIds: ['font-family', 'shell-integration', 'shell-integration-features'],
+      docsOnlyAnchorIds: [],
+      referenceAnchorIdAliases: REFERENCE_ANCHOR_ID_ALIASES,
+    });
+
+    expect(report.ok).toBe(true);
+    expect(report.referenceOptionIds).toEqual([
+      'font-family',
+      'shell-integration',
+      'shell-integration-features',
+    ]);
+    expect(report.missingLocalOptionIds).toEqual([]);
+    expect(report.extraLocalOptionIds).toEqual([]);
+    expect(report.staleReferenceAnchorIdAliases).toEqual([]);
+  });
+
+  it('fails when the anchor id alias map contains stale entries', () => {
+    const report = createGhosttySchemaDriftReport({
+      referenceAnchorIds: ['font-family', 'shell-integration'],
+      localOptionIds: ['font-family', 'shell-integration'],
+      docsOnlyAnchorIds: [],
+      referenceAnchorIdAliases: { 'shell-integration-3': 'shell-integration' },
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.staleReferenceAnchorIdAliases).toEqual(['shell-integration-3']);
   });
 });
