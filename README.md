@@ -4,10 +4,16 @@
   <h1>👻</h1>
   <h3>A beautiful, modern configuration generator for Ghostty terminal</h3>
   <p>
-    <a href="https://ghostty.org">Ghostty</a> •
+    <a href="https://spectre-ghostty-config.vercel.app">Open Spectre</a> •
     <a href="#features">Features</a> •
     <a href="#getting-started">Getting Started</a> •
+    <a href="#roadmap">Roadmap</a> •
     <a href="#contributing">Contributing</a>
+  </p>
+  <p>
+    <a href="https://github.com/imrajyavardhan12/spectre-ghostty-config/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/imrajyavardhan12/spectre-ghostty-config/actions/workflows/ci.yml/badge.svg" /></a>
+    <a href="https://github.com/imrajyavardhan12/spectre-ghostty-config/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/imrajyavardhan12/spectre-ghostty-config" /></a>
+    <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/imrajyavardhan12/spectre-ghostty-config" /></a>
   </p>
 </div>
 
@@ -111,15 +117,21 @@ to compare Spectre's local option IDs against the official Ghostty config refere
 | **Linux** | Linux/GTK-specific settings |
 | **Advanced** | Scrollback, shaders, image storage |
 
+## Roadmap
+
+Current priorities are upstream Ghostty correctness, end-to-end confidence, accessibility, preview resilience, and contributor readiness. See the [public roadmap](ROADMAP.md) for planned work and prioritization principles.
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for setup, testing, Ghostty source-of-truth requirements, and the pull request workflow.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- Browse [`good first issue`](https://github.com/imrajyavardhan12/spectre-ghostty-config/labels/good%20first%20issue) and [`help wanted`](https://github.com/imrajyavardhan12/spectre-ghostty-config/labels/help%20wanted) work.
+- Ask questions or explore early ideas in [GitHub Discussions](https://github.com/imrajyavardhan12/spectre-ghostty-config/discussions).
+- Read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+
+## Support and security
+
+Use [SUPPORT.md](SUPPORT.md) to choose between Discussions, issues, and upstream Ghostty support. Report vulnerabilities privately according to [SECURITY.md](SECURITY.md); do not open a public security issue.
 
 ## Acknowledgements
 

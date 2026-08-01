@@ -1,0 +1,93 @@
+name: Bug report
+description: Report reproducible behavior that is incorrect in Spectre
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Remove secrets, tokens, hostnames, usernames, and personal paths from configurations and screenshots.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and pull requests for this problem.
+          required: true
+        - label: I confirmed this is a Spectre problem rather than Ghostty behavior that also occurs without Spectre.
+          required: true
+        - label: I removed sensitive information from the report.
+          required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem
+      description: Describe what went wrong and its impact.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest reliable sequence that reproduces the problem.
+      placeholder: |
+        1. Open ...
+        2. Set ...
+        3. Export ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Minimal configuration or share link
+      description: Include only what is needed to reproduce the problem. Remove sensitive values.
+      render: shell
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Firefox 140, Chrome 140, Safari 19
+    validations:
+      required: true
+
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating system
+      placeholder: macOS 16, Ubuntu 26.04, Windows 11
+    validations:
+      required: true
+
+  - type: input
+    id: ghostty-version
+    attributes:
+      label: Ghostty version
+      description: If the problem involves imported or generated Ghostty behavior.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots, console output, or additional context
+      description: Drag files here. Redact personal information first.
+
+  - type: checkboxes
+    id: conduct
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow the project's Code of Conduct.
+          required: true

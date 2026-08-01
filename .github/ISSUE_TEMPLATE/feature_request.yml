@@ -1,0 +1,68 @@
+name: Feature request
+description: Propose a concrete improvement to Spectre
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start with the user problem. Early ideas and broad discussion belong in GitHub Discussions.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues, pull requests, and Discussions.
+          required: true
+        - label: This request relates to Spectre rather than a change required in Ghostty itself.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Who has this problem, and what are they unable to do today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the successful user outcome without prescribing implementation details.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Optional implementation or interaction ideas.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds or other approaches you considered.
+
+  - type: textarea
+    id: upstream
+    attributes:
+      label: Ghostty source or documentation
+      description: Link relevant Ghostty documentation, source, or release notes when applicable.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, examples, or related projects are welcome.
+
+  - type: checkboxes
+    id: conduct
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow the project's Code of Conduct.
+          required: true

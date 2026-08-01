@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and support
+    url: https://github.com/imrajyavardhan12/spectre-ghostty-config/discussions/categories/q-a
+    about: Ask for usage help or troubleshoot an unconfirmed problem.
+  - name: Explore an idea
+    url: https://github.com/imrajyavardhan12/spectre-ghostty-config/discussions/categories/ideas
+    about: Discuss early or broad product ideas before opening an issue.
+  - name: Report a security vulnerability
+    url: https://github.com/imrajyavardhan12/spectre-ghostty-config/security/advisories/new
+    about: Report vulnerabilities privately. Do not create a public issue.
+  - name: Ghostty support
+    url: https://github.com/ghostty-org/ghostty/discussions
+    about: Ask about behavior that occurs in Ghostty independently of Spectre.
