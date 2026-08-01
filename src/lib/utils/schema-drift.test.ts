@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   DOCS_ONLY_REFERENCE_ANCHORS,
-  REFERENCE_ANCHOR_ID_ALIASES,
   createGhosttySchemaDriftReport,
   extractGhosttyReferenceAnchorIds,
 } from '@/lib/utils/schema-drift';
@@ -46,7 +45,6 @@ describe('Ghostty schema drift utilities', () => {
       referenceAnchorIds: ['font-family', 'theme', 'chained-actions', 'key-tables'],
       localOptionIds: ['theme', 'font-family'],
       docsOnlyAnchorIds: DOCS_ONLY_REFERENCE_ANCHORS,
-      referenceAnchorIdAliases: {},
     });
 
     expect(report.ok).toBe(true);
@@ -71,7 +69,7 @@ describe('Ghostty schema drift utilities', () => {
       referenceAnchorIds: ['font-family', 'shell-integration-3', 'shell-integration-features'],
       localOptionIds: ['font-family', 'shell-integration', 'shell-integration-features'],
       docsOnlyAnchorIds: [],
-      referenceAnchorIdAliases: REFERENCE_ANCHOR_ID_ALIASES,
+      referenceAnchorIdAliases: { 'shell-integration-3': 'shell-integration' },
     });
 
     expect(report.ok).toBe(true);

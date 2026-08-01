@@ -5,6 +5,7 @@
   "author": "imrajyavardhan12",
   "license": "MIT",
   "private": true,
+  "packageManager": "bun@1.2.22",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,7 +13,6 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "schema:check": "bun run scripts/check-ghostty-schema-drift.ts",
-    "format": "prettier --write .",
     "postinstall": "cp node_modules/ghostty-web/ghostty-vt.wasm public/ 2>/dev/null || true",
     "test": "vitest",
     "test:watch": "vitest watch",
