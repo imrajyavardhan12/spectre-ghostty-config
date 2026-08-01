@@ -16,6 +16,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Switched Dependabot to its Bun ecosystem so dependency updates include the committed `bun.lock` file.
 - Declared the repository's Bun package-manager version in `package.json` for consistent local and CI tooling.
 - Removed the unusable Prettier script; formatter adoption will be handled separately from functional changes.
+- Added contributor, security, support, conduct, roadmap, issue, pull request, ownership, and funding documentation for a clearer open-source workflow.
 
 ### Fixed
 
