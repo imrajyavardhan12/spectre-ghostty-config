@@ -381,6 +381,7 @@ export function PreviewToggleButton({
   return (
     <Button
       onClick={onToggle}
+      aria-label={isOpen ? "Close Preview" : "Open Preview"}
       variant={isOpen ? "secondary" : "outline"}
       className={cn(
         "gap-2 shadow-lg transition-all duration-300",

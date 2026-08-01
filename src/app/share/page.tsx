@@ -38,7 +38,7 @@ function SharePageContent() {
   };
 
   const handleDownload = () => {
-    const blob = new Blob([configString], { type: "text/plain" });
+    const blob = new Blob([configString], { type: "application/octet-stream" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

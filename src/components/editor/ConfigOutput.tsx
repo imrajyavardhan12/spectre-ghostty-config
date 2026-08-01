@@ -55,7 +55,7 @@ export function ConfigOutput() {
 
   const handleDownload = () => {
     setDownloadTooltipOpen(false);
-    const blob = new Blob([configString], { type: "text/plain" });
+    const blob = new Blob([configString], { type: "application/octet-stream" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -78,6 +78,7 @@ export function ConfigOutput() {
     <Sheet open={isOpen} onOpenChange={handleSheetOpenChange}>
       <SheetTrigger asChild>
         <Button 
+          aria-label="View Config"
           className={cn(
             "gap-2 shadow-lg transition-all duration-300",
             modifiedCount > 0 && "shadow-primary/20"

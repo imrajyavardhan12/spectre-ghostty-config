@@ -39,16 +39,17 @@ export default function HomePage() {
               <Image
                 src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
                 alt="Buy Me A Coffee"
-                width={116}
+                width={114}
                 height={32}
+                priority
                 unoptimized
-                className="h-8 w-auto"
               />
             </a>
             <a
               href="https://github.com/imrajyavardhan12/spectre-ghostty-config"
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="View Spectre on GitHub"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <Code2 className="h-5 w-5" />

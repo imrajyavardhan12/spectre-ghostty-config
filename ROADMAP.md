@@ -14,8 +14,8 @@ Spectre's goal is to be the most trustworthy and approachable way to create a Gh
 
 - Keep the option schema synchronized with Ghostty upstream.
 - Establish contributor, security, support, and issue workflows.
-- Add end-to-end coverage for import → edit → preview → export/share.
-- Audit editor and theme-browser accessibility.
+- Expand end-to-end coverage beyond the critical import → edit → preview → export/share path.
+- Continue auditing editor and theme-browser accessibility beyond automated checks.
 - Improve recovery when WASM preview initialization or remote theme fetching fails.
 - Publish a clear compatibility statement for Spectre and Ghostty versions.
 

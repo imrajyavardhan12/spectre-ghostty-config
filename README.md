@@ -77,6 +77,7 @@ bun run start
 - **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Terminal Preview**: [ghostty-web](https://github.com/coder/ghostty-web) (libghostty compiled to WASM)
+- **End-to-End Testing**: [Playwright](https://playwright.dev/) with [axe-core](https://github.com/dequelabs/axe-core)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
 - **State Management**: [Zustand 5](https://zustand-demo.pmnd.rs/)

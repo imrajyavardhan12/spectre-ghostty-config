@@ -82,6 +82,7 @@ export function SettingWrapper({
                         href={`${GHOSTTY_DOCS_BASE_URL}#${id}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        aria-label={`View ${name} in Ghostty docs`}
                         className="text-muted-foreground hover:text-primary transition-colors"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -154,6 +155,7 @@ export function SettingWrapper({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    aria-label={`Reset ${name} to default`}
                     onClick={onReset}
                   >
                     <RotateCcw className="h-3.5 w-3.5" />

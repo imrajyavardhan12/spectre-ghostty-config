@@ -11,16 +11,24 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+### Added
+
+- Added Playwright browser tests for the landing-to-editor path, import/export, config sharing, mobile navigation, preview recovery, theme-service recovery, and automated WCAG A/AA checks.
+
 ### Changed
 
 - Switched Dependabot to its Bun ecosystem so dependency updates include the committed `bun.lock` file.
 - Declared the repository's Bun package-manager version in `package.json` for consistent local and CI tooling.
 - Removed the unusable Prettier script; formatter adoption will be handled separately from functional changes.
 - Added contributor, security, support, conduct, roadmap, issue, pull request, ownership, and funding documentation for a clearer open-source workflow.
+- Added Chromium end-to-end tests to the required CI verification job.
 
 ### Fixed
 
 - Removed a stale Ghostty documentation anchor alias that caused the weekly schema drift check to fail after upstream restored the canonical `shell-integration` anchor.
+- Added accessible names to editor actions, option reset controls, documentation links, and sliders.
+- Prevented the editor's mobile category strip from widening the page beyond the viewport.
+- Preserved Ghostty's extensionless `config` filename when downloading from editor and shared-config views.
 
 ## [0.3.0] - 2026-07-03
 
