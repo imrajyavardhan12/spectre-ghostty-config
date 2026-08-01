@@ -36,9 +36,17 @@ Open <http://localhost:3000>.
 | `bun run typecheck` | Run TypeScript checking |
 | `bun run test -- --run` | Run the test suite once |
 | `bun run test:watch` | Run tests in watch mode |
-| `bun run test:coverage -- --run` | Generate test coverage |
+| `bun run test:coverage -- --run` | Generate unit-test coverage |
+| `bun run test:e2e` | Run browser end-to-end and accessibility tests |
+| `bun run test:e2e:ui` | Open Playwright's interactive test runner |
 | `bun run build` | Create a production build |
 | `bun run schema:check` | Compare local options with Ghostty's reference |
+
+Install Playwright's Chromium build before running browser tests for the first time:
+
+```bash
+bunx playwright install chromium
+```
 
 A repository-wide formatter is not currently enforced. Match the surrounding file and let ESLint catch enforceable style problems. Avoid unrelated formatting changes.
 

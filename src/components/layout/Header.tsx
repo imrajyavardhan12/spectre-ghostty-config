@@ -31,7 +31,7 @@ export function Header() {
     await new Promise(resolve => setTimeout(resolve, 300));
     
     const configString = exportConfig();
-    const blob = new Blob([configString], { type: "text/plain" });
+    const blob = new Blob([configString], { type: "application/octet-stream" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -116,6 +116,7 @@ export function Header() {
                   variant="ghost" 
                   size="icon" 
                   onClick={handleImport}
+                  aria-label="Import Config"
                   className="relative h-9 w-9"
                 >
                   {importState === "loading" ? (
@@ -141,6 +142,7 @@ export function Header() {
                   variant="ghost" 
                   size="icon" 
                   onClick={handleExport}
+                  aria-label="Export Config"
                   className="h-9 w-9"
                 >
                   {exportState === "loading" ? (
@@ -166,6 +168,7 @@ export function Header() {
                   variant="ghost"
                   size="icon"
                   onClick={resetAll}
+                  aria-label="Reset All"
                   disabled={modifiedCount === 0}
                   className={cn(
                     "h-9 w-9 transition-all duration-200",
@@ -194,7 +197,12 @@ export function Header() {
                 <span className="inline-flex">
                   <PresetsDialog
                     trigger={
-                      <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Configuration Presets"
+                        className="h-9 w-9"
+                      >
                         <Sparkles className="h-4 w-4" />
                       </Button>
                     }
@@ -212,7 +220,7 @@ export function Header() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" asChild className="h-9 w-9">
-                  <Link href="/themes">
+                  <Link href="/themes" aria-label="Browse Themes">
                     <Palette className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -232,6 +240,7 @@ export function Header() {
                     href="https://github.com/imrajyavardhan12/spectre-ghostty-config"
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label="View Spectre on GitHub"
                   >
                     <Code2 className="h-4 w-4" />
                   </a>

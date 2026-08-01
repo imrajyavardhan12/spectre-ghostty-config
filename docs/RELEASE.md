@@ -23,6 +23,8 @@ Track Ghostty compatibility separately from the Spectre app version.
    bun run lint
    bun run test -- --run
    bun run build
+   bunx playwright install chromium # first run only
+   bun run test:e2e
    ```
 
 3. Update `CHANGELOG.md`.

@@ -48,7 +48,7 @@ export function NumberInput({ option, showSlider = true }: NumberInputProps) {
         {useSlider ? (
           <>
             <Slider
-              id={option.id}
+              aria-label={`${option.name} slider`}
               value={[sliderValue]}
               onValueChange={([v]) => setValue(option.id, v)}
               min={option.min}
@@ -57,6 +57,7 @@ export function NumberInput({ option, showSlider = true }: NumberInputProps) {
               className="flex-1 max-w-xs"
             />
             <Input
+              id={option.id}
               type="number"
               value={value ?? option.default}
               onChange={(e) => setValue(option.id, parseFloat(e.target.value) || 0)}
