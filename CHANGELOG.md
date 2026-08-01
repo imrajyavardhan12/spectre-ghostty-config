@@ -11,6 +11,16 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+### Changed
+
+- Switched Dependabot to its Bun ecosystem so dependency updates include the committed `bun.lock` file.
+- Declared the repository's Bun package-manager version in `package.json` for consistent local and CI tooling.
+- Removed the unusable Prettier script; formatter adoption will be handled separately from functional changes.
+
+### Fixed
+
+- Removed a stale Ghostty documentation anchor alias that caused the weekly schema drift check to fail after upstream restored the canonical `shell-integration` anchor.
+
 ## [0.3.0] - 2026-07-03
 
 ### Added

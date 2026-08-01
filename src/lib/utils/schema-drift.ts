@@ -8,21 +8,11 @@ export const DOCS_ONLY_REFERENCE_ANCHORS = [
   "key-tables",
 ] as const;
 
-// Ghostty's docs site occasionally disambiguates two headings that share a
-// visible slug by appending a numeric suffix to one heading's anchor `id`,
-// even though the heading text (and the real Ghostty option name) is
-// unaffected. Map the drifted anchor id back to the real option id here.
-// Keep this list intentionally small and documented so it stays reviewable.
-//
-// - "shell-integration-3": the `shell-integration` option heading itself
-//   renders with id="shell-integration-3" upstream, while the page's own
-//   sidecar table of contents still links to "#shell-integration". The
-//   option is unchanged in Ghostty's source
-//   (https://github.com/ghostty-org/ghostty/blob/main/src/config/Config.zig,
-//   `@"shell-integration"`). Verified 2026-07-06.
-export const REFERENCE_ANCHOR_ID_ALIASES: Readonly<Record<string, string>> = {
-  "shell-integration-3": "shell-integration",
-};
+// Ghostty's docs site may disambiguate duplicate heading slugs by appending a
+// numeric suffix to an anchor `id`. Map any active drifted anchor ids back to
+// their real option ids here. Keep this list intentionally small, documented,
+// and temporary: stale aliases deliberately fail the drift check.
+export const REFERENCE_ANCHOR_ID_ALIASES: Readonly<Record<string, string>> = {};
 
 const CONFIG_REFERENCE_ID_PATTERN = /^[a-z][a-z0-9-]*$/;
 const HTML_TAG_PATTERN = /<[^>]+>/g;
