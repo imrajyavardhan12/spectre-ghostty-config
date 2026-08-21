@@ -149,12 +149,15 @@ export function parseThemeContent(content: string): ThemeColors {
 }
 
 // Fetch list of available themes from GitHub
-export async function fetchThemeList(): Promise<ThemeListItem[]> {
+export async function fetchThemeList(
+  options: { signal?: AbortSignal } = {}
+): Promise<ThemeListItem[]> {
   const response = await fetch(GITHUB_API_BASE, {
     headers: {
       Accept: "application/vnd.github.v3+json",
     },
     next: { revalidate: 3600 }, // Cache for 1 hour
+    signal: options.signal,
   });
 
   if (!response.ok) {
@@ -188,12 +191,16 @@ export async function fetchThemeList(): Promise<ThemeListItem[]> {
 }
 
 // Fetch a single theme by name
-export async function fetchTheme(name: string): Promise<Theme> {
+export async function fetchTheme(
+  name: string,
+  options: { signal?: AbortSignal } = {}
+): Promise<Theme> {
   const encodedName = encodeURIComponent(name);
   const url = `${RAW_CONTENT_BASE}/${encodedName}`;
 
   const response = await fetch(url, {
     next: { revalidate: 86400 }, // Cache for 24 hours
+    signal: options.signal,
   });
 
   if (!response.ok) {
@@ -214,7 +221,9 @@ export async function fetchTheme(name: string): Promise<Theme> {
 
 // Fetch multiple themes in parallel
 export async function fetchThemes(names: string[]): Promise<Theme[]> {
-  const results = await Promise.allSettled(names.map(fetchTheme));
+  const results = await Promise.allSettled(
+    names.map((name) => fetchTheme(name))
+  );
   
   return results
     .filter((result): result is PromiseFulfilledResult<Theme> => 

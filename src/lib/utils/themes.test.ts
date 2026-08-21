@@ -239,6 +239,20 @@ describe('theme fetch hardening', () => {
       ]);
     });
 
+    it('forwards an abort signal to the theme list request', async () => {
+      const controller = new AbortController();
+      fetchSpy.mockResolvedValue(
+        new Response('[]', { headers: { 'content-type': 'application/json' } })
+      );
+
+      await fetchThemeList({ signal: controller.signal });
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('api.github.com'),
+        expect.objectContaining({ signal: controller.signal })
+      );
+    });
+
     it('accepts a valid GitHub API list larger than the individual theme-file cap', async () => {
       const entries = Array.from({ length: 3000 }, (_, index) => ({
         type: 'file',
@@ -304,6 +318,22 @@ describe('theme fetch hardening', () => {
       expect(result.colors.background).toBe('#1a1b26');
       expect(result.colors.foreground).toBe('#c0caf5');
       expect(result.raw).toBe(theme);
+    });
+
+    it('forwards an abort signal to the theme request', async () => {
+      const controller = new AbortController();
+      fetchSpy.mockResolvedValue(
+        new Response('background = #000000', {
+          headers: { 'content-type': 'text/plain' },
+        })
+      );
+
+      await fetchTheme('Tokyo Night', { signal: controller.signal });
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/Tokyo%20Night'),
+        expect.objectContaining({ signal: controller.signal })
+      );
     });
 
     it('rejects when the content-type is not text', async () => {

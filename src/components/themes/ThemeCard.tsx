@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { useState, useRef, useId } from "react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Theme, categorizeTheme } from "@/lib/utils/themes";
@@ -13,15 +13,15 @@ interface ThemeCardProps {
 }
 
 export function ThemeCard({ theme, isActive, onApply }: ThemeCardProps) {
-  const [isApplying, setIsApplying] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const cardRef = useRef<HTMLElement>(null);
   const [transform, setTransform] = useState({ rotateX: 0, rotateY: 0 });
   const [isHovering, setIsHovering] = useState(false);
 
   const isDark = categorizeTheme(theme) === "dark";
   const { background, foreground, palette } = theme.colors;
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -38,11 +38,8 @@ export function ThemeCard({ theme, isActive, onApply }: ThemeCardProps) {
     setTransform({ rotateX: 0, rotateY: 0 });
   };
 
-  const handleApply = async () => {
-    setIsApplying(true);
-    await new Promise((r) => setTimeout(r, 300));
+  const handleApply = () => {
     onApply(theme);
-    setIsApplying(false);
   };
 
   // Get 8 main colors from palette for preview
@@ -50,8 +47,9 @@ export function ThemeCard({ theme, isActive, onApply }: ThemeCardProps) {
 
   return (
     <div style={{ perspective: "800px" }}>
-      <div
+      <article
         ref={cardRef}
+        aria-labelledby={titleId}
         onMouseMove={handleMouseMove}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={handleMouseLeave}
@@ -71,6 +69,7 @@ export function ThemeCard({ theme, isActive, onApply }: ThemeCardProps) {
       >
         {/* Terminal Preview */}
         <div
+          aria-hidden="true"
           className="p-4"
           style={{ backgroundColor: background, color: foreground }}
         >
@@ -108,7 +107,7 @@ export function ThemeCard({ theme, isActive, onApply }: ThemeCardProps) {
         </div>
 
         {/* Color palette strip */}
-        <div className="flex h-2">
+        <div aria-hidden="true" className="flex h-2">
           {previewColors.length > 0
             ? previewColors.map((color, i) => (
                 <div
@@ -133,7 +132,13 @@ export function ThemeCard({ theme, isActive, onApply }: ThemeCardProps) {
         {/* Info and action */}
         <div className="p-3 bg-card flex items-center justify-between">
           <div>
-            <h3 className="font-medium text-sm truncate">{theme.name}</h3>
+            <h3
+              id={titleId}
+              className="font-medium text-sm truncate"
+              title={theme.name}
+            >
+              {theme.name}
+            </h3>
             <p className="text-xs text-muted-foreground">
               {isDark ? "Dark" : "Light"} theme
             </p>
@@ -143,12 +148,14 @@ export function ThemeCard({ theme, isActive, onApply }: ThemeCardProps) {
             size="sm"
             variant={isActive ? "secondary" : "default"}
             onClick={handleApply}
-            disabled={isApplying}
+            aria-label={
+              isActive
+                ? `Applied ${theme.name} theme`
+                : `Apply ${theme.name} theme`
+            }
             className="gap-1.5"
           >
-            {isApplying ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : isActive ? (
+            {isActive ? (
               <>
                 <Check className="h-3.5 w-3.5" />
                 Applied
@@ -158,7 +165,7 @@ export function ThemeCard({ theme, isActive, onApply }: ThemeCardProps) {
             )}
           </Button>
         </div>
-      </div>
+      </article>
     </div>
   );
 }
