@@ -1,7 +1,7 @@
 'use client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useConfigStore } from '@/lib/store/config-store';
 import { GhosttyPreview } from './GhosttyPreview';
 
@@ -121,6 +121,20 @@ describe('GhosttyPreview lifecycle', () => {
     rerender(<GhosttyPreview isOpen onToggle={vi.fn()} />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(2));
     expect(mocks.terminalInstances[1].open).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates the minimize toggle name to match its current action', async () => {
+    render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
+    await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
+
+    const minimizeToggle = screen.getAllByRole('button', {
+      name: 'Minimize preview',
+    })[0];
+    fireEvent.click(minimizeToggle);
+    expect(minimizeToggle).toHaveAccessibleName('Restore preview');
+
+    fireEvent.click(minimizeToggle);
+    expect(minimizeToggle).toHaveAccessibleName('Minimize preview');
   });
 
   it('lets a newer config creation supersede an in-flight request', async () => {

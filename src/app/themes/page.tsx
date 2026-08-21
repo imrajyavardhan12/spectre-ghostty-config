@@ -17,7 +17,11 @@ export default function ThemesPage() {
       <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link
+              href="/"
+              aria-label="Spectre home"
+              className="flex items-center gap-2 group"
+            >
               <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
               <span className="hidden font-medium sm:inline">Spectre</span>
             </Link>

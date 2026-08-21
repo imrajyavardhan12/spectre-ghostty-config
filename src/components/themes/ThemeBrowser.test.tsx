@@ -134,6 +134,55 @@ describe('ThemeBrowser loading lifecycle', () => {
     expect(fetchThemeMock.mock.calls[6][0]).toBe('Target Theme');
   });
 
+  it('keeps concurrency slots occupied until aborted requests settle', async () => {
+    const oldNames = Array.from({ length: 6 }, (_, index) => `Old Theme ${index}`);
+    const names = [...oldNames, 'New Theme'];
+    const resolvers = new Map<string, () => void>();
+    const signals = new Map<string, AbortSignal>();
+
+    fetchThemeListMock.mockResolvedValue(createThemeList(names));
+    fetchThemeMock.mockImplementation(
+      (name: string, options: { signal: AbortSignal }) => {
+        signals.set(name, options.signal);
+        if (name === 'New Theme') {
+          return Promise.resolve(createTheme(name));
+        }
+        return new Promise<void>((resolve) => {
+          resolvers.set(name, resolve);
+        }).then(() => createTheme(name));
+      }
+    );
+
+    render(<ThemeBrowser />);
+    await waitFor(() => {
+      expect(screen.getByText('0 of 7 themes loaded')).toBeInTheDocument();
+    });
+    const search = screen.getByRole('searchbox', { name: 'Search themes' });
+    fireEvent.change(search, { target: { value: 'Old' } });
+    await waitFor(
+      () => expect(fetchThemeMock).toHaveBeenCalledTimes(6),
+      { timeout: 1_000 }
+    );
+
+    fireEvent.change(search, { target: { value: 'New' } });
+    await waitFor(() => {
+      expect(oldNames.every((name) => signals.get(name)?.aborted)).toBe(true);
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+
+    // The replacement remains queued because the six aborted promises have
+    // deliberately not settled yet.
+    expect(fetchThemeMock).toHaveBeenCalledTimes(6);
+
+    await act(async () => {
+      resolvers.get(oldNames[0])?.();
+    });
+    await waitFor(() => expect(fetchThemeMock).toHaveBeenCalledTimes(7));
+    expect(fetchThemeMock.mock.calls[6][0]).toBe('New Theme');
+  });
+
   it('aborts work that was only needed by a superseded search', async () => {
     let oldSearchSignal: AbortSignal | undefined;
     fetchThemeListMock.mockResolvedValue(
@@ -176,6 +225,29 @@ describe('ThemeBrowser loading lifecycle', () => {
       { timeout: 1_000 }
     );
     await waitFor(() => expect(screen.getByRole('button', { name: 'New Theme' })).toBeInTheDocument());
+    expect(screen.queryByText(/failed to load/i)).not.toBeInTheDocument();
+  });
+
+  it('reports individual download failures and retries them', async () => {
+    fetchThemeListMock.mockResolvedValue(createThemeList(['Featured']));
+    fetchThemeMock
+      .mockRejectedValueOnce(new Error('theme service unavailable'))
+      .mockResolvedValueOnce(createTheme('Featured'));
+
+    render(<ThemeBrowser />);
+
+    await waitFor(() => {
+      expect(screen.getByText('1 theme failed to load.')).toBeInTheDocument();
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Retry failed theme' })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('1 of 1 themes loaded')).toBeInTheDocument();
+      expect(screen.queryByText('1 theme failed to load.')).not.toBeInTheDocument();
+    });
+    expect(fetchThemeMock).toHaveBeenCalledTimes(2);
   });
 
   it('aborts the theme request when the browser unmounts', async () => {

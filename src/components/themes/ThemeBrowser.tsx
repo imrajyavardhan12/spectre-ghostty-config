@@ -30,7 +30,9 @@ interface ThemeLoadTask {
   name: string;
   priority: number;
   order: number;
+  generation: number;
   status: ThemeLoadStatus;
+  occupiesSlot: boolean;
   priorities: Map<ThemeLoadSource, number>;
   controller: AbortController;
   promise: Promise<void>;
@@ -46,11 +48,15 @@ export function ThemeBrowser() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<FilterType>("featured");
   const [appliedTheme, setAppliedTheme] = useState<string | null>(null);
+  const [failedThemeNames, setFailedThemeNames] = useState<Set<string>>(
+    new Set()
+  );
   const loadedThemesRef = useRef(loadedThemes);
   const pendingThemeLoadsRef = useRef(new Map<string, ThemeLoadTask>());
   const queuedThemeLoadsRef = useRef<ThemeLoadTask[]>([]);
   const activeThemeLoadsRef = useRef(0);
   const themeLoadOrderRef = useRef(0);
+  const themeLoadGenerationRef = useRef(0);
   const searchPriorityRef = useRef(0);
   const drainThemeQueueRef = useRef<() => void>(() => undefined);
   const themeListAbortControllerRef = useRef<AbortController | null>(null);
@@ -66,19 +72,32 @@ export function ThemeBrowser() {
     }
   }, []);
 
+  const releaseThemeLoadSlot = useCallback((task: ThemeLoadTask) => {
+    if (!task.occupiesSlot) return;
+
+    task.occupiesSlot = false;
+    if (task.generation === themeLoadGenerationRef.current) {
+      activeThemeLoadsRef.current = Math.max(
+        0,
+        activeThemeLoadsRef.current - 1
+      );
+    }
+  }, []);
+
   const detachThemeLoad = useCallback(
     (task: ThemeLoadTask) => {
       if (pendingThemeLoadsRef.current.get(task.name) !== task) return;
 
       pendingThemeLoadsRef.current.delete(task.name);
-      if (task.status === "active") {
-        activeThemeLoadsRef.current = Math.max(0, activeThemeLoadsRef.current - 1);
-      } else {
+      if (task.status === "queued") {
         queuedThemeLoadsRef.current = queuedThemeLoadsRef.current.filter(
           (queuedTask) => queuedTask !== task
         );
       }
 
+      // Active tasks keep their concurrency slot until the fetch promise
+      // settles. This prevents replacements from exceeding the global cap
+      // while an aborted request is still winding down.
       task.controller.abort();
       task.resolve();
       updateLoadingMore();
@@ -107,6 +126,7 @@ export function ThemeBrowser() {
       }
 
       task.status = "active";
+      task.occupiesSlot = true;
       activeThemeLoadsRef.current += 1;
 
       void fetchTheme(task.name, { signal: task.controller.signal })
@@ -123,22 +143,45 @@ export function ThemeBrowser() {
           next.set(task.name, theme);
           loadedThemesRef.current = next;
           setLoadedThemes(next);
+          setFailedThemeNames((prev) => {
+            if (!prev.has(task.name)) return prev;
+            const failures = new Set(prev);
+            failures.delete(task.name);
+            return failures;
+          });
         })
-        .catch(() => undefined)
-        .finally(() => {
-          if (pendingThemeLoadsRef.current.get(task.name) !== task) return;
+        .catch((error: unknown) => {
+          const wasAborted =
+            task.controller.signal.aborted ||
+            (error instanceof Error && error.name === "AbortError");
+          if (
+            wasAborted ||
+            !isMountedRef.current ||
+            pendingThemeLoadsRef.current.get(task.name) !== task
+          ) {
+            return;
+          }
 
-          pendingThemeLoadsRef.current.delete(task.name);
-          activeThemeLoadsRef.current = Math.max(
-            0,
-            activeThemeLoadsRef.current - 1
-          );
-          task.resolve();
-          updateLoadingMore();
+          setFailedThemeNames((prev) => {
+            if (prev.has(task.name)) return prev;
+            const failures = new Set(prev);
+            failures.add(task.name);
+            return failures;
+          });
+        })
+        .finally(() => {
+          releaseThemeLoadSlot(task);
+
+          if (pendingThemeLoadsRef.current.get(task.name) === task) {
+            pendingThemeLoadsRef.current.delete(task.name);
+            task.resolve();
+            updateLoadingMore();
+          }
+
           drainThemeQueueRef.current();
         });
     }
-  }, [updateLoadingMore]);
+  }, [releaseThemeLoadSlot, updateLoadingMore]);
   drainThemeQueueRef.current = drainThemeQueue;
 
   // Schedule per-theme work so overlapping UI requests share one fetch. Newer
@@ -171,7 +214,9 @@ export function ThemeBrowser() {
           name,
           priority,
           order: themeLoadOrderRef.current++,
+          generation: themeLoadGenerationRef.current,
           status: "queued",
+          occupiesSlot: false,
           priorities,
           controller: new AbortController(),
           promise,
@@ -219,6 +264,7 @@ export function ThemeBrowser() {
     return () => {
       isMountedRef.current = false;
       controller.abort();
+      themeLoadGenerationRef.current += 1;
       for (const task of [...pendingThemeLoads.values()]) {
         detachThemeLoad(task);
       }
@@ -336,6 +382,11 @@ export function ThemeBrowser() {
   const handleLoadAll = async () => {
     const allNames = themeList.map((t) => t.name);
     await loadThemeBatch(allNames, "manual");
+  };
+
+  const handleRetryFailedThemes = () => {
+    const priority = ++searchPriorityRef.current;
+    void loadThemeBatch([...failedThemeNames], "manual", priority);
   };
 
   // Apply theme
@@ -457,6 +508,27 @@ export function ThemeBrowser() {
           </Badge>
         )}
       </div>
+
+      {failedThemeNames.size > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex flex-wrap items-center gap-2 text-sm text-destructive"
+        >
+          <span>
+            {failedThemeNames.size} {failedThemeNames.size === 1 ? "theme" : "themes"}{" "}
+            failed to load.
+          </span>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={handleRetryFailedThemes}
+            className="h-auto p-0 text-destructive"
+          >
+            Retry failed {failedThemeNames.size === 1 ? "theme" : "themes"}
+          </Button>
+        </div>
+      )}
 
       {/* Theme grid */}
       {loading ? (

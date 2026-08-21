@@ -107,6 +107,10 @@ test("the mobile theme browser supports keyboard navigation without horizontal o
   await page.goto("/themes");
   await expect(page.getByRole("heading", { name: "Dracula" })).toBeVisible();
 
+  await expect(
+    page.getByRole("link", { name: "Spectre home" })
+  ).toBeVisible();
+
   const search = page.getByRole("searchbox", { name: "Search themes" });
   await search.focus();
   await expect(search).toBeFocused();
@@ -117,4 +121,5 @@ test("the mobile theme browser supports keyboard navigation without horizontal o
     () => document.documentElement.scrollWidth > window.innerWidth
   );
   expect(hasHorizontalPageOverflow).toBe(false);
+  expect(await findAccessibilityViolations(page)).toEqual([]);
 });

@@ -318,7 +318,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
               </div>
               <div className="flex items-center gap-1">
                 <button
-                  aria-label="Minimize preview"
+                  aria-label={isMinimized ? "Restore preview" : "Minimize preview"}
                   onClick={() => setIsMinimized(!isMinimized)}
                   className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
                 >
@@ -356,7 +356,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
                     </span>
                   </button>
                   <button
-                    aria-label="Minimize preview"
+                    aria-label={isMinimized ? "Restore preview" : "Minimize preview"}
                     onClick={() => setIsMinimized(!isMinimized)}
                     className="w-3.5 h-3.5 rounded-full bg-[#febc2e] hover:bg-[#febc2e]/80 transition-colors flex items-center justify-center"
                   >
