@@ -15,6 +15,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 - Added Playwright browser tests for the landing-to-editor path, import/export, config sharing, mobile navigation, preview recovery, theme-service recovery, and automated WCAG A/AA checks.
 - Added focused unit coverage for theme loading concurrency, prioritization, and cancellation.
+- Added focused unit coverage for Ghostty preview lifecycle and supersession races.
 
 ### Changed
 
@@ -27,6 +28,8 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
+- Prevented stale Ghostty preview initialization from attaching a terminal after the preview closes or a newer configuration replaces it, including cleanup of resources created by invalidated requests.
+- Added accessible names and status announcements to preview controls, loading, and failures.
 - Added accessible names and state announcements to the theme browser.
 - Kept the theme browser header within the viewport on small screens.
 - Removed a stale Ghostty documentation anchor alias that caused the weekly schema drift check to fail after upstream restored the canonical `shell-integration` anchor.
