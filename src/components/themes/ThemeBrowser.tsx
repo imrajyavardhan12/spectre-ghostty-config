@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Search, Palette, Moon, Sun, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,25 @@ import { useConfigStore } from "@/lib/store/config-store";
 
 type FilterType = "all" | "dark" | "light" | "featured";
 
+const THEME_FETCH_CONCURRENCY = 6;
+const SEARCH_LOAD_DEBOUNCE_MS = 200;
+
+type ThemeLoadSource = "featured" | "filter" | "manual" | "search";
+type ThemeLoadStatus = "queued" | "active";
+
+interface ThemeLoadTask {
+  name: string;
+  priority: number;
+  order: number;
+  generation: number;
+  status: ThemeLoadStatus;
+  occupiesSlot: boolean;
+  priorities: Map<ThemeLoadSource, number>;
+  controller: AbortController;
+  promise: Promise<void>;
+  resolve: () => void;
+}
+
 export function ThemeBrowser() {
   const [themeList, setThemeList] = useState<ThemeListItem[]>([]);
   const [loadedThemes, setLoadedThemes] = useState<Map<string, Theme>>(new Map());
@@ -29,34 +48,240 @@ export function ThemeBrowser() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<FilterType>("featured");
   const [appliedTheme, setAppliedTheme] = useState<string | null>(null);
+  const [failedThemeNames, setFailedThemeNames] = useState<Set<string>>(
+    new Set()
+  );
+  const loadedThemesRef = useRef(loadedThemes);
+  const pendingThemeLoadsRef = useRef(new Map<string, ThemeLoadTask>());
+  const queuedThemeLoadsRef = useRef<ThemeLoadTask[]>([]);
+  const activeThemeLoadsRef = useRef(0);
+  const themeLoadOrderRef = useRef(0);
+  const themeLoadGenerationRef = useRef(0);
+  const searchPriorityRef = useRef(0);
+  const drainThemeQueueRef = useRef<() => void>(() => undefined);
+  const themeListAbortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
   
   // Use selectors to properly subscribe to config changes
   const config = useConfigStore((state) => state.config);
   const loadConfig = useConfigStore((state) => state.loadConfig);
 
-  // Load a batch of themes
-  const loadThemeBatch = useCallback(async (names: string[]) => {
-    setLoadingMore(true);
-    const results = await Promise.allSettled(names.map(fetchTheme));
-    
-    setLoadedThemes((prev) => {
-      const next = new Map(prev);
-      results.forEach((result, index) => {
-        if (result.status === "fulfilled" && !prev.has(names[index])) {
-          next.set(names[index], result.value);
-        }
-      });
-      return next;
-    });
-    setLoadingMore(false);
+  const updateLoadingMore = useCallback(() => {
+    if (isMountedRef.current) {
+      setLoadingMore(pendingThemeLoadsRef.current.size > 0);
+    }
   }, []);
+
+  const releaseThemeLoadSlot = useCallback((task: ThemeLoadTask) => {
+    if (!task.occupiesSlot) return;
+
+    task.occupiesSlot = false;
+    if (task.generation === themeLoadGenerationRef.current) {
+      activeThemeLoadsRef.current = Math.max(
+        0,
+        activeThemeLoadsRef.current - 1
+      );
+    }
+  }, []);
+
+  const detachThemeLoad = useCallback(
+    (task: ThemeLoadTask) => {
+      if (pendingThemeLoadsRef.current.get(task.name) !== task) return;
+
+      pendingThemeLoadsRef.current.delete(task.name);
+      if (task.status === "queued") {
+        queuedThemeLoadsRef.current = queuedThemeLoadsRef.current.filter(
+          (queuedTask) => queuedTask !== task
+        );
+      }
+
+      // Active tasks keep their concurrency slot until the fetch promise
+      // settles. This prevents replacements from exceeding the global cap
+      // while an aborted request is still winding down.
+      task.controller.abort();
+      task.resolve();
+      updateLoadingMore();
+    },
+    [updateLoadingMore]
+  );
+
+  const drainThemeQueue = useCallback(() => {
+    if (!isMountedRef.current) return;
+
+    queuedThemeLoadsRef.current.sort(
+      (a, b) => b.priority - a.priority || a.order - b.order
+    );
+
+    while (
+      activeThemeLoadsRef.current < THEME_FETCH_CONCURRENCY &&
+      queuedThemeLoadsRef.current.length > 0
+    ) {
+      const task = queuedThemeLoadsRef.current.shift();
+      if (
+        !task ||
+        task.status !== "queued" ||
+        pendingThemeLoadsRef.current.get(task.name) !== task
+      ) {
+        continue;
+      }
+
+      task.status = "active";
+      task.occupiesSlot = true;
+      activeThemeLoadsRef.current += 1;
+
+      void fetchTheme(task.name, { signal: task.controller.signal })
+        .then((theme) => {
+          if (
+            !isMountedRef.current ||
+            task.controller.signal.aborted ||
+            pendingThemeLoadsRef.current.get(task.name) !== task
+          ) {
+            return;
+          }
+
+          const next = new Map(loadedThemesRef.current);
+          next.set(task.name, theme);
+          loadedThemesRef.current = next;
+          setLoadedThemes(next);
+          setFailedThemeNames((prev) => {
+            if (!prev.has(task.name)) return prev;
+            const failures = new Set(prev);
+            failures.delete(task.name);
+            return failures;
+          });
+        })
+        .catch((error: unknown) => {
+          const wasAborted =
+            task.controller.signal.aborted ||
+            (error instanceof Error && error.name === "AbortError");
+          if (
+            wasAborted ||
+            !isMountedRef.current ||
+            pendingThemeLoadsRef.current.get(task.name) !== task
+          ) {
+            return;
+          }
+
+          setFailedThemeNames((prev) => {
+            if (prev.has(task.name)) return prev;
+            const failures = new Set(prev);
+            failures.add(task.name);
+            return failures;
+          });
+        })
+        .finally(() => {
+          releaseThemeLoadSlot(task);
+
+          if (pendingThemeLoadsRef.current.get(task.name) === task) {
+            pendingThemeLoadsRef.current.delete(task.name);
+            task.resolve();
+            updateLoadingMore();
+          }
+
+          drainThemeQueueRef.current();
+        });
+    }
+  }, [releaseThemeLoadSlot, updateLoadingMore]);
+  drainThemeQueueRef.current = drainThemeQueue;
+
+  // Schedule per-theme work so overlapping UI requests share one fetch. Newer
+  // searches receive a higher priority and can move already-queued names ahead
+  // of stale work without discarding themes that have already loaded.
+  const loadThemeBatch = useCallback(
+    (
+      names: string[],
+      source: ThemeLoadSource,
+      priority = 0
+    ): Promise<void> => {
+      const promises = [...new Set(names)].map((name) => {
+        if (loadedThemesRef.current.has(name)) {
+          return Promise.resolve();
+        }
+
+        const pendingTask = pendingThemeLoadsRef.current.get(name);
+        if (pendingTask) {
+          pendingTask.priorities.set(source, priority);
+          pendingTask.priority = Math.max(...pendingTask.priorities.values());
+          return pendingTask.promise;
+        }
+
+        let resolveTask: () => void = () => undefined;
+        const promise = new Promise<void>((resolve) => {
+          resolveTask = resolve;
+        });
+        const priorities = new Map<ThemeLoadSource, number>([[source, priority]]);
+        const task: ThemeLoadTask = {
+          name,
+          priority,
+          order: themeLoadOrderRef.current++,
+          generation: themeLoadGenerationRef.current,
+          status: "queued",
+          occupiesSlot: false,
+          priorities,
+          controller: new AbortController(),
+          promise,
+          resolve: resolveTask,
+        };
+
+        pendingThemeLoadsRef.current.set(name, task);
+        queuedThemeLoadsRef.current.push(task);
+        return promise;
+      });
+
+      updateLoadingMore();
+      drainThemeQueueRef.current();
+      return Promise.all(promises).then(() => undefined);
+    },
+    [updateLoadingMore]
+  );
+
+  const releaseThemeLoadSource = useCallback(
+    (source: ThemeLoadSource) => {
+      for (const task of [...pendingThemeLoadsRef.current.values()]) {
+        if (!task.priorities.delete(source)) continue;
+
+        if (task.priorities.size === 0) {
+          detachThemeLoad(task);
+        } else {
+          task.priority = Math.max(...task.priorities.values());
+        }
+      }
+
+      drainThemeQueueRef.current();
+    },
+    [detachThemeLoad]
+  );
+
+  // Cancel list and theme requests when leaving the browser. Resolving queued
+  // task promises also lets any awaiting effects finish without retaining the
+  // unmounted component.
+  useEffect(() => {
+    isMountedRef.current = true;
+    const controller = new AbortController();
+    const pendingThemeLoads = pendingThemeLoadsRef.current;
+    themeListAbortControllerRef.current = controller;
+
+    return () => {
+      isMountedRef.current = false;
+      controller.abort();
+      themeLoadGenerationRef.current += 1;
+      for (const task of [...pendingThemeLoads.values()]) {
+        detachThemeLoad(task);
+      }
+      queuedThemeLoadsRef.current = [];
+      activeThemeLoadsRef.current = 0;
+    };
+  }, [detachThemeLoad]);
 
   // Fetch theme list on mount
   useEffect(() => {
+    const signal = themeListAbortControllerRef.current?.signal;
+
     async function loadThemeList() {
       try {
         setLoading(true);
-        const list = await fetchThemeList();
+        const list = await fetchThemeList({ signal });
+        if (!isMountedRef.current || signal?.aborted) return;
         setThemeList(list);
         
         // Load featured themes first
@@ -65,15 +290,18 @@ export function ThemeBrowser() {
           .map((t) => t.name)
           .slice(0, 12);
         
-        await loadThemeBatch(featuredNames);
+        await loadThemeBatch(featuredNames, "featured");
       } catch (err) {
+        if (!isMountedRef.current || signal?.aborted) return;
         setError(err instanceof Error ? err.message : "Failed to load themes");
       } finally {
-        setLoading(false);
+        if (isMountedRef.current && !signal?.aborted) {
+          setLoading(false);
+        }
       }
     }
     
-    loadThemeList();
+    void loadThemeList();
   }, [loadThemeBatch]);
 
   // Filter and search themes
@@ -93,7 +321,9 @@ export function ThemeBrowser() {
       themes = themes.filter((t) => categorizeTheme(t) === "dark");
     } else if (filter === "light") {
       themes = themes.filter((t) => categorizeTheme(t) === "light");
-    } else if (filter === "featured") {
+    } else if (filter === "featured" && !searchQuery) {
+      // Searching should cover the complete upstream list even though the
+      // browser defaults to Featured before the user enters a query.
       themes = themes.filter((t) => FEATURED_THEMES.includes(t.name));
     }
 
@@ -109,30 +339,54 @@ export function ThemeBrowser() {
     return themes;
   }, [loadedThemes, searchQuery, filter]);
 
-  // Auto-load all themes when a non-featured filter is selected
+  // Auto-load all themes when a non-featured filter is selected. Switching
+  // back to Featured releases filter-only work while retaining shared search
+  // and manual requests.
+  const shouldLoadAllForFilter = filter !== "featured";
   useEffect(() => {
-    if (filter !== "featured" && themeList.length > 0 && loadedThemes.size < themeList.length) {
-      const allNames = themeList.map((t) => t.name);
-      loadThemeBatch(allNames);
+    if (!shouldLoadAllForFilter) {
+      releaseThemeLoadSource("filter");
+      return;
     }
-  }, [filter, themeList, loadedThemes.size, loadThemeBatch]);
 
-  // Load more themes when searching
+    if (themeList.length > 0) {
+      void loadThemeBatch(
+        themeList.map((theme) => theme.name),
+        "filter"
+      );
+    }
+  }, [shouldLoadAllForFilter, themeList, loadThemeBatch, releaseThemeLoadSource]);
+
+  // Debounce search requests and immediately cancel queued or in-flight work
+  // that was only needed by the previous query. A monotonically increasing
+  // priority lets the latest query jump ahead of older shared work.
   useEffect(() => {
+    releaseThemeLoadSource("search");
     if (!searchQuery) return;
-    
-    const matchingNames = themeList
-      .filter((t) => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
-      .map((t) => t.name)
-      .slice(0, 20);
-    
-    loadThemeBatch(matchingNames);
-  }, [searchQuery, themeList, loadThemeBatch]);
+
+    const priority = ++searchPriorityRef.current;
+    const timeoutId = window.setTimeout(() => {
+      const query = searchQuery.toLowerCase();
+      const matchingNames = themeList
+        .filter((theme) => theme.name.toLowerCase().includes(query))
+        .map((theme) => theme.name)
+        .slice(0, 20);
+
+      void loadThemeBatch(matchingNames, "search", priority);
+    }, SEARCH_LOAD_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery, themeList, loadThemeBatch, releaseThemeLoadSource]);
 
   // Load all themes button
   const handleLoadAll = async () => {
     const allNames = themeList.map((t) => t.name);
-    await loadThemeBatch(allNames);
+    await loadThemeBatch(allNames, "manual");
+  };
+
+  const handleRetryFailedThemes = () => {
+    const priority = ++searchPriorityRef.current;
+    void loadThemeBatch([...failedThemeNames], "manual", priority);
   };
 
   // Apply theme
@@ -164,7 +418,10 @@ export function ThemeBrowser() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div
+        role="alert"
+        className="flex flex-col items-center justify-center py-16 text-center"
+      >
         <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
           <Palette className="h-8 w-8 text-destructive" />
         </div>
@@ -180,8 +437,16 @@ export function ThemeBrowser() {
       {/* Search and filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <label htmlFor="theme-search" className="sr-only">
+            Search themes
+          </label>
+          <Search
+            aria-hidden="true"
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+          />
           <Input
+            id="theme-search"
+            type="search"
             placeholder="Search themes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -189,13 +454,18 @@ export function ThemeBrowser() {
           />
         </div>
         
-        <div className="flex gap-2">
+        <div
+          className="grid grid-cols-2 gap-2 sm:flex"
+          role="group"
+          aria-label="Filter themes"
+        >
           {filterButtons.map((btn) => (
             <Button
               key={btn.value}
               variant={filter === btn.value ? "default" : "outline"}
               size="sm"
               onClick={() => setFilter(btn.value)}
+              aria-pressed={filter === btn.value}
               className="gap-1.5"
             >
               {btn.icon}
@@ -206,7 +476,10 @@ export function ThemeBrowser() {
       </div>
 
       {/* Stats */}
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <div
+        className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground"
+        aria-live="polite"
+      >
         <span>
           {loadedThemes.size} of {themeList.length} themes loaded
         </span>
@@ -236,9 +509,34 @@ export function ThemeBrowser() {
         )}
       </div>
 
+      {failedThemeNames.size > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex flex-wrap items-center gap-2 text-sm text-destructive"
+        >
+          <span>
+            {failedThemeNames.size} {failedThemeNames.size === 1 ? "theme" : "themes"}{" "}
+            failed to load.
+          </span>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={handleRetryFailedThemes}
+            className="h-auto p-0 text-destructive"
+          >
+            Retry failed {failedThemeNames.size === 1 ? "theme" : "themes"}
+          </Button>
+        </div>
+      )}
+
       {/* Theme grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          aria-busy="true"
+          aria-label="Loading themes"
+        >
           {Array(8)
             .fill(0)
             .map((_, i) => (
@@ -246,7 +544,11 @@ export function ThemeBrowser() {
             ))}
         </div>
       ) : filteredThemes.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div
+          id="theme-results"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          aria-busy={loadingMore}
+        >
           {filteredThemes.map((theme) => (
             <ThemeCard
               key={theme.name}
@@ -270,8 +572,15 @@ export function ThemeBrowser() {
 
       {/* Load more indicator */}
       {loadingMore && (
-        <div className="flex justify-center py-4">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div
+          className="flex justify-center py-4"
+          role="status"
+          aria-label="Loading more themes"
+        >
+          <Loader2
+            aria-hidden="true"
+            className="h-6 w-6 animate-spin text-muted-foreground"
+          />
         </div>
       )}
     </div>

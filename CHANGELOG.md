@@ -14,9 +14,13 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 ### Added
 
 - Added Playwright browser tests for the landing-to-editor path, import/export, config sharing, mobile navigation, preview recovery, theme-service recovery, and automated WCAG A/AA checks.
+- Added focused unit coverage for theme loading concurrency, prioritization, and cancellation.
+- Added focused unit coverage for Ghostty preview lifecycle and supersession races.
 
 ### Changed
 
+- Bounded, de-duplicated, and cancellable theme loading, with the latest search prioritized ahead of stale queued work.
+- Kept canceled theme requests inside the six-request concurrency budget until they settle, with retry controls for individual download failures.
 - Switched Dependabot to its Bun ecosystem so dependency updates include the committed `bun.lock` file.
 - Declared the repository's Bun package-manager version in `package.json` for consistent local and CI tooling.
 - Removed the unusable Prettier script; formatter adoption will be handled separately from functional changes.
@@ -25,6 +29,11 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
+- Prevented stale Ghostty preview initialization from attaching a terminal after the preview closes or a newer configuration replaces it, including cleanup of resources created by invalidated requests.
+- Added accessible names and status announcements to preview controls, loading, and failures.
+- Kept mobile navigation and minimize/restore controls accurately named in every responsive and preview state.
+- Added accessible names and state announcements to the theme browser.
+- Kept the theme browser header within the viewport on small screens.
 - Removed a stale Ghostty documentation anchor alias that caused the weekly schema drift check to fail after upstream restored the canonical `shell-integration` anchor.
 - Added accessible names to editor actions, option reset controls, documentation links, and sliders.
 - Prevented the editor's mobile category strip from widening the page beyond the viewport.

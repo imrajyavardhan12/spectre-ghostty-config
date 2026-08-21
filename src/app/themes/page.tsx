@@ -16,12 +16,16 @@ export default function ThemesPage() {
       {/* Header - consistent with editor */}
       <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 group">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link
+              href="/"
+              aria-label="Spectre home"
+              className="flex items-center gap-2 group"
+            >
               <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
-              <span className="font-medium">Spectre</span>
+              <span className="hidden font-medium sm:inline">Spectre</span>
             </Link>
-            <span className="text-muted-foreground/50">/</span>
+            <span className="hidden text-muted-foreground/50 sm:inline">/</span>
             <div className="flex items-center gap-2">
               <Palette className="h-4 w-4 text-primary" />
               <span className="font-medium">Themes</span>
@@ -29,11 +33,17 @@ export default function ThemesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" asChild className="h-9 w-9">
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="hidden h-9 w-9 sm:inline-flex"
+            >
               <a
                 href="https://github.com/imrajyavardhan12/spectre-ghostty-config"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="View Spectre on GitHub"
               >
                 <Code2 className="h-4 w-4" />
               </a>
@@ -41,7 +51,7 @@ export default function ThemesPage() {
             <Button asChild>
               <Link href="/editor">
                 Open Editor
-                <ArrowRight className="h-4 w-4 ml-2" />
+                <ArrowRight className="hidden h-4 w-4 sm:inline sm:ml-2" />
               </Link>
             </Button>
           </div>
@@ -82,7 +92,7 @@ export default function ThemesPage() {
               href="https://github.com/mbadolato/iTerm2-Color-Schemes"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="text-primary underline hover:no-underline"
             >
               iTerm2-Color-Schemes
             </a>
