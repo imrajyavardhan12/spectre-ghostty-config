@@ -26,7 +26,8 @@
 - [ ] `bun run typecheck`
 - [ ] `bun run test -- --run`
 - [ ] `bun run build`
-- [ ] `bun run schema:check` when Ghostty options changed
+- [ ] `bun run test:e2e` when browser behavior changed
+- [ ] `bun run schema:check` when Ghostty options or the stable target changed
 
 ## Visual evidence
 
@@ -37,6 +38,7 @@
 - [ ] The change is focused and does not include unrelated formatting or refactoring.
 - [ ] Tests cover observable behavior and important failure paths.
 - [ ] User-facing behavior and `CHANGELOG.md` are updated where needed.
+- [ ] Ghostty target changes update `compatibility.json` and `COMPATIBILITY.md` together.
 - [ ] UI changes were checked with keyboard navigation and responsive layouts.
 - [ ] No secrets, personal configuration, or sensitive data are included.
 - [ ] I have read and followed `CONTRIBUTING.md` and the Code of Conduct.

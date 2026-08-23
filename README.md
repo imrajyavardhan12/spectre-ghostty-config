@@ -6,6 +6,7 @@
   <p>
     <a href="https://spectre-ghostty-config.vercel.app">Open Spectre</a> •
     <a href="#features">Features</a> •
+    <a href="COMPATIBILITY.md">Compatibility</a> •
     <a href="#getting-started">Getting Started</a> •
     <a href="#roadmap">Roadmap</a> •
     <a href="#contributing">Contributing</a>
@@ -21,12 +22,12 @@
 
 ## Features
 
-- 👻 **Real Ghostty Preview** - Live terminal preview powered by [libghostty](https://mitchellh.com/writing/libghostty-is-coming) WASM - see exactly how your config will look!
+- 👻 **Ghostty-Powered Preview** - Live terminal-style preview powered by [ghostty-web](https://github.com/coder/ghostty-web) for mapped fonts, colors, palettes, and cursor settings
 - 🎨 **Visual Color Editor** - Pick colors with an intuitive color picker and palette editor
 - 🎭 **200+ Themes** - Browse and apply themes from iTerm2 Color Schemes with one click
 - 🔤 **Font Configuration** - Configure font families, sizes, styles, and OpenType features
 - ⌨️ **Keybind Manager** - Create and manage custom keyboard shortcuts
-- 📦 **100+ Options** - Support for all Ghostty configuration options
+- 📦 **Complete Stable Schema** - All 202 public configuration option IDs from the verified Ghostty stable target, guarded by automated drift checks
 - 💾 **Import/Export** - Import existing configs and export ready-to-use config files
 - 🔗 **Shareable URLs** - Share your configuration with others via URL
 - 🌙 **Dark Mode** - Beautiful dark interface that matches your terminal aesthetic
@@ -37,8 +38,8 @@
 ### Landing Page
 ![Landing Page](screenshots/landing.png)
 
-### Config Editor with Live libghostty Preview
-![Editor with libghostty Preview](screenshots/editor-preview.png)
+### Config Editor with Ghostty-Powered Preview
+![Editor with Ghostty-powered preview](screenshots/editor-preview.png)
 
 ### Theme Browser
 ![Theme Browser](screenshots/themes.png)
@@ -76,7 +77,7 @@ bun run start
 
 - **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Terminal Preview**: [ghostty-web](https://github.com/coder/ghostty-web) (libghostty compiled to WASM)
+- **Terminal Preview**: [ghostty-web](https://github.com/coder/ghostty-web) (Ghostty's terminal parser compiled to WASM)
 - **End-to-End Testing**: [Playwright](https://playwright.dev/) with [axe-core](https://github.com/dequelabs/axe-core)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
@@ -85,6 +86,8 @@ bun run start
 - **Icons**: [Lucide React](https://lucide.dev/)
 
 ## Ghostty Source of Truth
+
+Spectre `0.3.x` currently targets [Ghostty 1.3.1](https://ghostty.org/docs/install/release-notes/1-3-1). The local schema contains all 202 public option IDs from that stable release. See the [compatibility policy](COMPATIBILITY.md) for the exact guarantees, version behavior, verification snapshot, and browser-preview limits.
 
 Spectre treats the official Ghostty project as the source of truth for configuration behavior:
 
@@ -98,7 +101,7 @@ Schema changes should be traceable to these upstream sources. Maintainers can ru
 bun run schema:check
 ```
 
-to compare Spectre's local option IDs against the official Ghostty config reference.
+to compare Spectre's local option IDs against both the live official reference and the pinned stable Ghostty source snapshot.
 
 ## Configuration Categories
 
@@ -137,7 +140,7 @@ Use [SUPPORT.md](SUPPORT.md) to choose between Discussions, issues, and upstream
 ## Acknowledgements
 
 - [Mitchell Hashimoto](https://github.com/mitchellh) - Creator of Ghostty and libghostty
-- [Coder](https://github.com/coder) - For [ghostty-web](https://github.com/coder/ghostty-web), the WASM build of libghostty that powers our terminal preview
+- [Coder](https://github.com/coder) - For [ghostty-web](https://github.com/coder/ghostty-web), the Ghostty-based WASM terminal engine that powers our browser preview
 - [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) - Theme collection
 
 ## Related Projects

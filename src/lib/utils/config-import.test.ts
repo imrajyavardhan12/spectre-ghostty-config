@@ -25,6 +25,15 @@ unknown-option = "raw = value"
     expect(config['unknown-option']).toBe('raw = value');
   });
 
+  it('retains only the last value for repeated unknown options', () => {
+    const config = parseGhosttyConfig(`
+future-option = first
+future-option = "second value"
+`);
+
+    expect(config['future-option']).toBe('second value');
+  });
+
   it('preserves Ghostty path optional marker semantics', () => {
     const config = parseGhosttyConfig(`
 config-file = first
