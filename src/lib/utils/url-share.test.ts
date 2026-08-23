@@ -3,6 +3,7 @@ import LZString from 'lz-string';
 import {
   encodeConfig,
   decodeConfig,
+  generateShareSlug,
   generateShareUrl,
   getConfigFromUrl,
 } from '@/lib/utils/url-share';
@@ -124,20 +125,42 @@ describe('url-share', () => {
     });
   });
 
-  describe('generateShareUrl', () => {
-    it('should generate URL with encoded config', () => {
-      const config = { 'font-size': 16 };
-      const url = generateShareUrl(config);
-
-      expect(url).toContain('/share?c=');
-      expect(url).toContain('http');
+  describe('generateShareSlug', () => {
+    it('creates readable, URL-safe theme slugs', () => {
+      expect(generateShareSlug('Rosé Pine / Dark')).toBe('rose-pine-dark');
+      expect(generateShareSlug('  Tokyo   Night  ')).toBe('tokyo-night');
     });
 
-    it('should include theme in URL when provided', () => {
-      const config = { 'font-size': 16 };
-      const url = generateShareUrl(config, 'Nord');
+    it('falls back when no readable slug characters remain', () => {
+      expect(generateShareSlug()).toBe('custom-config');
+      expect(generateShareSlug('日本語 👻')).toBe('custom-config');
+    });
 
-      const decoded = decodeConfig(url.split('c=')[1]);
+    it('removes path and markup characters and bounds slug length', () => {
+      expect(generateShareSlug('../../<script>alert(1)</script>')).toBe(
+        'script-alert-1-script'
+      );
+      expect(generateShareSlug('a'.repeat(100))).toHaveLength(64);
+    });
+  });
+
+  describe('generateShareUrl', () => {
+    it('generates a slugged URL with an encoded config payload', () => {
+      const config = { 'font-size': 16 };
+      const url = new URL(generateShareUrl(config));
+
+      expect(url.pathname).toBe('/share/custom-config');
+      const encoded = url.searchParams.get('c');
+      expect(encoded).toBeTruthy();
+      expect(decodeConfig(encoded!)?.config['font-size']).toBe(16);
+    });
+
+    it('uses the theme for the slug and keeps it in the encoded payload', () => {
+      const config = { 'font-size': 16 };
+      const url = new URL(generateShareUrl(config, 'Nord'));
+
+      expect(url.pathname).toBe('/share/nord');
+      const decoded = decodeConfig(url.searchParams.get('c')!);
       expect(decoded?.theme).toBe('Nord');
     });
   });
