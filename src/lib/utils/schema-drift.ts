@@ -17,6 +17,8 @@ export const REFERENCE_ANCHOR_ID_ALIASES: Readonly<Record<string, string>> = {};
 const CONFIG_REFERENCE_ID_PATTERN = /^[a-z][a-z0-9-]*$/;
 const HTML_TAG_PATTERN = /<[^>]+>/g;
 const ID_ATTRIBUTE_PATTERN = /\bid=(['"])(.*?)\1/;
+const QUOTED_CONFIG_FIELD_PATTERN = /^@"([^"]+)"\s*:/;
+const PLAIN_CONFIG_FIELD_PATTERN = /^([a-z][a-z0-9-]*)\s*:/;
 
 export interface GhosttySchemaDriftReport {
   ok: boolean;
@@ -77,6 +79,29 @@ export function extractGhosttyReferenceAnchorIds(html: string): string[] {
 
     const id = decodeHtmlAttribute(idMatch[2]);
     if (CONFIG_REFERENCE_ID_PATTERN.test(id)) {
+      ids.push(id);
+    }
+  }
+
+  return uniqueInOrder(ids);
+}
+
+/**
+ * Extract public configuration field names from Ghostty's Config.zig.
+ *
+ * Config fields are declared at column zero; nested helper types and local
+ * fields are indented. Underscore-prefixed fields are Ghostty internals and
+ * are intentionally excluded from the public schema.
+ */
+export function extractGhosttyConfigSourceOptionIds(source: string): string[] {
+  const ids: string[] = [];
+
+  for (const line of source.split("\n")) {
+    const id =
+      QUOTED_CONFIG_FIELD_PATTERN.exec(line)?.[1] ??
+      PLAIN_CONFIG_FIELD_PATTERN.exec(line)?.[1];
+
+    if (id && !id.startsWith("_")) {
       ids.push(id);
     }
   }

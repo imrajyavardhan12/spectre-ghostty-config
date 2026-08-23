@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Route } from "@playwright/test";
+import compatibility from "../compatibility.json";
 
 test("a user can open the configuration editor", async ({ page }) => {
   await page.goto("/");
@@ -25,6 +26,9 @@ test("a user can edit, inspect, share, and reopen a configuration", async ({
   await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /view config/i }).click();
   await expect(page.getByRole("heading", { name: "Generated Config" })).toBeVisible();
+  await expect(page.locator("pre")).toContainText(
+    `Spectre schema target: Ghostty ${compatibility.ghostty.stableVersion}`
+  );
   await expect(page.locator("pre")).toContainText("font-size = 16");
 
   await page.getByRole("button", { name: "Share", exact: true }).click();
@@ -70,12 +74,12 @@ test("a user can import and export a Ghostty configuration", async ({ page }) =>
 
   expect(download.suggestedFilename()).toBe("config");
   expect(downloadPath).not.toBeNull();
-  await expect(readFile(downloadPath!, "utf8")).resolves.toContain(
-    "font-size = 18"
+  const downloadedConfig = await readFile(downloadPath!, "utf8");
+  expect(downloadedConfig).toContain(
+    `Spectre schema target: Ghostty ${compatibility.ghostty.stableVersion}`
   );
-  await expect(readFile(downloadPath!, "utf8")).resolves.toContain(
-    "cursor-style = bar"
-  );
+  expect(downloadedConfig).toContain("font-size = 18");
+  expect(downloadedConfig).toContain("cursor-style = bar");
 });
 
 test("a user can navigate and inspect configuration on a mobile screen", async ({

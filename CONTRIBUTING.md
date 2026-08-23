@@ -52,7 +52,7 @@ A repository-wide formatter is not currently enforced. Match the surrounding fil
 
 ## Working on Ghostty configuration behavior
 
-Ghostty itself is the source of truth. Check sources in this order:
+Ghostty itself is the source of truth. Read [COMPATIBILITY.md](COMPATIBILITY.md) before changing schema behavior so the current stable target and preview limits remain explicit. Check sources in this order:
 
 1. [Ghostty Config Reference](https://ghostty.org/docs/config/reference)
 2. [Ghostty documentation](https://ghostty.org/docs)
@@ -64,7 +64,19 @@ When adding or changing an option:
 - Record type, default, platform restrictions, repeatability, and validation accurately.
 - Add focused tests for import, export, validation, sharing, and preview mapping where applicable.
 - Link the relevant upstream documentation or source in the pull request.
-- Run `bun run schema:check` when network access is available.
+- Run `bun run schema:check` when network access is available; it checks both the live reference and the stable source snapshot declared in `compatibility.json`.
+
+### Advancing the Ghostty stable target
+
+Only advance Spectre's stable target for an official Ghostty release. In the same pull request:
+
+1. update `compatibility.json` with the release, immutable config commit, option count, and verification date;
+2. review release notes and the tagged `Config.zig`, not only the moving website;
+3. update option metadata and focused behavior tests;
+4. update `COMPATIBILITY.md`, `README.md`, and `CHANGELOG.md`;
+5. run the complete validation suite, including schema and browser checks.
+
+Do not describe nightly or unreleased Ghostty behavior as stable compatibility.
 
 ## Pull request workflow
 

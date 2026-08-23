@@ -123,6 +123,24 @@ describe('GhosttyPreview lifecycle', () => {
     expect(mocks.terminalInstances[1].open).toHaveBeenCalledTimes(1);
   });
 
+  it('applies configured background color and opacity to the preview window', async () => {
+    act(() => {
+      useConfigStore.getState().setValue('background', '#123456');
+      useConfigStore.getState().setValue('background-opacity', 0.5);
+    });
+
+    render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
+    await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
+
+    const previewWindow = screen
+      .getByText(/^Ghostty Preview/)
+      .closest('.rounded-xl');
+    expect(previewWindow).toHaveStyle({
+      backgroundColor: '#123456',
+      opacity: '0.5',
+    });
+  });
+
   it('updates the minimize toggle name to match its current action', async () => {
     render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));

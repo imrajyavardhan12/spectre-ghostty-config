@@ -29,9 +29,49 @@ describe('config mapper', () => {
 
       expect(options.fontFamily).toBe('monospace');
     });
+
+    it('maps font size and the supported cursor behavior', () => {
+      const options = mapConfigToTerminalOptions({
+        'font-size': 15.5,
+        'cursor-style': 'block_hollow',
+        'cursor-style-blink': true,
+      });
+
+      expect(options.fontSize).toBe(15.5);
+      expect(options.cursorStyle).toBe('block');
+      expect(options.cursorBlink).toBe(true);
+    });
+
+    it('disables cursor blinking for values other than true', () => {
+      const options = mapConfigToTerminalOptions({
+        'cursor-style-blink': false,
+      });
+
+      expect(options.cursorBlink).toBe(false);
+    });
   });
 
   describe('mapConfigToTheme', () => {
+    it('maps foreground, background, cursor, and selection colors', () => {
+      const theme = mapConfigToTheme({
+        background: '#101010',
+        foreground: '#f0f0f0',
+        'cursor-color': '#ff0000',
+        'cursor-text': '#00ff00',
+        'selection-background': '#0000ff',
+        'selection-foreground': '#ffffff',
+      });
+
+      expect(theme).toMatchObject({
+        background: '#101010',
+        foreground: '#f0f0f0',
+        cursor: '#ff0000',
+        cursorAccent: '#00ff00',
+        selectionBackground: '#0000ff',
+        selectionForeground: '#ffffff',
+      });
+    });
+
     it('maps Ghostty indexed palette entries to terminal ANSI theme colors', () => {
       const theme = mapConfigToTheme({
         palette: [

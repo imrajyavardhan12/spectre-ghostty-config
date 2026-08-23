@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DOCS_ONLY_REFERENCE_ANCHORS,
   createGhosttySchemaDriftReport,
+  extractGhosttyConfigSourceOptionIds,
   extractGhosttyReferenceAnchorIds,
 } from '@/lib/utils/schema-drift';
 
@@ -19,6 +20,28 @@ describe('Ghostty schema drift utilities', () => {
       'font-family',
       'theme',
       'chained-actions',
+    ]);
+  });
+
+  it('extracts public top-level option fields from Ghostty Config.zig source', () => {
+    const source = `
+/// Main config fields.
+language: ?[:0]const u8 = null,
+@"font-family": RepeatableString = .{},
+background: Color = .{},
+@"font-family": RepeatableString = .{},
+@"_xdg-terminal-exec": bool = false,
+
+pub const Nested = struct {
+    nested_field: bool = false,
+};
+    indented_local: bool = false,
+`;
+
+    expect(extractGhosttyConfigSourceOptionIds(source)).toEqual([
+      'language',
+      'font-family',
+      'background',
     ]);
   });
 

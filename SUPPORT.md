@@ -13,7 +13,7 @@ When asking for help, include:
 
 ## Bugs
 
-Use the [bug report form](https://github.com/imrajyavardhan12/spectre-ghostty-config/issues/new?template=bug_report.yml) for reproducible Spectre defects. Search existing issues first.
+Use the [bug report form](https://github.com/imrajyavardhan12/spectre-ghostty-config/issues/new?template=bug_report.yml) for reproducible Spectre defects. Search existing issues first and check the current [Spectre ↔ Ghostty compatibility policy](COMPATIBILITY.md) for version and preview scope.
 
 For Ghostty behavior that also occurs without Spectre, consult the [Ghostty documentation](https://ghostty.org/docs) or the [Ghostty repository](https://github.com/ghostty-org/ghostty).
 

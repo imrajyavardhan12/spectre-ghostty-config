@@ -1,0 +1,16 @@
+{
+  "spectreReleaseLine": "0.3.x",
+  "ghostty": {
+    "stableVersion": "1.3.1",
+    "tag": "v1.3.1",
+    "configCommit": "332b2aefc6e72d363aa93ab6ecfc86eeeeb5ed28",
+    "publicOptionCount": 202,
+    "verifiedOn": "2026-08-22"
+  },
+  "preview": {
+    "package": "ghostty-web",
+    "version": "0.4.0",
+    "sourceTag": "v0.4.0",
+    "ghosttySourceCommit": "5714ed07a1012573261b7b7e3ed2add9c1504496"
+  }
+}

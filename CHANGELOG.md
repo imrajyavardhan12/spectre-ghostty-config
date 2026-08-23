@@ -5,7 +5,7 @@ All notable changes to Spectre will be documented in this file.
 Spectre tracks two versions:
 
 - **Spectre app version** from `package.json`.
-- **Ghostty compatibility version** documented from the official Ghostty config reference.
+- **Ghostty compatibility target** recorded in `compatibility.json` and documented in `COMPATIBILITY.md`.
 
 Ghostty configuration changes should be traceable to the official Ghostty docs or source code.
 
@@ -16,11 +16,14 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Added Playwright browser tests for the landing-to-editor path, import/export, config sharing, mobile navigation, preview recovery, theme-service recovery, and automated WCAG A/AA checks.
 - Added focused unit coverage for theme loading concurrency, prioritization, and cancellation.
 - Added focused unit coverage for Ghostty preview lifecycle and supersession races.
+- Added a versioned Spectre ↔ Ghostty compatibility policy and machine-readable stable-source snapshot.
 
 ### Changed
 
 - Bounded, de-duplicated, and cancellable theme loading, with the latest search prioritized ahead of stale queued work.
 - Kept canceled theme requests inside the six-request concurrency budget until they settle, with retry controls for individual download failures.
+- Expanded the schema drift check to verify both the live Ghostty reference and the pinned stable `Config.zig` source snapshot.
+- Generated config headers now identify Spectre's Ghostty schema target and warn when imported options fall outside it.
 - Switched Dependabot to its Bun ecosystem so dependency updates include the committed `bun.lock` file.
 - Declared the repository's Bun package-manager version in `package.json` for consistent local and CI tooling.
 - Removed the unusable Prettier script; formatter adoption will be handled separately from functional changes.
@@ -34,6 +37,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Kept mobile navigation and minimize/restore controls accurately named in every responsive and preview state.
 - Added accessible names and state announcements to the theme browser.
 - Kept the theme browser header within the viewport on small screens.
+- Corrected [`progress-style`](https://ghostty.org/docs/install/release-notes/1-3-1) availability metadata to Ghostty 1.3.1, where the option was introduced.
 - Removed a stale Ghostty documentation anchor alias that caused the weekly schema drift check to fail after upstream restored the canonical `shell-integration` anchor.
 - Added accessible names to editor actions, option reset controls, documentation links, and sliders.
 - Prevented the editor's mobile category strip from widening the page beyond the viewport.
