@@ -29,7 +29,7 @@
 - ⌨️ **Keybind Manager** - Create and manage custom keyboard shortcuts
 - 📦 **Complete Stable Schema** - All 202 public configuration option IDs from the verified Ghostty stable target, guarded by automated drift checks
 - 💾 **Import/Export** - Import existing configs and export ready-to-use config files
-- 🔗 **Shareable URLs** - Share your configuration with others via URL
+- 🔗 **Readable Share URLs** - Share configurations with human-readable theme slugs while keeping existing links compatible
 - 🌙 **Dark Mode** - Beautiful dark interface that matches your terminal aesthetic
 - 📱 **Responsive** - Works on desktop and mobile devices
 

@@ -17,6 +17,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Added focused unit coverage for theme loading concurrency, prioritization, and cancellation.
 - Added focused unit coverage for Ghostty preview lifecycle and supersession races.
 - Added a versioned Spectre ↔ Ghostty compatibility policy and machine-readable stable-source snapshot.
+- Added sanitized, human-readable slugs to new share URLs while preserving legacy query-only links and keeping shared configurations out of search indexes.
 
 ### Changed
 
