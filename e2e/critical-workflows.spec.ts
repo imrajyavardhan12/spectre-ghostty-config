@@ -92,16 +92,42 @@ test("the payload theme remains authoritative when a share slug is renamed", asy
 test("a user can import and export a Ghostty configuration", async ({ page }) => {
   await page.goto("/editor");
 
-  const fileChooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Import Config" }).click();
-  const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles({
+  const importedFile = {
     name: "config",
     mimeType: "text/plain",
     buffer: Buffer.from("font-size = 18\ncursor-style = bar\n"),
-  });
+  };
+
+  const importButton = page.getByRole("button", { name: "Import Config" });
+  let fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  let fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(importedFile);
+
+  await expect(
+    page.getByRole("heading", { name: "Review imported configuration" })
+  ).toBeVisible();
+  await expect(page.getByText("font-size = 18")).toBeVisible();
+  await expect(page.getByText("cursor-style = bar")).toBeVisible();
+
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review imported configuration" })
+  ).not.toBeVisible();
+  await expect(
+    page.locator("#option-font-size").getByRole("spinbutton")
+  ).toHaveValue("13");
+  await expect(importButton).toBeFocused();
+
+  fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(importedFile);
+  await page.getByRole("button", { name: "Replace with 2 settings" }).click();
 
   await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
+  await expect(page.getByText("Imported 2 settings.", { exact: true })).toBeAttached();
+  await expect(importButton).toBeFocused();
   await expect(
     page.locator("#option-font-size").getByRole("spinbutton")
   ).toHaveValue("18");

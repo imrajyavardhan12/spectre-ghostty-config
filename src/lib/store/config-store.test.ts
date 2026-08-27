@@ -1,12 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useConfigStore } from '@/lib/store/config-store';
 import { GHOSTTY_COMPATIBILITY_VERSION } from '@/lib/compatibility';
+import { parseGhosttyConfig } from '@/lib/utils/config-import';
 import { SPECTRE_VERSION } from '@/lib/version';
 import { act } from '@testing-library/react';
 
 // Helper to run hooks inside a test
 function getStoreState() {
   return useConfigStore.getState();
+}
+
+function applyConfigImport(configString: string) {
+  useConfigStore.getState().applyImportedCandidate(
+    parseGhosttyConfig(configString)
+  );
 }
 
 describe('config-store', () => {
@@ -166,11 +173,33 @@ describe('config-store', () => {
     });
   });
 
-  describe('importConfig', () => {
+  describe('applyImportedCandidate', () => {
+    it('atomically replaces config, clears theme metadata, and clones arrays', () => {
+      const candidate = {
+        'font-size': 16,
+        'font-family': ['JetBrains Mono', 'Symbols Nerd Font'],
+      };
+
+      act(() => {
+        useConfigStore.getState().loadConfig({ background: '#000000' }, 'Dracula');
+        useConfigStore.getState().applyImportedCandidate(candidate);
+      });
+
+      candidate['font-family'].push('Later Mutation');
+      const state = getStoreState();
+      expect(state.config).toEqual({
+        'font-size': 16,
+        'font-family': ['JetBrains Mono', 'Symbols Nerd Font'],
+      });
+      expect(state.appliedTheme).toBeNull();
+    });
+  });
+
+  describe('reviewed import candidates', () => {
     it('should clear applied theme when importing a config string', () => {
       act(() => {
         useConfigStore.getState().loadConfig({ background: '#000000' }, 'Dracula');
-        useConfigStore.getState().importConfig('font-size = 16');
+        applyConfigImport('font-size = 16');
       });
 
       const state = getStoreState();
@@ -186,7 +215,7 @@ cursor-style-blink = true
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -204,7 +233,7 @@ keybind = clear
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -228,7 +257,7 @@ unknown-option = "raw = value with spaces"
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -257,7 +286,7 @@ gtk-custom-css = gtk/overrides.css
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -312,7 +341,7 @@ custom-shader = ignore
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -351,7 +380,7 @@ palette = 0xF=ffffff
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -378,7 +407,7 @@ font-size = 16
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -398,7 +427,7 @@ keybind =
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -424,7 +453,7 @@ unknown-option = true
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();

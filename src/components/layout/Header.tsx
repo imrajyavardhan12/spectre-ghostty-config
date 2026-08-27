@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Ghost, Code2, Download, Upload, RotateCcw, Check, Loader2, Palette, Sparkles, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +11,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useConfigStore } from "@/lib/store/config-store";
+import { ImportReviewDialog } from "@/components/editor/ImportReviewDialog";
 import { PresetsDialog } from "@/components/editor/PresetsDialog";
 import { cn } from "@/lib/utils";
+import { analyzeGhosttyConfig } from "@/lib/utils/config-import-analysis";
+import type { ImportAnalysis } from "@/lib/utils/config-import-analysis";
+import type { ConfigValues } from "@/lib/schema/types";
 import { SPECTRE_VERSION } from "@/lib/version";
+
+interface PendingImport {
+  fileName: string;
+  fileSize: number;
+  currentSettingCount: number;
+  analysis: ImportAnalysis;
+}
 
 export function Header() {
   // Use selectors to properly subscribe to config changes
@@ -23,6 +34,9 @@ export function Header() {
   const modifiedCount = Object.keys(config).length;
   const [exportState, setExportState] = useState<"idle" | "loading" | "success">("idle");
   const [importState, setImportState] = useState<"idle" | "loading" | "success">("idle");
+  const [importStatusMessage, setImportStatusMessage] = useState("");
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const importButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleExport = async () => {
     setExportState("loading");
@@ -52,13 +66,46 @@ export function Header() {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         setImportState("loading");
-        const text = await file.text();
-        useConfigStore.getState().importConfig(text);
-        setImportState("success");
-        setTimeout(() => setImportState("idle"), 2000);
+        try {
+          const text = await file.text();
+          setPendingImport({
+            fileName: file.name,
+            fileSize: file.size,
+            currentSettingCount: Object.keys(useConfigStore.getState().config).length,
+            analysis: analyzeGhosttyConfig(text),
+          });
+        } finally {
+          setImportState("idle");
+        }
       }
     };
     input.click();
+  };
+
+  const restoreImportFocus = () => {
+    setTimeout(() => importButtonRef.current?.focus(), 0);
+  };
+
+  const closeImportReview = () => {
+    setPendingImport(null);
+    restoreImportFocus();
+  };
+
+  const handleConfirmImport = (candidate: ConfigValues) => {
+    const resultingCount = pendingImport?.analysis.summary.resultingSettingCount ?? 0;
+    useConfigStore.getState().applyImportedCandidate(candidate);
+    setPendingImport(null);
+    setImportState("success");
+    setImportStatusMessage(
+      resultingCount === 0
+        ? "Imported configuration defaults."
+        : `Imported ${resultingCount} ${resultingCount === 1 ? "setting" : "settings"}.`
+    );
+    restoreImportFocus();
+    setTimeout(() => {
+      setImportState("idle");
+      setImportStatusMessage("");
+    }, 2000);
   };
 
   return (
@@ -112,9 +159,10 @@ export function Header() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  ref={importButtonRef}
+                  variant="ghost"
+                  size="icon"
                   onClick={handleImport}
                   aria-label="Import Config"
                   className="relative h-9 w-9"
@@ -253,6 +301,24 @@ export function Header() {
           </TooltipProvider>
         </div>
       </div>
+
+      {pendingImport && (
+        <ImportReviewDialog
+          open
+          fileName={pendingImport.fileName}
+          fileSize={pendingImport.fileSize}
+          currentSettingCount={pendingImport.currentSettingCount}
+          analysis={pendingImport.analysis}
+          onOpenChange={(open) => {
+            if (!open) closeImportReview();
+          }}
+          onConfirm={handleConfirmImport}
+        />
+      )}
+
+      <p className="sr-only" role="status" aria-live="polite">
+        {importStatusMessage}
+      </p>
     </header>
   );
 }
