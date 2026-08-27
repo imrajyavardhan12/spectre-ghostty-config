@@ -25,6 +25,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Kept canceled theme requests inside the six-request concurrency budget until they settle, with retry controls for individual download failures.
 - Expanded the schema drift check to verify both the live Ghostty reference and the pinned stable `Config.zig` source snapshot.
 - Generated config headers now identify Spectre's Ghostty schema target and warn when imported options fall outside it.
+- Config file imports now open a review step before atomically replacing the current editor state.
 - Switched Dependabot to its Bun ecosystem so dependency updates include the committed `bun.lock` file.
 - Declared the repository's Bun package-manager version in `package.json` for consistent local and CI tooling.
 - Removed the unusable Prettier script; formatter adoption will be handled separately from functional changes.

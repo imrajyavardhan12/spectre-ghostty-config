@@ -3,9 +3,8 @@ import { persist } from "zustand/middleware";
 import { useState, useEffect } from "react";
 import type { ConfigValues } from "@/lib/schema/types";
 import { exportGhosttyConfig } from "@/lib/utils/config-export";
-import { getDefaultValue, isRepeatableOption } from "@/lib/utils/config-options";
-import { parseGhosttyConfig } from "@/lib/utils/config-import";
-import { normalizePaletteEntries } from "@/lib/utils/palette";
+import { getDefaultValue } from "@/lib/utils/config-options";
+import { normalizeConfigValues } from "@/lib/utils/config-normalization";
 import { isThemeConfigKey } from "@/lib/utils/theme-config";
 
 export type { ConfigValues };
@@ -21,7 +20,7 @@ interface ConfigStore {
   setValue: (key: string, value: unknown) => void;
   resetValue: (key: string) => void;
   resetAll: () => void;
-  importConfig: (configString: string) => void;
+  applyImportedCandidate: (config: ConfigValues) => void;
   loadConfig: (config: ConfigValues, themeName?: string) => void;
   setAppliedTheme: (themeName: string | null) => void;
 
@@ -32,54 +31,6 @@ interface ConfigStore {
   exportConfig: () => string;
 }
 
-function normalizeValue(key: string, value: unknown): unknown {
-  if (key === "palette" && Array.isArray(value)) {
-    return normalizePaletteEntries(value as string[]);
-  }
-
-  return value;
-}
-
-function valuesEqual(a: unknown, b: unknown): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((item, index) => item === b[index]);
-  }
-
-  return a === b;
-}
-
-function shouldStoreValue(key: string, value: unknown): boolean {
-  const defaultValue = getDefaultValue(key);
-
-  // Unknown options do not have Spectre defaults; preserve them as raw strings.
-  if (defaultValue === undefined) {
-    return true;
-  }
-
-  if (valuesEqual(value, defaultValue) || (value === "" && defaultValue === "")) {
-    return false;
-  }
-
-  if (Array.isArray(value) && value.length === 0 && isRepeatableOption(key)) {
-    return false;
-  }
-
-  return true;
-}
-
-function normalizeConfigValues(config: ConfigValues): ConfigValues {
-  const normalized: ConfigValues = {};
-
-  for (const [key, value] of Object.entries(config)) {
-    const normalizedValue = normalizeValue(key, value);
-
-    if (shouldStoreValue(key, normalizedValue)) {
-      normalized[key] = normalizedValue;
-    }
-  }
-
-  return normalized;
-}
 
 export const useConfigStore = create<ConfigStore>()(
   persist(
@@ -88,17 +39,11 @@ export const useConfigStore = create<ConfigStore>()(
       appliedTheme: null,
 
       setValue: (key: string, value: unknown) => {
-        const normalizedValue = normalizeValue(key, value);
-
         set((state) => {
-          const newConfig = { ...state.config };
-
-          // If value equals default, remove from config
-          if (shouldStoreValue(key, normalizedValue)) {
-            newConfig[key] = normalizedValue;
-          } else {
-            delete newConfig[key];
-          }
+          const newConfig = normalizeConfigValues({
+            ...state.config,
+            [key]: value,
+          });
 
           return {
             config: newConfig,
@@ -147,9 +92,14 @@ export const useConfigStore = create<ConfigStore>()(
         set({ config: normalizeConfigValues(newConfig), appliedTheme: themeName || null });
       },
 
-      importConfig: (configString: string) => {
-        const parsed = parseGhosttyConfig(configString);
-        set({ config: normalizeConfigValues(parsed), appliedTheme: null });
+      applyImportedCandidate: (candidate: ConfigValues) => {
+        const cloned = Object.fromEntries(
+          Object.entries(candidate).map(([key, value]) => [
+            key,
+            Array.isArray(value) ? [...value] : value,
+          ])
+        );
+        set({ config: normalizeConfigValues(cloned), appliedTheme: null });
       },
 
       exportConfig: () => {
