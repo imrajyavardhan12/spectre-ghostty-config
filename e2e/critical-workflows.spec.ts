@@ -147,6 +147,43 @@ test("a user can import and export a Ghostty configuration", async ({ page }) =>
   expect(downloadedConfig).toContain("cursor-style = bar");
 });
 
+test("a user can explicitly import valid settings from a partially invalid file", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import Config" }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      "font-size = 16\nmouse-hide-while-typing = maybe\ncursor-style = bar\n"
+    ),
+  });
+
+  await expect(
+    page.getByText(
+      "Error — Line 2 · mouse-hide-while-typing: Use 1, 0, t, T, f, F, true, or false."
+    )
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Replace with 2 settings and skip 1 line" })
+    .click();
+
+  await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Imported 2 settings and skipped 1 line.", {
+      exact: true,
+    })
+  ).toBeAttached();
+  await page.getByRole("button", { name: "View Config" }).click();
+  await expect(page.locator("pre")).toContainText("font-size = 16");
+  await expect(page.locator("pre")).toContainText("cursor-style = bar");
+  await expect(page.locator("pre")).not.toContainText("mouse-hide-while-typing");
+});
+
 test("a user can navigate and inspect configuration on a mobile screen", async ({
   page,
 }) => {

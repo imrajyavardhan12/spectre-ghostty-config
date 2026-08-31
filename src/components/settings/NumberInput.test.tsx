@@ -10,6 +10,8 @@ const option: NumberOption = {
   name: 'Cursor Opacity',
   description: 'Opacity of the cursor.',
   type: 'number',
+  numberKind: 'float',
+  floatBits: 64,
   default: 1,
   category: 'cursor',
   min: 0,

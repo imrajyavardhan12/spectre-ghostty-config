@@ -26,6 +26,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Expanded the schema drift check to verify both the live Ghostty reference and the pinned stable `Config.zig` source snapshot.
 - Generated config headers now identify Spectre's Ghostty schema target and warn when imported options fall outside it.
 - Config file imports now open a review step before atomically replacing the current editor state.
+- Import review now supports explicit partial replacement when known values are invalid.
 - Switched Dependabot to its Bun ecosystem so dependency updates include the committed `bun.lock` file.
 - Declared the repository's Bun package-manager version in `package.json` for consistent local and CI tooling.
 - Removed the unusable Prettier script; formatter adoption will be handled separately from functional changes.
@@ -44,6 +45,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Added accessible names to editor actions, option reset controls, documentation links, and sliders.
 - Prevented the editor's mobile category strip from widening the page beyond the viewport.
 - Preserved Ghostty's extensionless `config` filename when downloading from editor and shared-config views.
+- Rejected invalid imported booleans, numbers, enums, colors, and durations with line-level diagnostics instead of silently coercing them.
 
 ## [0.3.0] - 2026-07-03
 

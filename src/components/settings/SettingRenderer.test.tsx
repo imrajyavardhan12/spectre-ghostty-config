@@ -130,6 +130,8 @@ describe('SettingRenderer', () => {
       name: 'Font Size',
       description: 'Font size in points',
       type: 'number' as const,
+      numberKind: 'float' as const,
+      floatBits: 32 as const,
       default: 13,
       category: 'fonts' as const,
       min: 4,

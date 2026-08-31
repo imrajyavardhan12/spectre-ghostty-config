@@ -28,7 +28,7 @@
 - 🔤 **Font Configuration** - Configure font families, sizes, styles, and OpenType features
 - ⌨️ **Keybind Manager** - Create and manage custom keyboard shortcuts
 - 📦 **Complete Stable Schema** - All 202 public configuration option IDs from the verified Ghostty stable target, guarded by automated drift checks
-- 💾 **Import/Export** - Review imported settings before replacing your editor state, then export ready-to-use config files
+- 💾 **Import/Export** - Review imported settings and line-level diagnostics before replacement, then export ready-to-use config files
 - 🔗 **Readable Share URLs** - Share configurations with human-readable theme slugs while keeping existing links compatible
 - 🌙 **Dark Mode** - Beautiful dark interface that matches your terminal aesthetic
 - 📱 **Responsive** - Works on desktop and mobile devices

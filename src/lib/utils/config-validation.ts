@@ -9,6 +9,21 @@ export interface ConfigValidationResult {
 }
 
 const HEX_COLOR_PATTERN = /^#?(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+const TERMINAL_RELATIVE_COLOR_OPTIONS = new Set([
+  "cursor-color",
+  "cursor-text",
+  "selection-background",
+  "selection-foreground",
+  "search-background",
+  "search-foreground",
+  "search-selected-background",
+  "search-selected-foreground",
+]);
+const COLOR_LIST_OPTIONS = new Set(["macos-icon-screen-color"]);
+const TERMINAL_RELATIVE_COLORS = new Set([
+  "cell-foreground",
+  "cell-background",
+]);
 const DURATION_UNITS = ["ms", "us", "µs", "ns", "y", "w", "d", "h", "m", "s"] as const;
 const DURATION_UNIT_MESSAGE = "Use y, w, d, h, m, s, ms, us, µs, or ns.";
 
@@ -20,7 +35,17 @@ function invalid(errors: string[], warnings: string[] = []): ConfigValidationRes
   return { valid: false, errors, warnings };
 }
 
-function validateColorValue(value: unknown): ConfigValidationResult {
+function isGhosttyColor(value: string): boolean {
+  return (
+    HEX_COLOR_PATTERN.test(value) ||
+    X11_COLOR_NAMES.has(value.toLowerCase())
+  );
+}
+
+function validateColorValue(
+  option: ConfigOption,
+  value: unknown
+): ConfigValidationResult {
   if (typeof value !== "string") {
     return invalid(["Enter a color value."]);
   }
@@ -30,17 +55,39 @@ function validateColorValue(value: unknown): ConfigValidationResult {
     return valid("");
   }
 
-  if (HEX_COLOR_PATTERN.test(trimmedValue)) {
+  if (COLOR_LIST_OPTIONS.has(option.id)) {
+    const colors = trimmedValue
+      .split(",")
+      .map((color) => color.trim())
+      .filter(Boolean);
+    if (
+      colors.length > 0 &&
+      colors.length <= 64 &&
+      colors.every(isGhosttyColor)
+    ) {
+      return valid(trimmedValue);
+    }
+    return invalid([
+      "Use up to 64 comma-separated #RGB, RGB, #RRGGBB, RRGGBB, or named X11 colors.",
+    ]);
+  }
+
+  if (isGhosttyColor(trimmedValue)) {
     return valid(trimmedValue);
   }
 
-  // Ghostty uses the X11 rgb.txt map, which is case-insensitive and includes
-  // names with spaces such as "medium spring green".
-  if (X11_COLOR_NAMES.has(trimmedValue.toLowerCase())) {
+  if (
+    TERMINAL_RELATIVE_COLOR_OPTIONS.has(option.id) &&
+    TERMINAL_RELATIVE_COLORS.has(trimmedValue)
+  ) {
     return valid(trimmedValue);
   }
 
-  return invalid(["Use #RGB, RGB, #RRGGBB, RRGGBB, or a named X11 color."]);
+  return invalid([
+    TERMINAL_RELATIVE_COLOR_OPTIONS.has(option.id)
+      ? "Use #RGB, RGB, #RRGGBB, RRGGBB, a named X11 color, cell-foreground, or cell-background."
+      : "Use #RGB, RGB, #RRGGBB, RRGGBB, or a named X11 color.",
+  ]);
 }
 
 function readUnsignedInteger(input: string, startIndex: number) {
@@ -158,7 +205,7 @@ function validateNumberValue(option: ConfigOption, value: unknown): ConfigValida
 export function validateConfigValue(option: ConfigOption, value: unknown): ConfigValidationResult {
   switch (option.type) {
     case "color":
-      return validateColorValue(value);
+      return validateColorValue(option, value);
     case "duration":
       return validateDurationValue(value);
     case "number":

@@ -131,10 +131,17 @@ describe('ghostty-options', () => {
       }
     });
 
-    it('should have valid defaults for number options', () => {
+    it('should have valid defaults and upstream kinds for number options', () => {
       const numberOptions = allOptions.filter(o => o.type === 'number');
+      const numberKinds = ['float', 'signed-integer', 'unsigned-integer'];
       for (const option of numberOptions) {
         expect(typeof option.default).toBe('number');
+        expect(numberKinds).toContain(option.numberKind);
+        if (option.numberKind === 'float') {
+          expect([32, 64]).toContain(option.floatBits);
+        } else {
+          expect([8, 16, 32, 64]).toContain(option.integerBits);
+        }
       }
     });
 
