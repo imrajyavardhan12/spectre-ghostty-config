@@ -50,13 +50,26 @@ export interface StringOption extends BaseConfigOption {
   validValues?: { value: string; label: string; description?: string }[];
 }
 
-export interface NumberOption extends BaseConfigOption {
+/** Scalar grammar from the pinned Ghostty Config.zig field type. */
+export type NumberKind = "float" | "signed-integer" | "unsigned-integer";
+
+interface NumberOptionBase extends BaseConfigOption {
   type: "number";
   default: number;
   min?: number;
   max?: number;
   step?: number;
 }
+
+export type NumberOption = NumberOptionBase &
+  (
+    | { numberKind: "float"; floatBits: 32 | 64; integerBits?: never }
+    | {
+        numberKind: "signed-integer" | "unsigned-integer";
+        integerBits: 8 | 16 | 32 | 64;
+        floatBits?: never;
+      }
+  );
 
 export interface BooleanOption extends BaseConfigOption {
   type: "boolean";

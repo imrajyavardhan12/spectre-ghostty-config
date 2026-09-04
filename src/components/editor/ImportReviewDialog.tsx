@@ -52,11 +52,15 @@ export function ImportReviewDialog({
       instruction.disposition === "reset"
   );
   const resultingCount = analysis.summary.resultingSettingCount;
+  const skippedCount = analysis.summary.skippedLineCount;
+  const baseActionLabel = resultingCount === 0
+    ? "Replace current config with defaults"
+    : `Replace with ${resultingCount} ${resultingCount === 1 ? "setting" : "settings"}`;
   const actionLabel = !analysis.hasMeaningfulInstruction
     ? "Nothing usable to apply"
-    : resultingCount === 0
-      ? "Replace current config with defaults"
-      : `Replace with ${resultingCount} ${resultingCount === 1 ? "setting" : "settings"}`;
+    : skippedCount > 0
+      ? `${baseActionLabel} and skip ${skippedCount} ${skippedCount === 1 ? "line" : "lines"}`
+      : baseActionLabel;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -82,6 +86,11 @@ export function ImportReviewDialog({
           <span>{formatFileSize(fileSize)}</span>
           <span>{analysis.summary.acceptedInstructionCount} accepted instructions</span>
           <span>{resultingCount} resulting settings</span>
+          {skippedCount > 0 && (
+            <span>
+              {skippedCount} skipped {skippedCount === 1 ? "line" : "lines"}
+            </span>
+          )}
         </div>
 
         <div className="min-h-0 space-y-2 overflow-y-auto rounded-md border p-3">
@@ -99,6 +108,26 @@ export function ImportReviewDialog({
             </ol>
           ) : (
             <p className="text-sm text-muted-foreground">No usable instructions found.</p>
+          )}
+
+          {analysis.diagnostics.length > 0 && (
+            <div className="space-y-2 border-t pt-3">
+              <h3 className="text-sm font-medium">Import issues</h3>
+              <ul className="space-y-1 text-xs">
+                {analysis.diagnostics.map((diagnostic) => (
+                  <li
+                    key={`${diagnostic.lineNumber}-${diagnostic.code}`}
+                    className={
+                      diagnostic.severity === "error"
+                        ? "break-words text-destructive"
+                        : "break-words text-amber-600 dark:text-amber-400"
+                    }
+                  >
+                    {`${diagnostic.severity === "error" ? "Error" : diagnostic.severity === "warning" ? "Warning" : "Info"} — Line ${diagnostic.lineNumber}${diagnostic.key ? ` · ${diagnostic.key}` : ""}: ${diagnostic.message}`}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
 

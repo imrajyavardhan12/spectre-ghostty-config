@@ -25,6 +25,8 @@ const numberOption: NumberOption = {
   name: 'Cursor Opacity',
   description: 'Opacity of the cursor.',
   type: 'number',
+  numberKind: 'float',
+  floatBits: 64,
   default: 1,
   category: 'cursor',
   min: 0,
@@ -38,6 +40,22 @@ describe('validateConfigValue', () => {
     expect(validateConfigValue(colorOption, '#abc').valid).toBe(true);
     expect(validateConfigValue(colorOption, 'black').valid).toBe(true);
     expect(validateConfigValue(colorOption, 'medium spring green').valid).toBe(true);
+  });
+
+  it('accepts terminal-relative colors only for supported Ghostty options', () => {
+    const cursorColorOption: ColorOption = {
+      ...colorOption,
+      id: 'cursor-color',
+      name: 'Cursor Color',
+    };
+
+    expect(
+      validateConfigValue(cursorColorOption, 'cell-foreground').valid
+    ).toBe(true);
+    expect(
+      validateConfigValue(cursorColorOption, 'cell-background').valid
+    ).toBe(true);
+    expect(validateConfigValue(colorOption, 'cell-foreground').valid).toBe(false);
   });
 
   it('rejects malformed color values and unknown color names', () => {

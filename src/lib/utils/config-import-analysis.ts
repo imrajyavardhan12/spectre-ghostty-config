@@ -1,6 +1,7 @@
-import type { ConfigValues } from "@/lib/schema/types";
+import type { ConfigValues, NumberOption } from "@/lib/schema/types";
 import { getConfigOption, isPathOption } from "@/lib/utils/config-options";
 import { normalizeConfigValues } from "@/lib/utils/config-normalization";
+import { validateConfigValue } from "@/lib/utils/config-validation";
 
 export type ImportInstructionDisposition =
   | "retained"
@@ -18,7 +19,16 @@ export interface ImportInstruction {
   known: boolean;
 }
 
-export type ImportDiagnosticCode = "malformed-line";
+export type ImportDiagnosticCode =
+  | "malformed-line"
+  | "invalid-boolean"
+  | "invalid-number"
+  | "unsupported-number-form"
+  | "unsupported-number-range"
+  | "number-out-of-range"
+  | "invalid-enum"
+  | "invalid-color"
+  | "invalid-duration";
 
 export interface ImportDiagnostic {
   code: ImportDiagnosticCode;
@@ -107,6 +117,112 @@ function appendValue(
   }
 }
 
+const TRUE_BOOLEAN_TOKENS = new Set(["1", "t", "T", "true"]);
+const FALSE_BOOLEAN_TOKENS = new Set(["0", "f", "F", "false"]);
+const FLOAT_PATTERN = /^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$/;
+const INTEGER_PATTERN = /^(?:0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+|[0-9]+)$/;
+
+function parseBoolean(value: string): boolean | null {
+  if (TRUE_BOOLEAN_TOKENS.has(value)) return true;
+  if (FALSE_BOOLEAN_TOKENS.has(value)) return false;
+  return null;
+}
+
+type NumberParseResult =
+  | { status: "valid"; value: number }
+  | { status: "invalid" }
+  | { status: "unsupported-range" };
+
+function parseInteger(
+  value: string,
+  signed: boolean,
+  bits: 8 | 16 | 32 | 64
+): NumberParseResult {
+  const zero = BigInt(0);
+  const one = BigInt(1);
+  let unsignedValue = value;
+  let multiplier = one;
+
+  if (value.startsWith("+") || value.startsWith("-")) {
+    if (value[0] === "-" && !signed) return { status: "invalid" };
+    multiplier = value[0] === "-" ? BigInt(-1) : one;
+    unsignedValue = value.slice(1);
+  }
+
+  if (!INTEGER_PATTERN.test(unsignedValue)) return { status: "invalid" };
+
+  try {
+    const parsed = BigInt(unsignedValue) * multiplier;
+    const width = BigInt(bits);
+    const typeMin = signed ? -(one << (width - one)) : zero;
+    const typeMax = signed
+      ? (one << (width - one)) - one
+      : (one << width) - one;
+    const safeMin = BigInt(Number.MIN_SAFE_INTEGER);
+    const safeMax = BigInt(Number.MAX_SAFE_INTEGER);
+    if (parsed < typeMin || parsed > typeMax) {
+      return { status: "invalid" };
+    }
+    if (parsed < safeMin || parsed > safeMax) {
+      return { status: "unsupported-range" };
+    }
+    return { status: "valid", value: Number(parsed) };
+  } catch {
+    return { status: "invalid" };
+  }
+}
+
+function isValidMouseScrollMultiplier(value: string): boolean {
+  const entries = value.split(",");
+  if (entries.length === 0 || entries.some((entry) => entry.trim() === "")) {
+    return false;
+  }
+
+  return entries.every((entry) => {
+    const separator = entry.indexOf(":");
+    if (separator <= 0) return false;
+    const key = entry.slice(0, separator).trim();
+    const rawNumber = entry.slice(separator + 1).trim();
+    if (key !== "precision" && key !== "discrete") return false;
+    if (!FLOAT_PATTERN.test(rawNumber)) return false;
+    return Number.isFinite(Number(rawNumber));
+  });
+}
+
+function parseNumber(option: NumberOption, value: string): NumberParseResult {
+  if (option.numberKind === "float") {
+    if (!FLOAT_PATTERN.test(value)) return { status: "invalid" };
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return { status: "invalid" };
+    if (option.floatBits === 32 && !Number.isFinite(Math.fround(parsed))) {
+      return { status: "invalid" };
+    }
+    // Keep the user's finite decimal value for stable re-export. Ghostty will
+    // apply f32 rounding internally for f32-backed options.
+    return { status: "valid", value: parsed };
+  }
+
+  return parseInteger(
+    value,
+    option.numberKind === "signed-integer",
+    option.integerBits
+  );
+}
+
+function invalidInstruction(
+  lineNumber: number,
+  key: string,
+  rawValue: string
+): ImportInstruction {
+  return {
+    lineNumber,
+    key,
+    rawValue,
+    disposition: "invalid",
+    known: true,
+  };
+}
+
 export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
   const candidateConfig: ConfigValues = {};
   const instructions: ImportInstruction[] = [];
@@ -180,16 +296,97 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
       ? parsedPathValue.value
       : stripMatchingQuotes(rawValue);
     let normalizedValue: unknown = value;
+    const rejectValue = (
+      code: ImportDiagnosticCode,
+      message: string
+    ) => {
+      instructions.push(invalidInstruction(lineNumber, key, rawValue));
+      diagnostics.push({
+        code,
+        severity: "error",
+        lineNumber,
+        key,
+        message,
+      });
+    };
 
     switch (option.type) {
-      case "boolean":
-        normalizedValue = value === "true";
+      case "boolean": {
+        const parsed = parseBoolean(value);
+        if (parsed === null) {
+          rejectValue(
+            "invalid-boolean",
+            "Use 1, 0, t, T, f, F, true, or false."
+          );
+          return;
+        }
+        normalizedValue = parsed;
+        candidateConfig[key] = parsed;
+        break;
+      }
+      case "number": {
+        if (key === "mouse-scroll-multiplier" && value.includes(":")) {
+          if (isValidMouseScrollMultiplier(value)) {
+            rejectValue(
+              "unsupported-number-form",
+              "This value is valid in Ghostty, but Spectre cannot yet represent separate precision and discrete multipliers."
+            );
+          } else {
+            rejectValue("invalid-number", "Enter a valid Ghostty number.");
+          }
+          return;
+        }
+        const parsed = parseNumber(option, value);
+        if (parsed.status === "invalid") {
+          rejectValue("invalid-number", "Enter a valid Ghostty number.");
+          return;
+        }
+        if (parsed.status === "unsupported-range") {
+          rejectValue(
+            "unsupported-number-range",
+            "This integer is valid in Ghostty but exceeds JavaScript's safe integer range, so Spectre cannot import it without losing precision."
+          );
+          return;
+        }
+        normalizedValue = parsed.value;
+        candidateConfig[key] = parsed.value;
+        const validation = validateConfigValue(option, parsed.value);
+        for (const warning of validation.warnings) {
+          diagnostics.push({
+            code: "number-out-of-range",
+            severity: "warning",
+            lineNumber,
+            key,
+            message: warning,
+          });
+        }
+        break;
+      }
+      case "enum": {
+        if (!option.options.some((entry) => entry.value === value)) {
+          rejectValue(
+            "invalid-enum",
+            `Use one of: ${option.options.map((entry) => entry.value || "(empty)").join(", ")}.`
+          );
+          return;
+        }
+        candidateConfig[key] = value;
+        break;
+      }
+      case "color":
+      case "duration": {
+        const validation = validateConfigValue(option, value);
+        if (!validation.valid) {
+          rejectValue(
+            option.type === "color" ? "invalid-color" : "invalid-duration",
+            validation.errors.join(" ")
+          );
+          return;
+        }
+        normalizedValue = validation.normalizedValue ?? value;
         candidateConfig[key] = normalizedValue;
         break;
-      case "number":
-        normalizedValue = parseFloat(value) || 0;
-        candidateConfig[key] = normalizedValue;
-        break;
+      }
       case "keybind":
       case "palette":
         appendValue(candidateConfig, key, value);
@@ -220,11 +417,26 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
       instruction.disposition === "retained" ||
       instruction.disposition === "reset"
   ).length;
+  // Scalar override classification is added by the duplicate/order slice (#69).
   const effectiveInstructionCount = acceptedInstructionCount;
-  const skippedLineCount =
-    diagnostics.length +
-    instructions.filter((instruction) => instruction.disposition === "ignored")
-      .length;
+  const instructionLineNumbers = new Set(
+    instructions.map((instruction) => instruction.lineNumber)
+  );
+  const skippedLineNumbers = new Set(
+    instructions
+      .filter(
+        (instruction) =>
+          instruction.disposition === "ignored" ||
+          instruction.disposition === "invalid"
+      )
+      .map((instruction) => instruction.lineNumber)
+  );
+  for (const diagnostic of diagnostics) {
+    if (!instructionLineNumbers.has(diagnostic.lineNumber)) {
+      skippedLineNumbers.add(diagnostic.lineNumber);
+    }
+  }
+  const skippedLineCount = skippedLineNumbers.size;
   const normalizedConfig = normalizeConfigValues(candidateConfig);
 
   return {

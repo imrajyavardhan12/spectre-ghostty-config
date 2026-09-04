@@ -93,14 +93,17 @@ export function Header() {
 
   const handleConfirmImport = (candidate: ConfigValues) => {
     const resultingCount = pendingImport?.analysis.summary.resultingSettingCount ?? 0;
+    const skippedCount = pendingImport?.analysis.summary.skippedLineCount ?? 0;
     useConfigStore.getState().applyImportedCandidate(candidate);
     setPendingImport(null);
     setImportState("success");
-    setImportStatusMessage(
-      resultingCount === 0
-        ? "Imported configuration defaults."
-        : `Imported ${resultingCount} ${resultingCount === 1 ? "setting" : "settings"}.`
-    );
+    const resultMessage = resultingCount === 0
+      ? "Imported configuration defaults"
+      : `Imported ${resultingCount} ${resultingCount === 1 ? "setting" : "settings"}`;
+    const skippedMessage = skippedCount > 0
+      ? ` and skipped ${skippedCount} ${skippedCount === 1 ? "line" : "lines"}`
+      : "";
+    setImportStatusMessage(`${resultMessage}${skippedMessage}.`);
     restoreImportFocus();
     setTimeout(() => {
       setImportState("idle");

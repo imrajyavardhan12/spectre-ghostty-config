@@ -41,6 +41,62 @@ cursor-style = bar
     expect(onConfirm).toHaveBeenCalledWith(analysis.candidateConfig);
   });
 
+  it('shows invalid known values and explicit partial-import action copy', () => {
+    const analysis = analyzeGhosttyConfig(`
+font-size = 16
+mouse-hide-while-typing = maybe
+`);
+    const onConfirm = vi.fn();
+
+    render(
+      <ImportReviewDialog
+        open
+        fileName="config"
+        fileSize={48}
+        currentSettingCount={2}
+        analysis={analysis}
+        onOpenChange={vi.fn()}
+        onConfirm={onConfirm}
+      />
+    );
+
+    expect(screen.getByText('font-size = 16')).toBeInTheDocument();
+    expect(screen.getByText(/Line 3.*Use 1, 0, t, T, f, F, true, or false\./)).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Replace with 1 setting and skip 1 line',
+      })
+    );
+    expect(onConfirm).toHaveBeenCalledWith({ 'font-size': 16 });
+  });
+
+  it('shows clamp warnings without counting retained values as skipped', () => {
+    const analysis = analyzeGhosttyConfig('cursor-opacity = 2');
+
+    render(
+      <ImportReviewDialog
+        open
+        fileName="config"
+        fileSize={18}
+        currentSettingCount={0}
+        analysis={analysis}
+        onOpenChange={vi.fn()}
+        onConfirm={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        'Warning — Line 1 · cursor-opacity: Ghostty will clamp values above 1 down to 1.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Replace with 1 setting' })
+    ).toBeEnabled();
+    expect(screen.queryByText(/skipped line/)).not.toBeInTheDocument();
+  });
+
   it('uses explicit defaults-only action copy for a meaningful empty result', () => {
     const analysis = analyzeGhosttyConfig('font-size = 13\ncursor-style =\n');
 

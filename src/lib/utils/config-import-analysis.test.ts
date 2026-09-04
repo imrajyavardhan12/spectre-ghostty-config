@@ -68,6 +68,242 @@ cursor-style =
     expect(analysis.hasMeaningfulInstruction).toBe(true);
   });
 
+  it('parses Ghostty boolean tokens exactly and rejects other values', () => {
+    const trueTokens = ['1', 't', 'T', 'true'];
+    const falseTokens = ['0', 'f', 'F', 'false'];
+
+    for (const token of trueTokens) {
+      expect(
+        analyzeGhosttyConfig(`mouse-hide-while-typing = ${token}`).candidateConfig[
+          'mouse-hide-while-typing'
+        ]
+      ).toBe(true);
+    }
+    for (const token of falseTokens) {
+      expect(
+        analyzeGhosttyConfig(`mouse-hide-while-typing = ${token}`).candidateConfig[
+          'mouse-hide-while-typing'
+        ]
+      ).toBe(false);
+    }
+
+    const invalid = analyzeGhosttyConfig('mouse-hide-while-typing = yes');
+    expect(invalid.candidateConfig).toEqual({});
+    expect(invalid.instructions[0].disposition).toBe('invalid');
+    expect(invalid.diagnostics[0]).toMatchObject({
+      code: 'invalid-boolean',
+      severity: 'error',
+      lineNumber: 1,
+      key: 'mouse-hide-while-typing',
+    });
+    expect(invalid.summary.skippedLineCount).toBe(1);
+    expect(invalid.hasMeaningfulInstruction).toBe(false);
+  });
+
+  it('uses upstream numeric kinds and rejects partial or unsafe numbers', () => {
+    expect(analyzeGhosttyConfig('font-size = 1.5e1').candidateConfig['font-size']).toBe(15);
+    expect(
+      analyzeGhosttyConfig('scrollback-limit = 0x10').candidateConfig[
+        'scrollback-limit'
+      ]
+    ).toBe(16);
+    expect(
+      analyzeGhosttyConfig('scrollback-limit = 0o10').candidateConfig[
+        'scrollback-limit'
+      ]
+    ).toBe(8);
+    expect(
+      analyzeGhosttyConfig('scrollback-limit = 0b10').candidateConfig[
+        'scrollback-limit'
+      ]
+    ).toBe(2);
+    expect(
+      analyzeGhosttyConfig('window-position-x = -0x10').candidateConfig[
+        'window-position-x'
+      ]
+    ).toBe(-16);
+    expect(
+      analyzeGhosttyConfig('font-thicken-strength = 255').candidateConfig[
+        'font-thicken-strength'
+      ]
+    ).toBe(255);
+    expect(
+      analyzeGhosttyConfig('image-storage-limit = 4294967295').candidateConfig[
+        'image-storage-limit'
+      ]
+    ).toBe(4294967295);
+    expect(
+      analyzeGhosttyConfig(
+        'scrollback-limit = 9007199254740991'
+      ).candidateConfig['scrollback-limit']
+    ).toBe(Number.MAX_SAFE_INTEGER);
+
+    for (const source of [
+      'scrollback-limit = -1',
+      'font-thicken-strength = 256',
+      'window-position-x = 40000',
+      'image-storage-limit = 4294967296',
+      'font-size = 12abc',
+      'font-size = Infinity',
+      'font-size = 1e39',
+    ]) {
+      const analysis = analyzeGhosttyConfig(source);
+      expect(analysis.candidateConfig).toEqual({});
+      expect(analysis.diagnostics[0].code).toBe('invalid-number');
+      expect(analysis.instructions[0].disposition).toBe('invalid');
+    }
+
+    const unsafeInteger = analyzeGhosttyConfig(
+      'scrollback-limit = 9007199254740992'
+    );
+    expect(unsafeInteger.candidateConfig).toEqual({});
+    expect(unsafeInteger.diagnostics[0]).toMatchObject({
+      code: 'unsupported-number-range',
+      severity: 'error',
+    });
+    expect(unsafeInteger.diagnostics[0].message).toMatch(/valid in Ghostty/i);
+  });
+
+  it('preserves finite f32 source values while checking f32 range', () => {
+    const analysis = analyzeGhosttyConfig('font-size = 1e-50');
+
+    expect(analysis.candidateConfig['font-size']).toBe(1e-50);
+    expect(analysis.diagnostics[0].code).toBe('number-out-of-range');
+  });
+
+  it('retains finite f64 values beyond the f32 range', () => {
+    const analysis = analyzeGhosttyConfig('faint-opacity = 1e39');
+
+    expect(analysis.candidateConfig['faint-opacity']).toBe(1e39);
+    expect(analysis.diagnostics[0]).toMatchObject({
+      code: 'number-out-of-range',
+      severity: 'warning',
+    });
+  });
+
+  it('reports structured mouse multipliers as valid Ghostty syntax not yet representable by Spectre', () => {
+    const analysis = analyzeGhosttyConfig(
+      'mouse-scroll-multiplier = precision:0.1,discrete:3'
+    );
+
+    expect(analysis.candidateConfig).toEqual({});
+    expect(analysis.diagnostics[0]).toMatchObject({
+      code: 'unsupported-number-form',
+      severity: 'error',
+      key: 'mouse-scroll-multiplier',
+    });
+    expect(analysis.diagnostics[0].message).toMatch(/valid in Ghostty/i);
+
+    for (const value of [
+      'foo:1',
+      'precision:bar',
+      'precision:1,,discrete:3',
+    ]) {
+      const invalid = analyzeGhosttyConfig(
+        `mouse-scroll-multiplier = ${value}`
+      );
+      expect(invalid.diagnostics[0].code).toBe('invalid-number');
+      expect(invalid.diagnostics[0].message).not.toMatch(/valid in Ghostty/i);
+    }
+  });
+
+  it('uses Ghostty mouse multiplier clamp bounds', () => {
+    for (const value of ['0.05', '100']) {
+      const analysis = analyzeGhosttyConfig(
+        `mouse-scroll-multiplier = ${value}`
+      );
+      expect(analysis.diagnostics).toEqual([]);
+    }
+
+    for (const value of ['0.001', '10001']) {
+      const analysis = analyzeGhosttyConfig(
+        `mouse-scroll-multiplier = ${value}`
+      );
+      expect(analysis.diagnostics[0].code).toBe('number-out-of-range');
+    }
+  });
+
+  it('retains out-of-range numbers with Ghostty clamp warnings', () => {
+    const analysis = analyzeGhosttyConfig('cursor-opacity = 2');
+
+    expect(analysis.candidateConfig['cursor-opacity']).toBe(2);
+    expect(analysis.diagnostics[0]).toMatchObject({
+      code: 'number-out-of-range',
+      severity: 'warning',
+      lineNumber: 1,
+      key: 'cursor-opacity',
+    });
+    expect(analysis.summary.skippedLineCount).toBe(0);
+  });
+
+  it('accepts Ghostty terminal-relative colors only for supported options', () => {
+    const valid = analyzeGhosttyConfig(`
+cursor-color = cell-foreground
+selection-background = cell-background
+search-foreground = cell-background
+`);
+    expect(valid.candidateConfig).toEqual({
+      'cursor-color': 'cell-foreground',
+      'selection-background': 'cell-background',
+      'search-foreground': 'cell-background',
+    });
+
+    const invalid = analyzeGhosttyConfig('background = cell-foreground');
+    expect(invalid.candidateConfig).toEqual({});
+    expect(invalid.diagnostics[0].code).toBe('invalid-color');
+  });
+
+  it('accepts Ghostty custom icon color lists', () => {
+    const valid = analyzeGhosttyConfig(
+      'macos-icon-screen-color = #112233, medium spring green, abc'
+    );
+    expect(valid.candidateConfig['macos-icon-screen-color']).toBe(
+      '#112233, medium spring green, abc'
+    );
+
+    const invalid = analyzeGhosttyConfig(
+      'macos-icon-screen-color = #112233, not-a-color'
+    );
+    expect(invalid.candidateConfig).toEqual({});
+    expect(invalid.diagnostics[0].code).toBe('invalid-color');
+  });
+
+  it('diagnoses invalid enum, color, and duration values', () => {
+    const analysis = analyzeGhosttyConfig(`
+cursor-style = rainbow
+background = definitely-not-a-color
+resize-overlay-duration = 1.5s
+`);
+
+    expect(analysis.candidateConfig).toEqual({});
+    expect(analysis.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      'invalid-enum',
+      'invalid-color',
+      'invalid-duration',
+    ]);
+    expect(analysis.summary.skippedLineCount).toBe(3);
+  });
+
+  it('keeps valid settings when other known values are invalid', () => {
+    const analysis = analyzeGhosttyConfig(`
+font-size = 16
+mouse-hide-while-typing = maybe
+cursor-style = bar
+`);
+
+    expect(analysis.normalizedConfig).toEqual({
+      'font-size': 16,
+      'cursor-style': 'bar',
+    });
+    expect(analysis.summary).toMatchObject({
+      acceptedInstructionCount: 2,
+      effectiveInstructionCount: 2,
+      skippedLineCount: 1,
+      resultingSettingCount: 2,
+    });
+    expect(analysis.hasMeaningfulInstruction).toBe(true);
+  });
+
   it('cannot apply a file with no meaningful instruction', () => {
     const analysis = analyzeGhosttyConfig(`
 # Comment only
