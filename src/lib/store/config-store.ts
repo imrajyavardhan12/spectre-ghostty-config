@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import type { ConfigValues } from "@/lib/schema/types";
 import { exportGhosttyConfig } from "@/lib/utils/config-export";
 import { getDefaultValue } from "@/lib/utils/config-options";
-import { normalizeConfigValues } from "@/lib/utils/config-normalization";
+import {
+  createConfigValues,
+  normalizeConfigValues,
+} from "@/lib/utils/config-normalization";
 import { isThemeConfigKey } from "@/lib/utils/theme-config";
 
 export type { ConfigValues };
@@ -35,7 +38,7 @@ interface ConfigStore {
 export const useConfigStore = create<ConfigStore>()(
   persist(
     (set, get) => ({
-      config: {},
+      config: createConfigValues(),
       appliedTheme: null,
 
       setValue: (key: string, value: unknown) => {
@@ -54,7 +57,7 @@ export const useConfigStore = create<ConfigStore>()(
 
       resetValue: (key: string) => {
         set((state) => {
-          const newConfig = { ...state.config };
+          const newConfig = normalizeConfigValues(state.config);
           delete newConfig[key];
           return {
             config: newConfig,
@@ -64,7 +67,7 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       resetAll: () => {
-        set({ config: {}, appliedTheme: null });
+        set({ config: createConfigValues(), appliedTheme: null });
       },
       
       setAppliedTheme: (themeName: string | null) => {
@@ -93,13 +96,7 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       applyImportedCandidate: (candidate: ConfigValues) => {
-        const cloned = Object.fromEntries(
-          Object.entries(candidate).map(([key, value]) => [
-            key,
-            Array.isArray(value) ? [...value] : value,
-          ])
-        );
-        set({ config: normalizeConfigValues(cloned), appliedTheme: null });
+        set({ config: normalizeConfigValues(candidate), appliedTheme: null });
       },
 
       exportConfig: () => {
@@ -110,6 +107,21 @@ export const useConfigStore = create<ConfigStore>()(
     {
       name: "spectre-config",
       partialize: (state) => ({ config: state.config, appliedTheme: state.appliedTheme }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<
+          Pick<ConfigStore, "config" | "appliedTheme">
+        >;
+        const config = persisted.config &&
+          typeof persisted.config === "object" &&
+          !Array.isArray(persisted.config)
+          ? normalizeConfigValues(persisted.config)
+          : createConfigValues();
+        const appliedTheme = typeof persisted.appliedTheme === "string"
+          ? persisted.appliedTheme
+          : null;
+
+        return { ...currentState, config, appliedTheme };
+      },
       skipHydration: true,
     }
   )

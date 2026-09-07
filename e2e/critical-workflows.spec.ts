@@ -164,10 +164,10 @@ test("a user can explicitly import valid settings from a partially invalid file"
   });
 
   await expect(
-    page.getByText(
-      "Error — Line 2 · mouse-hide-while-typing: Use 1, 0, t, T, f, F, true, or false."
-    )
-  ).toBeVisible();
+    page.getByRole("list", { name: "Import issues" })
+  ).toContainText(
+    "Error — Line 2 · mouse-hide-while-typing: Use 1, 0, t, T, f, F, true, or false."
+  );
   await page
     .getByRole("button", { name: "Replace with 2 settings and skip 1 line" })
     .click();
@@ -182,6 +182,59 @@ test("a user can explicitly import valid settings from a partially invalid file"
   await expect(page.locator("pre")).toContainText("font-size = 16");
   await expect(page.locator("pre")).toContainText("cursor-style = bar");
   await expect(page.locator("pre")).not.toContainText("mouse-hide-while-typing");
+});
+
+test("a user can retain unverified options while unsafe names are rejected", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import Config" }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      'font-szie = 15\nfuture-option = first\nfuture-option = "second = value"\n__proto__ = polluted\nconstructor = polluted\n'
+    ),
+  });
+
+  const typoInstruction = page.getByRole("link", {
+    name: "font-szie",
+    exact: true,
+  });
+  await expect(typoInstruction.locator("..")).toContainText("font-szie = 15");
+  const futureInstruction = page.getByRole("link", {
+    name: "future-option",
+    exact: true,
+  });
+  await expect(futureInstruction).toHaveCount(1);
+  await expect(futureInstruction.locator("..")).toContainText(
+    "future-option = second = value"
+  );
+  await expect(page.getByText("Unverified", { exact: true })).toHaveCount(2);
+  await expect(
+    page.getByRole("list", { name: "Import issues" })
+  ).toContainText(
+    "Error — Line 4 · __proto__: This option name is reserved and cannot be imported safely."
+  );
+
+  await page
+    .getByRole("button", { name: "Replace with 2 settings and skip 2 lines" })
+    .click();
+  await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "View Config" }).click();
+  const output = page.locator("pre");
+  await expect(output).toContainText(
+    "Warning: contains 2 options outside this schema target"
+  );
+  await expect(output).toContainText("font-szie = 15");
+  await expect(output).toContainText('future-option = "second = value"');
+  await expect(output).not.toContainText("future-option = first");
+  await expect(output).not.toContainText("__proto__");
+  await expect(output).not.toContainText("constructor =");
 });
 
 test("a user can navigate and inspect configuration on a mobile screen", async ({
