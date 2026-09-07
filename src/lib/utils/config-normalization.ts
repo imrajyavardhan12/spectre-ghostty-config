@@ -1,13 +1,18 @@
 import type { ConfigValues } from "@/lib/schema/types";
+import { isSafeConfigKey } from "@/lib/security/config-key-safety";
 import { getDefaultValue, isRepeatableOption } from "@/lib/utils/config-options";
 import { normalizePaletteEntries } from "@/lib/utils/palette";
+
+export function createConfigValues(): ConfigValues {
+  return Object.create(null) as ConfigValues;
+}
 
 function normalizeValue(key: string, value: unknown): unknown {
   if (key === "palette" && Array.isArray(value)) {
     return normalizePaletteEntries(value as string[]);
   }
 
-  return value;
+  return Array.isArray(value) ? [...value] : value;
 }
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -37,9 +42,11 @@ function shouldStoreValue(key: string, value: unknown): boolean {
 }
 
 export function normalizeConfigValues(config: ConfigValues): ConfigValues {
-  const normalized: ConfigValues = {};
+  const normalized = createConfigValues();
 
   for (const [key, value] of Object.entries(config)) {
+    if (!isSafeConfigKey(key)) continue;
+
     const normalizedValue = normalizeValue(key, value);
 
     if (shouldStoreValue(key, normalizedValue)) {

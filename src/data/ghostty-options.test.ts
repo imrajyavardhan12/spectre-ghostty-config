@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { allOptions, getOptionById, getOptionsByCategory } from '@/data/ghostty-options';
 import { categories } from '@/data/categories';
 import type { Category } from '@/lib/schema/types';
+import { isSafeConfigKey } from '@/lib/security/config-key-safety';
 
 describe('ghostty-options', () => {
   describe('allOptions', () => {
@@ -43,9 +44,9 @@ describe('ghostty-options', () => {
       expect(uniqueIds.size).toBe(ids.length);
     });
 
-    it('should have string id format (kebab-case)', () => {
+    it('should have safe Ghostty-style option ids', () => {
       for (const option of allOptions) {
-        expect(option.id).toMatch(/^[a-z][a-z0-9-]*$/);
+        expect(isSafeConfigKey(option.id), option.id).toBe(true);
       }
     });
   });

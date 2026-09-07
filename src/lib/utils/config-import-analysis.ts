@@ -1,6 +1,13 @@
 import type { ConfigValues, NumberOption } from "@/lib/schema/types";
+import {
+  isSafeConfigKey,
+  isUnsafeConfigKey,
+} from "@/lib/security/config-key-safety";
 import { getConfigOption, isPathOption } from "@/lib/utils/config-options";
-import { normalizeConfigValues } from "@/lib/utils/config-normalization";
+import {
+  createConfigValues,
+  normalizeConfigValues,
+} from "@/lib/utils/config-normalization";
 import { validateConfigValue } from "@/lib/utils/config-validation";
 
 export type ImportInstructionDisposition =
@@ -26,6 +33,9 @@ export type ImportDiagnosticCode =
   | "unsupported-number-form"
   | "unsupported-number-range"
   | "number-out-of-range"
+  | "empty-key"
+  | "unknown-option"
+  | "unsafe-option-name"
   | "invalid-enum"
   | "invalid-color"
   | "invalid-duration";
@@ -37,6 +47,11 @@ export interface ImportDiagnostic {
   key?: string;
   message: string;
   relatedLineNumbers?: number[];
+}
+
+interface UnknownOptionOccurrences {
+  retainedInstructionIndex: number;
+  overriddenLineNumbers: number[];
 }
 
 export interface ImportAnalysis {
@@ -63,8 +78,9 @@ function stripDoubleQuotes(value: string): string {
 
 function stripMatchingQuotes(value: string): string {
   if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
+    value.length >= 2 &&
+    ((value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'")))
   ) {
     return value.slice(1, -1);
   }
@@ -212,21 +228,23 @@ function parseNumber(option: NumberOption, value: string): NumberParseResult {
 function invalidInstruction(
   lineNumber: number,
   key: string,
-  rawValue: string
+  rawValue: string,
+  known = true
 ): ImportInstruction {
   return {
     lineNumber,
     key,
     rawValue,
     disposition: "invalid",
-    known: true,
+    known,
   };
 }
 
 export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
-  const candidateConfig: ConfigValues = {};
+  const candidateConfig = createConfigValues();
   const instructions: ImportInstruction[] = [];
   const diagnostics: ImportDiagnostic[] = [];
+  const unknownOptions = new Map<string, UnknownOptionOccurrences>();
   const lines = configString.split("\n");
 
   lines.forEach((line, index) => {
@@ -250,14 +268,49 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
 
     const key = trimmed.slice(0, equalsIndex).trim();
     const rawValue = trimmed.slice(equalsIndex + 1).trim();
+
+    if (key === "") {
+      instructions.push(invalidInstruction(lineNumber, key, rawValue, false));
+      diagnostics.push({
+        code: "empty-key",
+        severity: "error",
+        lineNumber,
+        message: "Enter an option name before =.",
+      });
+      return;
+    }
+
     const option = getConfigOption(key);
     const parsedPathValue = option && isPathOption(key)
       ? parsePathValue(rawValue)
       : null;
 
+    if (!option && !isSafeConfigKey(key)) {
+      instructions.push(invalidInstruction(lineNumber, key, rawValue, false));
+      diagnostics.push({
+        code: "unsafe-option-name",
+        severity: "error",
+        lineNumber,
+        key,
+        message: isUnsafeConfigKey(key)
+          ? "This option name is reserved and cannot be imported safely."
+          : "Use a lowercase Ghostty option name containing letters, numbers, and single hyphens.",
+      });
+      return;
+    }
+
     if (!option) {
       const value = stripMatchingQuotes(rawValue);
       candidateConfig[key] = value;
+
+      const previous = unknownOptions.get(key);
+      if (previous) {
+        const overridden = instructions[previous.retainedInstructionIndex];
+        overridden.disposition = "overridden";
+        previous.overriddenLineNumbers.push(overridden.lineNumber);
+      }
+
+      const retainedInstructionIndex = instructions.length;
       instructions.push({
         lineNumber,
         key,
@@ -266,6 +319,16 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
         disposition: "retained",
         known: false,
       });
+
+      if (previous) {
+        previous.retainedInstructionIndex = retainedInstructionIndex;
+      } else {
+        unknownOptions.set(key, {
+          retainedInstructionIndex,
+          overriddenLineNumbers: [],
+        });
+      }
+
       return;
     }
 
@@ -412,13 +475,32 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
     });
   });
 
+  for (const [key, occurrence] of unknownOptions) {
+    diagnostics.push({
+      code: "unknown-option",
+      severity: "warning",
+      lineNumber: instructions[occurrence.retainedInstructionIndex].lineNumber,
+      key,
+      message: occurrence.overriddenLineNumbers.length > 0
+        ? "Spectre does not recognize this option. Its last occurrence will be retained as an unverified string."
+        : "Spectre does not recognize this option. It will be retained as an unverified string.",
+      relatedLineNumbers: occurrence.overriddenLineNumbers,
+    });
+  }
+  diagnostics.sort((a, b) => a.lineNumber - b.lineNumber);
+
   const acceptedInstructionCount = instructions.filter(
+    (instruction) =>
+      instruction.disposition === "retained" ||
+      instruction.disposition === "overridden" ||
+      instruction.disposition === "reset"
+  ).length;
+  // Known scalar override classification is added by the duplicate/order slice (#69).
+  const effectiveInstructionCount = instructions.filter(
     (instruction) =>
       instruction.disposition === "retained" ||
       instruction.disposition === "reset"
   ).length;
-  // Scalar override classification is added by the duplicate/order slice (#69).
-  const effectiveInstructionCount = acceptedInstructionCount;
   const instructionLineNumbers = new Set(
     instructions.map((instruction) => instruction.lineNumber)
   );

@@ -174,6 +174,40 @@ describe('config-store', () => {
   });
 
   describe('applyImportedCandidate', () => {
+    it('stores reviewed candidates in a null-prototype dictionary and drops unsafe keys', () => {
+      const candidate = JSON.parse(
+        '{"__proto__":{"polluted":true},"constructor":"bad","prototype":"bad","future-option":"safe"}'
+      );
+
+      act(() => {
+        useConfigStore.getState().applyImportedCandidate(candidate);
+      });
+
+      const stored = getStoreState().config;
+      expect(stored).toEqual({ 'future-option': 'safe' });
+      expect(Object.getPrototypeOf(stored)).toBeNull();
+      expect(Object.hasOwn(stored, '__proto__')).toBe(false);
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    });
+
+    it('keeps imported config dictionaries prototype-free after resets', () => {
+      act(() => {
+        useConfigStore.getState().applyImportedCandidate({
+          'font-size': 16,
+          'future-option': 'safe',
+        });
+        useConfigStore.getState().resetValue('font-size');
+      });
+
+      expect(getStoreState().config).toEqual({ 'future-option': 'safe' });
+      expect(Object.getPrototypeOf(getStoreState().config)).toBeNull();
+
+      act(() => {
+        useConfigStore.getState().resetAll();
+      });
+      expect(Object.getPrototypeOf(getStoreState().config)).toBeNull();
+    });
+
     it('atomically replaces config, clears theme metadata, and clones arrays', () => {
       const candidate = {
         'font-size': 16,
@@ -192,6 +226,26 @@ describe('config-store', () => {
         'font-family': ['JetBrains Mono', 'Symbols Nerd Font'],
       });
       expect(state.appliedTheme).toBeNull();
+    });
+  });
+
+  describe('persistence safety', () => {
+    it('normalizes persisted config before hydrating the store', async () => {
+      localStorage.setItem(
+        'spectre-config',
+        '{"state":{"config":{"__proto__":{"polluted":true},"constructor":"bad","future-option":"safe"},"appliedTheme":"Dracula"},"version":0}'
+      );
+
+      await act(async () => {
+        await useConfigStore.persist.rehydrate();
+      });
+
+      const state = getStoreState();
+      expect(state.config).toEqual({ 'future-option': 'safe' });
+      expect(Object.getPrototypeOf(state.config)).toBeNull();
+      expect(Object.hasOwn(state.config, '__proto__')).toBe(false);
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+      expect(state.appliedTheme).toBe('Dracula');
     });
   });
 

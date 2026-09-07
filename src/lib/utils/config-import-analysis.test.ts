@@ -52,6 +52,135 @@ cursor-style = bar
     expect(analysis.hasMeaningfulInstruction).toBe(true);
   });
 
+  it('normalizes unknown option values as unverified safe candidate data', () => {
+    const analysis = analyzeGhosttyConfig(`
+future-command = left=right
+future-double = "double = value"
+future-single = 'single = value'
+future-empty =
+future-quoted-empty = ""
+future-unmatched = "literal
+future-unmatched-single = '
+`);
+
+    expect(analysis.candidateConfig).toEqual({
+      'future-command': 'left=right',
+      'future-double': 'double = value',
+      'future-single': 'single = value',
+      'future-empty': '',
+      'future-quoted-empty': '',
+      'future-unmatched': '"literal',
+      'future-unmatched-single': "'",
+    });
+    expect(Object.getPrototypeOf(analysis.candidateConfig)).toBeNull();
+    expect(Object.getPrototypeOf(analysis.normalizedConfig)).toBeNull();
+    expect(analysis.diagnostics).toHaveLength(7);
+    expect(analysis.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unknown-option',
+          severity: 'warning',
+          lineNumber: 2,
+          key: 'future-command',
+        }),
+      ])
+    );
+    expect(analysis.instructions.every((instruction) => !instruction.known)).toBe(true);
+  });
+
+  it('retains the last repeated unknown value and reports every related line', () => {
+    const analysis = analyzeGhosttyConfig(`
+future-option = first
+future-option = "second = value"
+future-option =
+`);
+
+    expect(analysis.candidateConfig['future-option']).toBe('');
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual(['overridden', 'overridden', 'retained']);
+    expect(analysis.summary).toMatchObject({
+      acceptedInstructionCount: 3,
+      effectiveInstructionCount: 1,
+      skippedLineCount: 0,
+      resultingSettingCount: 1,
+    });
+
+    const unknownDiagnostics = analysis.diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'unknown-option'
+    );
+    expect(unknownDiagnostics).toHaveLength(1);
+    expect(unknownDiagnostics[0]).toMatchObject({
+      lineNumber: 4,
+      relatedLineNumbers: [2, 3],
+    });
+  });
+
+  it('handles many repeated unknown options with one effective value', () => {
+    const source = Array.from(
+      { length: 10_000 },
+      (_, index) => `future-option = value-${index}`
+    ).join('\n');
+
+    const analysis = analyzeGhosttyConfig(source);
+
+    expect(analysis.candidateConfig['future-option']).toBe('value-9999');
+    expect(analysis.instructions).toHaveLength(10_000);
+    expect(analysis.instructions[0].disposition).toBe('overridden');
+    expect(analysis.instructions[9_999].disposition).toBe('retained');
+    expect(analysis.diagnostics).toHaveLength(1);
+    expect(analysis.diagnostics[0].relatedLineNumbers).toHaveLength(9_999);
+    expect(analysis.diagnostics[0].relatedLineNumbers?.[0]).toBe(1);
+    expect(analysis.diagnostics[0].relatedLineNumbers?.[9_998]).toBe(9_999);
+    expect(analysis.summary).toMatchObject({
+      acceptedInstructionCount: 10_000,
+      effectiveInstructionCount: 1,
+      skippedLineCount: 0,
+      resultingSettingCount: 1,
+    });
+  });
+
+  it('rejects unsafe or non-Ghostty unknown option names', () => {
+    const analysis = analyzeGhosttyConfig(`
+__proto__ = polluted
+constructor = polluted
+prototype = polluted
+toString = polluted
+future_option = invalid
+Future-option = invalid
+future--option = invalid
+-future = invalid
+future- = invalid
+ = missing
+future-option-2 = retained
+`);
+
+    expect(analysis.candidateConfig).toEqual({
+      'future-option-2': 'retained',
+    });
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(
+      analysis.diagnostics.filter(
+        (diagnostic) => diagnostic.code === 'unsafe-option-name'
+      )
+    ).toHaveLength(9);
+    expect(analysis.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'empty-key',
+          severity: 'error',
+          lineNumber: 11,
+        }),
+      ])
+    );
+    expect(
+      analysis.instructions.filter(
+        (instruction) => instruction.disposition === 'invalid'
+      )
+    ).toHaveLength(10);
+    expect(analysis.summary.skippedLineCount).toBe(10);
+  });
+
   it('keeps explicit reset/default intent meaningful when the stored diff is empty', () => {
     const analysis = analyzeGhosttyConfig(`
 font-size = 13
