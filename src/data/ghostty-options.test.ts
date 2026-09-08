@@ -44,6 +44,42 @@ describe('ghostty-options', () => {
       expect(uniqueIds.size).toBe(ids.length);
     });
 
+    it('should match Ghostty 1.3.1 repeatable option metadata', () => {
+      const repeatableIds = allOptions
+        .filter(
+          (option) =>
+            option.type === 'keybind' ||
+            option.type === 'palette' ||
+            ('repeatable' in option && option.repeatable === true)
+        )
+        .map((option) => option.id)
+        .sort();
+
+      expect(repeatableIds).toEqual([
+        'clipboard-codepoint-map',
+        'command-palette-entry',
+        'config-file',
+        'custom-shader',
+        'env',
+        'font-codepoint-map',
+        'font-family',
+        'font-family-bold',
+        'font-family-bold-italic',
+        'font-family-italic',
+        'font-feature',
+        'font-variation',
+        'font-variation-bold',
+        'font-variation-bold-italic',
+        'font-variation-italic',
+        'gtk-custom-css',
+        'input',
+        'key-remap',
+        'keybind',
+        'link',
+        'palette',
+      ]);
+    });
+
     it('should have safe Ghostty-style option ids', () => {
       for (const option of allOptions) {
         expect(isSafeConfigKey(option.id), option.id).toBe(true);

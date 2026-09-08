@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ImportReviewDialog } from './ImportReviewDialog';
 import { analyzeGhosttyConfig } from '@/lib/utils/config-import-analysis';
 
@@ -140,6 +140,61 @@ future-option = third
     expect(screen.queryByText('future-option = second')).not.toBeInTheDocument();
     expectImportedInstruction('future-option', 'future-option = third');
     expectImportIssue(/Line 4.*Related lines: 2, 3\./);
+  });
+
+  it('shows effective order while keeping overridden, cleared, and ignored source values inspectable', () => {
+    const analysis = analyzeGhosttyConfig(`font-size = 14
+font-size = 16
+font-family = First
+font-family = Second
+font-family =
+font-family = After
+config-file = first
+config-file = """"
+config-file =`);
+
+    render(
+      <ImportReviewDialog
+        open
+        fileName="config"
+        fileSize={160}
+        currentSettingCount={0}
+        analysis={analysis}
+        onOpenChange={vi.fn()}
+        onConfirm={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('8 accepted instructions')).toBeInTheDocument();
+    expect(screen.getByText('4 effective instructions')).toBeInTheDocument();
+
+    const instructions = screen.getByRole('list', {
+      name: 'Imported instructions',
+    });
+    expect(instructions).toHaveTextContent('Line 2 font-size = 16');
+    expect(instructions).toHaveTextContent(
+      'Line 5 font-family = (reset to default)'
+    );
+    expect(instructions).toHaveTextContent('Line 6 font-family = After');
+    expect(instructions).toHaveTextContent(
+      'Line 9 config-file = (reset to default)'
+    );
+    expect(instructions).not.toHaveTextContent('font-size = 14');
+    expect(instructions).not.toHaveTextContent('font-family = First');
+    expect(instructions).not.toHaveTextContent('font-family = Second');
+    expect(within(instructions).getAllByRole('link', { name: 'font-family' })).toHaveLength(2);
+    expect(
+      screen.getByText(
+        'Repeatable values keep their order within each option. Export may regroup different option keys.'
+      )
+    ).toBeInTheDocument();
+
+    const issues = screen.getByRole('list', { name: 'Import issues' });
+    expect(issues).toHaveTextContent(/Line 1.*Source value: 14/);
+    expect(issues).toHaveTextContent(/Line 3.*Source value: First/);
+    expect(issues).toHaveTextContent(/Line 4.*Source value: Second/);
+    expect(issues).toHaveTextContent(/Line 7.*Source value: first/);
+    expect(issues).toHaveTextContent(/Line 8.*Source value: """"/);
   });
 
   it('shows invalid known values and explicit partial-import action copy', () => {

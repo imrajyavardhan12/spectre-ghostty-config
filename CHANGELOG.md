@@ -28,6 +28,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Config file imports now open a review step before atomically replacing the current editor state.
 - Import review now supports explicit partial replacement when known values are invalid.
 - Unknown imported options are retained as visibly unverified strings, while unsafe or non-Ghostty-style option names are rejected before apply.
+- Import review now preserves source order within repeatable options, explains scalar winners and reset-cleared values, and applies Ghostty's file-level quote normalization and path marker behavior.
 - Switched Dependabot to its Bun ecosystem so dependency updates include the committed `bun.lock` file.
 - Declared the repository's Bun package-manager version in `package.json` for consistent local and CI tooling.
 - Removed the unusable Prettier script; formatter adoption will be handled separately from functional changes.

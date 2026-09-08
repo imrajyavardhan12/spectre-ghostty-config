@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { ConfigValues } from "@/lib/schema/types";
+import { isRepeatableOption } from "@/lib/utils/config-options";
 import type {
   ImportAnalysis,
   ImportDiagnostic,
@@ -85,6 +86,9 @@ export function ImportReviewDialog({
   const hasUnknownInstructions = effectiveInstructions.some(
     (instruction) => !instruction.known
   );
+  const hasRepeatableInstructions = effectiveInstructions.some(
+    (instruction) => instruction.known && isRepeatableOption(instruction.key)
+  );
   const resultingCount = analysis.summary.resultingSettingCount;
   const skippedCount = analysis.summary.skippedLineCount;
   const baseActionLabel = resultingCount === 0
@@ -99,7 +103,7 @@ export function ImportReviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[calc(100vh-2rem)] sm:max-w-2xl"
+        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl"
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           cancelRef.current?.focus();
@@ -118,8 +122,17 @@ export function ImportReviewDialog({
             {fileName}
           </span>
           <span>{formatFileSize(fileSize)}</span>
-          <span>{analysis.summary.acceptedInstructionCount} accepted instructions</span>
-          <span>{resultingCount} resulting settings</span>
+          <span>
+            {analysis.summary.acceptedInstructionCount} accepted{" "}
+            {analysis.summary.acceptedInstructionCount === 1 ? "instruction" : "instructions"}
+          </span>
+          <span>
+            {analysis.summary.effectiveInstructionCount} effective{" "}
+            {analysis.summary.effectiveInstructionCount === 1 ? "instruction" : "instructions"}
+          </span>
+          <span>
+            {resultingCount} resulting {resultingCount === 1 ? "setting" : "settings"}
+          </span>
           {skippedCount > 0 && (
             <span>
               {skippedCount} skipped {skippedCount === 1 ? "line" : "lines"}
@@ -138,7 +151,7 @@ export function ImportReviewDialog({
                 <li key={`${instruction.lineNumber}-${instruction.key}`} className="break-words">
                   <span className="mr-2 text-muted-foreground">
                     Line {instruction.lineNumber}
-                  </span>
+                  </span>{" "}
                   <a
                     href={
                       instruction.known
@@ -163,6 +176,13 @@ export function ImportReviewDialog({
             </ol>
           ) : (
             <p className="text-sm text-muted-foreground">No usable instructions found.</p>
+          )}
+
+          {hasRepeatableInstructions && (
+            <p className="text-xs text-muted-foreground">
+              Repeatable values keep their order within each option. Export may regroup
+              different option keys.
+            </p>
           )}
 
           {hasUnknownInstructions && (
@@ -212,6 +232,15 @@ export function ImportReviewDialog({
                       </>
                     )}
                     {`: ${diagnostic.message}${formatRelatedLines(diagnostic)}`}
+                    {diagnostic.rawValue !== undefined && (
+                      <>
+                        {" Source value: "}
+                        <code>
+                          {diagnostic.rawValue === "" ? "(empty)" : diagnostic.rawValue}
+                        </code>
+                        .
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
