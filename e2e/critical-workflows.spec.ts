@@ -237,6 +237,76 @@ test("a user can retain unverified options while unsafe names are rejected", asy
   await expect(output).not.toContainText("constructor =");
 });
 
+test("a user can review and apply duplicate, reset, repeatable, and path semantics", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import Config" }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      'font-size = 14\nfont-size = 16\nfont-family = Before\nfont-family = ""\nfont-family = Primary\nfont-family = Fallback\nenv = BEFORE=1\nenv =\nenv = AFTER=2\nconfig-file = before\nconfig-file = """"\nconfig-file =\nconfig-file = ?after\n'
+    ),
+  });
+
+  await expect(page.getByText("12 accepted instructions")).toBeVisible();
+  await expect(page.getByText("8 effective instructions")).toBeVisible();
+
+  const imported = page.getByRole("list", { name: "Imported instructions" });
+  await expect(imported).toContainText("Line 2 font-size = 16");
+  const fontInstructions = imported
+    .getByRole("link", { name: "font-family", exact: true })
+    .locator("..");
+  await expect(fontInstructions).toHaveText([
+    /Line 4.*reset to default/,
+    /Line 5.*Primary/,
+    /Line 6.*Fallback/,
+  ]);
+  await expect(imported).toContainText("Line 8 env = (reset to default)");
+  await expect(imported).toContainText("Line 9 env = AFTER=2");
+  await expect(imported).toContainText(
+    "Line 12 config-file = (reset to default)"
+  );
+  await expect(imported).toContainText("Line 13 config-file = ?after");
+  await expect(
+    page.getByText(
+      "Repeatable values keep their order within each option. Export may regroup different option keys."
+    )
+  ).toBeVisible();
+
+  const issues = page.getByRole("list", { name: "Import issues" });
+  await expect(issues).toContainText("Line 1");
+  await expect(issues).toContainText("Source value: 14");
+  await expect(issues).toContainText("Source value: Before");
+  await expect(issues).toContainText('Source value: """"');
+
+  await page
+    .getByRole("button", { name: "Replace with 4 settings and skip 1 line" })
+    .click();
+  await expect(page.getByText("4 modified", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "View Config" }).click();
+  const output = page.locator("pre");
+  await expect(output).toContainText("font-size = 16");
+  await expect(output).toContainText("font-family = Primary");
+  await expect(output).toContainText("font-family = Fallback");
+  await expect(output).toContainText("env = AFTER=2");
+  await expect(output).toContainText("config-file = ?after");
+  await expect(output).not.toContainText("font-size = 14");
+  await expect(output).not.toContainText("font-family = Before");
+  await expect(output).not.toContainText("env = BEFORE=1");
+  await expect(output).not.toContainText("config-file = before");
+
+  const outputText = await output.textContent();
+  expect(outputText!.indexOf("font-family = Primary")).toBeLessThan(
+    outputText!.indexOf("font-family = Fallback")
+  );
+});
+
 test("a user can navigate and inspect configuration on a mobile screen", async ({
   page,
 }) => {

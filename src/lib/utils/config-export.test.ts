@@ -30,8 +30,12 @@ describe('exportGhosttyConfig', () => {
     expect(output).toContain('keybind = ctrl+shift+e=text:FOO=bar');
     expect(output).toContain('keybind = clear');
     expect(output).toContain('palette = 15=#ffffff');
-    expect(output).toContain('gtk-custom-css = "?required.css"');
+    expect(output).toContain('gtk-custom-css = ""?required.css""');
     expect(output).toContain('gtk-custom-css = ?optional.css');
+    expect(analyzeGhosttyConfig(output).candidateConfig['gtk-custom-css']).toEqual([
+      '"?required.css"',
+      '?optional.css',
+    ]);
     expect(output).toContain('unknown-option = "raw = value"');
   });
 

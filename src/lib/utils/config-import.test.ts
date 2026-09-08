@@ -37,14 +37,14 @@ future-option = "second value"
   it('preserves Ghostty path optional marker semantics', () => {
     const config = parseGhosttyConfig(`
 config-file = first
-config-file = ""
+config-file = """"
 config-file = second
 config-file =
 config-file = after-reset
-gtk-custom-css = "?required.css"
+gtk-custom-css = ""?required.css""
 gtk-custom-css = ?optional.css
 custom-shader = first.glsl
-custom-shader = ""
+custom-shader = """"
 custom-shader = second.glsl
 `);
 

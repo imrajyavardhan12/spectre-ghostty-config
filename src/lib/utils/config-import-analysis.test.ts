@@ -197,6 +197,395 @@ cursor-style =
     expect(analysis.hasMeaningfulInstruction).toBe(true);
   });
 
+  it('retains the last valid scalar occurrence and relates overridden lines to each winner', () => {
+    const analysis = analyzeGhosttyConfig(`font-size = 14
+font-size = invalid
+font-size = 16
+cursor-style = bar
+cursor-style = underline`);
+
+    expect(analysis.candidateConfig).toEqual({
+      'font-size': 16,
+      'cursor-style': 'underline',
+    });
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual([
+      'overridden',
+      'invalid',
+      'retained',
+      'overridden',
+      'retained',
+    ]);
+    expect(
+      analysis.diagnostics.filter(
+        (diagnostic) => diagnostic.code === 'duplicate-overridden'
+      )
+    ).toEqual([
+      expect.objectContaining({
+        lineNumber: 1,
+        key: 'font-size',
+        rawValue: '14',
+        relatedLineNumbers: [3],
+        severity: 'warning',
+      }),
+      expect.objectContaining({
+        lineNumber: 4,
+        key: 'cursor-style',
+        rawValue: 'bar',
+        relatedLineNumbers: [5],
+        severity: 'warning',
+      }),
+    ]);
+    expect(analysis.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'invalid-number',
+          lineNumber: 2,
+        }),
+      ])
+    );
+    expect(analysis.summary).toEqual({
+      acceptedInstructionCount: 4,
+      effectiveInstructionCount: 2,
+      skippedLineCount: 1,
+      resultingSettingCount: 2,
+    });
+  });
+
+  it('clears earlier scalar and repeatable values on explicit resets before retaining later values', () => {
+    const analysis = analyzeGhosttyConfig(`font-family = First
+font-family = Second
+font-size = 14
+font-family =
+font-size =
+font-family = After
+font-family = Fallback
+font-size = invalid`);
+
+    expect(analysis.candidateConfig).toEqual({
+      'font-family': ['After', 'Fallback'],
+    });
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual([
+      'overridden',
+      'overridden',
+      'overridden',
+      'reset',
+      'reset',
+      'retained',
+      'retained',
+      'invalid',
+    ]);
+
+    const cleared = analysis.diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'reset-cleared-value'
+    );
+    expect(cleared).toEqual([
+      expect.objectContaining({
+        lineNumber: 1,
+        rawValue: 'First',
+        relatedLineNumbers: [4],
+      }),
+      expect.objectContaining({
+        lineNumber: 2,
+        rawValue: 'Second',
+        relatedLineNumbers: [4],
+      }),
+      expect.objectContaining({
+        lineNumber: 3,
+        rawValue: '14',
+        relatedLineNumbers: [5],
+      }),
+    ]);
+
+    const resets = analysis.diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'explicit-reset'
+    );
+    expect(resets).toEqual([
+      expect.objectContaining({
+        severity: 'info',
+        lineNumber: 4,
+        key: 'font-family',
+        relatedLineNumbers: [1, 2],
+      }),
+      expect.objectContaining({
+        severity: 'info',
+        lineNumber: 5,
+        key: 'font-size',
+        relatedLineNumbers: [3],
+      }),
+    ]);
+    expect(analysis.summary).toEqual({
+      acceptedInstructionCount: 7,
+      effectiveInstructionCount: 4,
+      skippedLineCount: 1,
+      resultingSettingCount: 1,
+    });
+  });
+
+  it('keeps each consecutive explicit reset meaningful for review', () => {
+    const analysis = analyzeGhosttyConfig(`font-size =
+font-size =`);
+
+    expect(analysis.candidateConfig).toEqual({});
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual(['reset', 'reset']);
+    expect(analysis.summary).toEqual({
+      acceptedInstructionCount: 2,
+      effectiveInstructionCount: 2,
+      skippedLineCount: 0,
+      resultingSettingCount: 0,
+    });
+    expect(analysis.hasMeaningfulInstruction).toBe(true);
+  });
+
+  it('allows a later scalar value after an explicit reset', () => {
+    const analysis = analyzeGhosttyConfig(`font-size = 14
+font-size =
+font-size = 16`);
+
+    expect(analysis.candidateConfig['font-size']).toBe(16);
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual(['overridden', 'reset', 'retained']);
+    expect(analysis.summary).toMatchObject({
+      acceptedInstructionCount: 3,
+      effectiveInstructionCount: 2,
+      skippedLineCount: 0,
+      resultingSettingCount: 1,
+    });
+  });
+
+  it('applies Ghostty file-level double-quote removal before known empty resets', () => {
+    const analysis = analyzeGhosttyConfig(`font-family = Before
+font-family = ""
+font-family = After
+font-family = ''
+title = ""
+command = ''
+mouse-hide-while-typing = ""`);
+
+    expect(analysis.candidateConfig).toEqual({
+      'font-family': ['After', "''"],
+      command: "''",
+    });
+    expect(analysis.normalizedConfig).toEqual(analysis.candidateConfig);
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual([
+      'overridden',
+      'reset',
+      'retained',
+      'retained',
+      'reset',
+      'retained',
+      'reset',
+    ]);
+    expect(
+      analysis.diagnostics.filter(
+        (diagnostic) => diagnostic.code === 'explicit-reset'
+      )
+    ).toEqual([
+      expect.objectContaining({ lineNumber: 2, relatedLineNumbers: [1] }),
+      expect.objectContaining({ lineNumber: 5, relatedLineNumbers: [] }),
+      expect.objectContaining({ lineNumber: 7, relatedLineNumbers: [] }),
+    ]);
+    expect(analysis.summary.skippedLineCount).toBe(0);
+  });
+
+  it('lets a quoted empty scalar reset an earlier valid value', () => {
+    const analysis = analyzeGhosttyConfig(`font-size = 16
+font-size = ""`);
+
+    expect(analysis.candidateConfig).toEqual({});
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual(['overridden', 'reset']);
+    expect(analysis.summary).toEqual({
+      acceptedInstructionCount: 2,
+      effectiveInstructionCount: 1,
+      skippedLineCount: 0,
+      resultingSettingCount: 0,
+    });
+  });
+
+  it.each([
+    ['font-family-bold', 'Bold One', 'Bold Two'],
+    ['font-family-italic', 'Italic One', 'Italic Two'],
+    ['font-family-bold-italic', 'Bold Italic One', 'Bold Italic Two'],
+    ['font-feature', 'calt', 'liga'],
+    ['font-variation', 'wght=400', 'wdth=90'],
+    ['font-variation-bold', 'wght=600', 'wdth=95'],
+    ['font-variation-italic', 'ital=1', 'slnt=-10'],
+    ['font-variation-bold-italic', 'wght=600', 'ital=1'],
+    ['font-codepoint-map', 'U+ABCD=Font One', 'U+1234=Font Two'],
+    ['input', 'raw:first', 'raw:second'],
+  ])('preserves repeated %s values in source order', (key, first, second) => {
+    const analysis = analyzeGhosttyConfig(
+      `${key} = ${first}\n${key} = ${second}`
+    );
+
+    expect(analysis.candidateConfig[key]).toEqual([first, second]);
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual(['retained', 'retained']);
+    expect(
+      analysis.diagnostics.some(
+        (diagnostic) => diagnostic.code === 'duplicate-overridden'
+      )
+    ).toBe(false);
+  });
+
+  it('preserves relative order for effective font and environment occurrences', () => {
+    const analysis = analyzeGhosttyConfig(`font-family = Primary
+env = FIRST=1
+font-family = Fallback One
+env = SECOND=2
+font-family = Fallback Two
+env = ""
+env = AFTER=3`);
+
+    expect(analysis.candidateConfig).toEqual({
+      'font-family': ['Primary', 'Fallback One', 'Fallback Two'],
+      env: 'AFTER=3',
+    });
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual([
+      'retained',
+      'overridden',
+      'retained',
+      'overridden',
+      'retained',
+      'reset',
+      'retained',
+    ]);
+    expect(
+      analysis.instructions
+        .filter(
+          (instruction) =>
+            instruction.disposition === 'retained' ||
+            instruction.disposition === 'reset'
+        )
+        .map((instruction) => [
+          instruction.lineNumber,
+          instruction.key,
+          instruction.normalizedValue,
+        ])
+    ).toEqual([
+      [1, 'font-family', 'Primary'],
+      [3, 'font-family', 'Fallback One'],
+      [5, 'font-family', 'Fallback Two'],
+      [6, 'env', undefined],
+      [7, 'env', 'AFTER=3'],
+    ]);
+    expect(analysis.summary).toMatchObject({
+      acceptedInstructionCount: 7,
+      effectiveInstructionCount: 5,
+      skippedLineCount: 0,
+      resultingSettingCount: 2,
+    });
+  });
+
+  it('preserves Ghostty file-level resets, nested required paths, and optional paths', () => {
+    const analysis = analyzeGhosttyConfig(`config-file = first
+config-file = ""
+config-file = second
+config-file =
+config-file = after-reset
+gtk-custom-css = "?quoted-optional.css"
+gtk-custom-css = ?optional.css
+custom-shader = """"
+custom-shader = ""?required.glsl""`);
+
+    expect(analysis.candidateConfig).toEqual({
+      'config-file': 'after-reset',
+      'gtk-custom-css': ['?quoted-optional.css', '?optional.css'],
+      'custom-shader': '"?required.glsl"',
+    });
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual([
+      'overridden',
+      'reset',
+      'overridden',
+      'reset',
+      'retained',
+      'retained',
+      'retained',
+      'ignored',
+      'retained',
+    ]);
+
+    expect(
+      analysis.diagnostics.filter(
+        (diagnostic) => diagnostic.code === 'quoted-empty-path-ignored'
+      )
+    ).toEqual([
+      expect.objectContaining({
+        severity: 'info',
+        lineNumber: 8,
+        key: 'custom-shader',
+        rawValue: '""""',
+      }),
+    ]);
+    expect(analysis.summary).toEqual({
+      acceptedInstructionCount: 8,
+      effectiveInstructionCount: 6,
+      skippedLineCount: 1,
+      resultingSettingCount: 3,
+    });
+  });
+
+  it('resets repeatable custom parsers after file-level quoted-empty normalization', () => {
+    const analysis = analyzeGhosttyConfig(`font-variation = wght=400
+font-variation = ""
+clipboard-codepoint-map = U+2500=U+002D
+clipboard-codepoint-map = ""`);
+
+    expect(analysis.candidateConfig).toEqual({});
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual(['overridden', 'reset', 'overridden', 'reset']);
+    expect(
+      analysis.diagnostics.filter(
+        (diagnostic) => diagnostic.code === 'explicit-reset'
+      )
+    ).toEqual([
+      expect.objectContaining({ lineNumber: 2, relatedLineNumbers: [1] }),
+      expect.objectContaining({ lineNumber: 4, relatedLineNumbers: [3] }),
+    ]);
+    expect(analysis.summary).toMatchObject({
+      acceptedInstructionCount: 4,
+      effectiveInstructionCount: 2,
+      skippedLineCount: 0,
+      resultingSettingCount: 0,
+    });
+  });
+
+  it('keeps an earlier valid scalar when a later occurrence is invalid', () => {
+    const analysis = analyzeGhosttyConfig(`font-size = 16
+font-size = invalid`);
+
+    expect(analysis.candidateConfig['font-size']).toBe(16);
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual(['retained', 'invalid']);
+    expect(
+      analysis.diagnostics.some(
+        (diagnostic) => diagnostic.code === 'duplicate-overridden'
+      )
+    ).toBe(false);
+    expect(analysis.summary).toMatchObject({
+      acceptedInstructionCount: 1,
+      effectiveInstructionCount: 1,
+      skippedLineCount: 1,
+    });
+  });
+
   it('parses Ghostty boolean tokens exactly and rejects other values', () => {
     const trueTokens = ['1', 't', 'T', 'true'];
     const falseTokens = ['0', 'f', 'F', 'false'];

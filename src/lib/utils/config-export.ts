@@ -19,8 +19,19 @@ function formatValue(key: string, value: unknown): string {
   }
 
   if (typeof value === "string") {
-    if (isPathOption(key) && (value.startsWith("?") || value.startsWith('"?'))) {
+    if (isPathOption(key) && value.startsWith("?")) {
       return value;
+    }
+
+    if (
+      isPathOption(key) &&
+      value.startsWith('"?') &&
+      value.endsWith('"')
+    ) {
+      // Ghostty's file iterator removes one outer quote pair before the path
+      // parser runs. Keep an inner pair so a leading ? remains a required-path
+      // character instead of becoming the optional-file marker.
+      return `"${value}"`;
     }
 
     if (value.includes(" ")) {

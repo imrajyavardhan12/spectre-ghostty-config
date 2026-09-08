@@ -20,6 +20,7 @@ const fontOptions: ConfigOption[] = [
     default: "",
     category: "fonts",
     placeholder: "",
+    repeatable: true,
   },
   {
     id: "font-family-italic",
@@ -29,6 +30,7 @@ const fontOptions: ConfigOption[] = [
     default: "",
     category: "fonts",
     placeholder: "",
+    repeatable: true,
   },
   {
     id: "font-family-bold-italic",
@@ -38,6 +40,7 @@ const fontOptions: ConfigOption[] = [
     default: "",
     category: "fonts",
     placeholder: "",
+    repeatable: true,
   },
   {
     id: "font-size",
@@ -127,6 +130,7 @@ const fontOptions: ConfigOption[] = [
     default: "",
     category: "fonts",
     placeholder: "calt,liga",
+    repeatable: true,
   },
   {
     id: "font-variation",
@@ -136,6 +140,7 @@ const fontOptions: ConfigOption[] = [
     default: "",
     category: "fonts",
     placeholder: "wght=400",
+    repeatable: true,
   },
   {
     id: "font-variation-bold",
@@ -144,6 +149,7 @@ const fontOptions: ConfigOption[] = [
     type: "string",
     default: "",
     category: "fonts",
+    repeatable: true,
   },
   {
     id: "font-variation-italic",
@@ -152,6 +158,7 @@ const fontOptions: ConfigOption[] = [
     type: "string",
     default: "",
     category: "fonts",
+    repeatable: true,
   },
   {
     id: "font-variation-bold-italic",
@@ -160,6 +167,7 @@ const fontOptions: ConfigOption[] = [
     type: "string",
     default: "",
     category: "fonts",
+    repeatable: true,
   },
   {
     id: "font-codepoint-map",
@@ -168,6 +176,7 @@ const fontOptions: ConfigOption[] = [
     type: "string",
     default: "",
     category: "fonts",
+    repeatable: true,
   },
 ];
 
@@ -1094,6 +1103,7 @@ const shellOptions: ConfigOption[] = [
     category: "shell",
     placeholder: "raw:Hello",
     sinceVersion: "1.3.0",
+    repeatable: true,
   },
   {
     id: "working-directory",

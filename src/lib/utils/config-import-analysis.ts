@@ -3,7 +3,11 @@ import {
   isSafeConfigKey,
   isUnsafeConfigKey,
 } from "@/lib/security/config-key-safety";
-import { getConfigOption, isPathOption } from "@/lib/utils/config-options";
+import {
+  getConfigOption,
+  isPathOption,
+  isRepeatableOption,
+} from "@/lib/utils/config-options";
 import {
   createConfigValues,
   normalizeConfigValues,
@@ -36,6 +40,10 @@ export type ImportDiagnosticCode =
   | "empty-key"
   | "unknown-option"
   | "unsafe-option-name"
+  | "duplicate-overridden"
+  | "reset-cleared-value"
+  | "explicit-reset"
+  | "quoted-empty-path-ignored"
   | "invalid-enum"
   | "invalid-color"
   | "invalid-duration";
@@ -45,6 +53,7 @@ export interface ImportDiagnostic {
   severity: "error" | "warning" | "info";
   lineNumber: number;
   key?: string;
+  rawValue?: string;
   message: string;
   relatedLineNumbers?: number[];
 }
@@ -281,9 +290,6 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
     }
 
     const option = getConfigOption(key);
-    const parsedPathValue = option && isPathOption(key)
-      ? parsePathValue(rawValue)
-      : null;
 
     if (!option && !isSafeConfigKey(key)) {
       instructions.push(invalidInstruction(lineNumber, key, rawValue, false));
@@ -332,18 +338,15 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
       return;
     }
 
-    if (parsedPathValue?.kind === "ignore") {
-      instructions.push({
-        lineNumber,
-        key,
-        rawValue,
-        disposition: "ignored",
-        known: true,
-      });
-      return;
-    }
+    // Ghostty's config-file iterator removes one pair of outer double quotes
+    // before dispatching a known value to the generic field parser. The field
+    // parser then treats the resulting empty string as a default reset.
+    const fileValue = stripDoubleQuotes(rawValue);
+    const parsedPathValue = isPathOption(key)
+      ? parsePathValue(fileValue)
+      : null;
 
-    if (rawValue === "" || parsedPathValue?.kind === "reset") {
+    if (fileValue === "" || parsedPathValue?.kind === "reset") {
       delete candidateConfig[key];
       instructions.push({
         lineNumber,
@@ -355,9 +358,29 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
       return;
     }
 
+    if (parsedPathValue?.kind === "ignore") {
+      instructions.push({
+        lineNumber,
+        key,
+        rawValue,
+        disposition: "ignored",
+        known: true,
+      });
+      diagnostics.push({
+        code: "quoted-empty-path-ignored",
+        severity: "info",
+        lineNumber,
+        key,
+        rawValue,
+        message:
+          "This path is empty after quote and optional-marker parsing, so Ghostty ignores it without resetting earlier paths.",
+      });
+      return;
+    }
+
     const value = parsedPathValue?.kind === "value"
       ? parsedPathValue.value
-      : stripMatchingQuotes(rawValue);
+      : fileValue;
     let normalizedValue: unknown = value;
     const rejectValue = (
       code: ImportDiagnosticCode,
@@ -475,6 +498,66 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
     });
   });
 
+  const activeKnownInstructionIndexes = new Map<string, number[]>();
+  instructions.forEach((instruction, index) => {
+    if (!instruction.known) return;
+
+    if (instruction.disposition === "reset") {
+      const clearedIndexes = activeKnownInstructionIndexes.get(instruction.key) ?? [];
+      const clearedLineNumbers = clearedIndexes.map(
+        (clearedIndex) => instructions[clearedIndex].lineNumber
+      );
+      for (const clearedIndex of clearedIndexes) {
+        const cleared = instructions[clearedIndex];
+        cleared.disposition = "overridden";
+        diagnostics.push({
+          code: "reset-cleared-value",
+          severity: "warning",
+          lineNumber: cleared.lineNumber,
+          key: instruction.key,
+          rawValue: cleared.rawValue,
+          message: `This value is cleared by the reset on line ${instruction.lineNumber}.`,
+          relatedLineNumbers: [instruction.lineNumber],
+        });
+      }
+      diagnostics.push({
+        code: "explicit-reset",
+        severity: "info",
+        lineNumber: instruction.lineNumber,
+        key: instruction.key,
+        rawValue: instruction.rawValue,
+        message: "This instruction resets the option to its Ghostty default.",
+        relatedLineNumbers: clearedLineNumbers,
+      });
+      activeKnownInstructionIndexes.set(instruction.key, []);
+      return;
+    }
+
+    if (instruction.disposition !== "retained") return;
+    const indexes = activeKnownInstructionIndexes.get(instruction.key) ?? [];
+    indexes.push(index);
+    activeKnownInstructionIndexes.set(instruction.key, indexes);
+  });
+
+  for (const [key, indexes] of activeKnownInstructionIndexes) {
+    if (isRepeatableOption(key)) continue;
+    if (indexes.length < 2) continue;
+    const winner = instructions[indexes[indexes.length - 1]];
+    for (const index of indexes.slice(0, -1)) {
+      const overridden = instructions[index];
+      overridden.disposition = "overridden";
+      diagnostics.push({
+        code: "duplicate-overridden",
+        severity: "warning",
+        lineNumber: overridden.lineNumber,
+        key,
+        rawValue: overridden.rawValue,
+        message: `A later valid value on line ${winner.lineNumber} wins.`,
+        relatedLineNumbers: [winner.lineNumber],
+      });
+    }
+  }
+
   for (const [key, occurrence] of unknownOptions) {
     diagnostics.push({
       code: "unknown-option",
@@ -495,7 +578,6 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
       instruction.disposition === "overridden" ||
       instruction.disposition === "reset"
   ).length;
-  // Known scalar override classification is added by the duplicate/order slice (#69).
   const effectiveInstructionCount = instructions.filter(
     (instruction) =>
       instruction.disposition === "retained" ||

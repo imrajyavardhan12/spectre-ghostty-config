@@ -378,17 +378,58 @@ gtk-custom-css = gtk/overrides.css
       expect(output).toContain('gtk-custom-css = gtk/overrides.css');
     });
 
+    it('should apply and export only effective repeatable values in per-key order', () => {
+      const configString = `
+font-family = Primary
+font-family = Fallback One
+env = BEFORE=1
+env = ""
+env = AFTER=2
+config-file = before
+config-file = """"
+config-file =
+config-file = ?after
+font-family = Fallback Two
+`;
+
+      act(() => {
+        applyConfigImport(configString);
+      });
+
+      const state = getStoreState();
+      expect(state.config['font-family']).toEqual([
+        'Primary',
+        'Fallback One',
+        'Fallback Two',
+      ]);
+      expect(state.config['env']).toBe('AFTER=2');
+      expect(state.config['config-file']).toBe('?after');
+
+      const lines = state.exportConfig().split('\n');
+      expect(lines.filter((line) => line.startsWith('font-family ='))).toEqual([
+        'font-family = Primary',
+        'font-family = "Fallback One"',
+        'font-family = "Fallback Two"',
+      ]);
+      expect(lines.filter((line) => line.startsWith('env ='))).toEqual([
+        'env = AFTER=2',
+      ]);
+      expect(lines.filter((line) => line.startsWith('config-file ='))).toEqual([
+        'config-file = ?after',
+      ]);
+    });
+
     it('should preserve Ghostty path optional marker semantics', () => {
       const configString = `
 config-file = first
-config-file = ""
+config-file = """"
 config-file = second
 config-file =
 config-file = after-reset
-gtk-custom-css = "?required.css"
+gtk-custom-css = ""?required.css""
 gtk-custom-css = ?optional.css
 custom-shader = first.glsl
-custom-shader = ""
+custom-shader = """"
 custom-shader = second.glsl
 custom-shader = reset
 custom-shader = ignore
@@ -415,7 +456,7 @@ custom-shader = ignore
       expect(output).not.toContain('config-file = first');
       expect(output).not.toContain('config-file = second');
       expect(output).toContain('config-file = after-reset');
-      expect(output).toContain('gtk-custom-css = "?required.css"');
+      expect(output).toContain('gtk-custom-css = ""?required.css""');
       expect(output).toContain('gtk-custom-css = ?optional.css');
       expect(output).toContain('custom-shader = first.glsl');
       expect(output).toContain('custom-shader = second.glsl');
