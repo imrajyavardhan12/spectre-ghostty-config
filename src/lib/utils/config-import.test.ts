@@ -21,7 +21,7 @@ unknown-option = "raw = value"
       'ctrl+shift+e=text:FOO=bar',
       'clear',
     ]);
-    expect(config.palette).toEqual(['0b10=red']);
+    expect(config.palette).toEqual(['2=red']);
     expect(config['unknown-option']).toBe('raw = value');
   });
 

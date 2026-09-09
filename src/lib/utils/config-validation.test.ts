@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { validateConfigValue } from '@/lib/utils/config-validation';
+import {
+  validateConfigValue,
+  validateGhosttyColor,
+} from '@/lib/utils/config-validation';
 import type { ColorOption, DurationOption, NumberOption } from '@/lib/schema/types';
 
 const colorOption: ColorOption = {
@@ -34,6 +37,13 @@ const numberOption: NumberOption = {
 };
 
 describe('validateConfigValue', () => {
+  it('validates general Ghostty colors without terminal-relative extensions', () => {
+    expect(validateGhosttyColor('#abc').valid).toBe(true);
+    expect(validateGhosttyColor('medium spring green').valid).toBe(true);
+    expect(validateGhosttyColor('cell-foreground').valid).toBe(false);
+    expect(validateGhosttyColor('not-a-color').valid).toBe(false);
+  });
+
   it('accepts Ghostty color syntax from docs and source', () => {
     expect(validateConfigValue(colorOption, '#aabbcc').valid).toBe(true);
     expect(validateConfigValue(colorOption, 'aabbcc').valid).toBe(true);

@@ -89,6 +89,9 @@ export function ImportReviewDialog({
   const hasRepeatableInstructions = effectiveInstructions.some(
     (instruction) => instruction.known && isRepeatableOption(instruction.key)
   );
+  const hasUnresolvedConfigFiles = analysis.diagnostics.some(
+    (diagnostic) => diagnostic.code === "config-file-not-resolved"
+  );
   const resultingCount = analysis.summary.resultingSettingCount;
   const skippedCount = analysis.summary.skippedLineCount;
   const baseActionLabel = resultingCount === 0
@@ -183,6 +186,17 @@ export function ImportReviewDialog({
               Repeatable values keep their order within each option. Export may regroup
               different option keys.
             </p>
+          )}
+
+          {hasUnresolvedConfigFiles && (
+            <div
+              role="note"
+              aria-label="Included config files were not read"
+              className="rounded-md border border-blue-500/30 bg-blue-500/10 p-2 text-xs text-foreground"
+            >
+              Spectre did not read referenced config files. Counts cover only the selected
+              file, not Ghostty&apos;s final effective configuration after includes.
+            </div>
           )}
 
           {hasUnknownInstructions && (

@@ -631,8 +631,10 @@ export function validateTrigger(trigger: string): TriggerValidation {
     return { ...result, valid: false, error: "Trigger cannot be empty" };
   }
 
-  // Split by + to get parts
-  const parts = trigger.toLowerCase().split("+").map(p => p.trim()).filter(p => p);
+  // Split by + while preserving internal empty parts: Ghostty uses an empty
+  // part to represent the literal + key (for example, ctrl++).
+  const parts = trigger.toLowerCase().split("+").map((part) => part.trim());
+  if (parts[parts.length - 1] === "") parts.pop();
 
   if (parts.length === 0) {
     return { ...result, valid: false, error: "Invalid trigger format" };
@@ -645,23 +647,32 @@ export function validateTrigger(trigger: string): TriggerValidation {
     // All but the last are prefixes
     for (let i = 0; i < prefixParts.length - 1; i++) {
       const prefix = prefixParts[i].trim();
-      if (prefix && !TRIGGER_PREFIXES.has(prefix)) {
+      if (!prefix) {
+        return { ...result, valid: false, error: "Prefix cannot be empty" };
+      }
+      if (!TRIGGER_PREFIXES.has(prefix)) {
         return { ...result, valid: false, error: `Invalid prefix: "${prefix}". Valid prefixes: ${Array.from(TRIGGER_PREFIXES).join(", ")}` };
       }
-      if (prefix) {
-        result.prefixes.push(prefix);
+      if (result.prefixes.includes(prefix)) {
+        return { ...result, valid: false, error: `Duplicate prefix: "${prefix}"` };
       }
+      result.prefixes.push(prefix);
     }
-    // Replace first part with the last segment (the actual key/modifier)
-    parts[0] = prefixParts[prefixParts.length - 1].trim();
+    // Replace first part with the last segment (the actual key/modifier).
+    // A trailing + is the literal plus key; other empty trigger segments fail.
+    const triggerPart = prefixParts[prefixParts.length - 1].trim();
+    if (!triggerPart && !trigger.trim().endsWith("+")) {
+      return { ...result, valid: false, error: "Trigger cannot be empty" };
+    }
+    parts[0] = triggerPart;
   }
 
   // Track modifiers we've seen to detect duplicates
   const seenModifiers = new Set<string>();
   let keyFound = false;
 
-  for (const part of parts) {
-    if (!part) continue;
+  for (const rawPart of parts) {
+    const part = rawPart === "" ? "+" : rawPart;
 
     // Check if it's a modifier
     if (VALID_MODIFIERS.has(part)) {
@@ -716,8 +727,18 @@ export function validateTriggerSequence(triggerSeq: string): TriggerSequenceVali
     return { valid: false, error: "Trigger cannot be empty", sequences: [] };
   }
 
-  // Split by > to get individual triggers in the sequence
-  const triggerParts = triggerSeq.split(">").map(t => t.trim()).filter(t => t);
+  // Split by > to get individual triggers in the sequence. Empty parts are
+  // invalid rather than silently disappearing (a>>b, >a, and a>).
+  const triggerParts = triggerSeq.split(">").map((trigger) => trigger.trim());
+
+  if (triggerParts.some((trigger) => trigger === "")) {
+    const emptyIndex = triggerParts.findIndex((trigger) => trigger === "");
+    return {
+      valid: false,
+      error: `Sequence part ${emptyIndex + 1}: Trigger cannot be empty`,
+      sequences: [],
+    };
+  }
 
   if (triggerParts.length === 0) {
     return { valid: false, error: "Invalid trigger format", sequences: [] };
@@ -733,6 +754,20 @@ export function validateTriggerSequence(triggerSeq: string): TriggerSequenceVali
       result.error = `Sequence part ${i + 1}: ${validation.error}`;
       break;
     }
+  }
+
+  if (
+    result.valid &&
+    triggerParts.length > 1 &&
+    result.sequences.some((trigger) =>
+      trigger.prefixes.some((prefix) => prefix === "global" || prefix === "all")
+    )
+  ) {
+    return {
+      ...result,
+      valid: false,
+      error: "Global and all prefixes cannot be used with trigger sequences",
+    };
   }
 
   return result;
@@ -798,15 +833,39 @@ export function validateAction(actionStr: string): ActionValidation {
     };
   }
 
-  // Check if action requires param
-  const actionDef = KEYBIND_ACTIONS.find(a => a.action === result.action);
-  const requiresParam = actionDef?.hasParam && actionDef.paramRequired !== false;
-  if (requiresParam && !result.param) {
+  const actionDef = KEYBIND_ACTIONS.find((action) => action.action === result.action)!;
+  const hasParameter = colonIndex !== -1;
+  if (!actionDef.hasParam && hasParameter) {
     return {
       ...result,
       valid: false,
-      error: `Action "${result.action}" requires a parameter (${actionDef.paramDesc})`,
+      error: `Action "${result.action}" does not accept a parameter`,
     };
+  }
+
+  if (actionDef.hasParam) {
+    const requiresParam = actionDef.paramRequired !== false;
+    if (!hasParameter || (result.param === "" && !EMPTY_PARAMETER_ACTIONS.has(result.action))) {
+      if (requiresParam || hasParameter) {
+        return {
+          ...result,
+          valid: false,
+          error: `Action "${result.action}" requires a parameter (${actionDef.paramDesc})`,
+        };
+      }
+    }
+
+    if (
+      result.param !== undefined &&
+      actionDef.paramOptions &&
+      !actionDef.paramOptions.includes(result.param)
+    ) {
+      return {
+        ...result,
+        valid: false,
+        error: `Action "${result.action}" parameter must be one of: ${actionDef.paramOptions.join(", ")}`,
+      };
+    }
   }
 
   return result;
@@ -815,6 +874,32 @@ export function validateAction(actionStr: string): ActionValidation {
 interface KeyTableBinding {
   binding: string;
   bindingWithAction: string;
+}
+
+const EMPTY_PARAMETER_ACTIONS = new Set([
+  "activate_key_table",
+  "activate_key_table_once",
+  "csi",
+  "esc",
+  "search",
+  "set_surface_title",
+  "set_tab_title",
+  "text",
+]);
+
+function findKeybindDelimiter(input: string): number {
+  let offset = 0;
+  while (offset < input.length) {
+    const equalsIndex = input.indexOf("=", offset);
+    if (equalsIndex === -1) return -1;
+    const next = input[equalsIndex + 1];
+    if (next === "+" || next === "=") {
+      offset = equalsIndex + 1;
+      continue;
+    }
+    return equalsIndex;
+  }
+  return -1;
 }
 
 function parseKeyTableBinding(input: string, equalsIndex: number): KeyTableBinding | null {
@@ -880,7 +965,7 @@ export function validateKeybind(keybind: string): ValidationResult {
     return result;
   }
 
-  const equalsIndex = trimmedKeybind.indexOf("=");
+  const equalsIndex = findKeybindDelimiter(trimmedKeybind);
   const tableBinding = parseKeyTableBinding(trimmedKeybind, equalsIndex);
 
   if (equalsIndex === -1) {
@@ -927,6 +1012,43 @@ export function validateKeybind(keybind: string): ValidationResult {
   addActionErrorsAndWarnings(result, action);
 
   return result;
+}
+
+const FUTURE_ACTION_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
+const UNKNOWN_ACTION_ERROR_PATTERN = /^Unknown action: "([^"]+)"$/;
+
+/**
+ * Validate source-file keybind syntax without coupling imports to Spectre's
+ * pinned action-name list. Structurally valid future action names remain
+ * reviewable; known actions still receive their parameter validation.
+ */
+export interface ImportedKeybindValidationResult extends ValidationResult {
+  runtimeDependentWarnings: string[];
+}
+
+export function validateImportedKeybind(
+  keybind: string
+): ImportedKeybindValidationResult {
+  const validation = validateKeybind(keybind);
+  const runtimeWarnings: string[] = [];
+  const errors = validation.errors.filter((error) => {
+    const unknownAction = error.match(UNKNOWN_ACTION_ERROR_PATTERN);
+    if (!unknownAction || !FUTURE_ACTION_NAME_PATTERN.test(unknownAction[1])) {
+      return true;
+    }
+
+    runtimeWarnings.push(
+      `Action "${unknownAction[1]}" is not in Spectre's Ghostty target. Ghostty runtime support is unverified.`
+    );
+    return false;
+  });
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings: [...validation.warnings, ...runtimeWarnings],
+    runtimeDependentWarnings: runtimeWarnings,
+  };
 }
 
 // Helper to get autocomplete suggestions for actions

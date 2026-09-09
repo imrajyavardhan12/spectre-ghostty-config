@@ -307,6 +307,75 @@ test("a user can review and apply duplicate, reset, repeatable, and path semanti
   );
 });
 
+test("a user can review structured palette, keybind, and config-file instructions", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import Config" }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      'palette = 0=ffffff\npalette = red\npalette = 1=not-a-color\nkeybind = clear\nkeybind = chain=goto_split:left\nkeybind = resize/ctrl+h=resize_split:left,10\nkeybind = resize/\nkeybind = ctrl+/=new_tab\nkeybind = ctrl+shift+x=future_action:arg\nkeybind = ctrl+ctrl+c=new_tab\nconfig-file = "?optional"\nconfig-file = ""?required""\n'
+    ),
+  });
+
+  await expect(page.getByText("9 accepted instructions")).toBeVisible();
+  const imported = page.getByRole("list", { name: "Imported instructions" });
+  await expect(imported).toContainText("palette = 0=#ffffff");
+  await expect(imported).toContainText("keybind = clear");
+  await expect(imported).toContainText("keybind = chain=goto_split:left");
+  await expect(imported).toContainText(
+    "keybind = resize/ctrl+h=resize_split:left,10"
+  );
+  await expect(imported).toContainText("keybind = resize/");
+  await expect(imported).toContainText("keybind = ctrl+/=new_tab");
+  await expect(imported).toContainText(
+    "keybind = ctrl+shift+x=future_action:arg"
+  );
+  await expect(
+    page.getByRole("note", { name: "Included config files were not read" })
+  ).toContainText("Counts cover only the selected file");
+
+  const issues = page.getByRole("list", { name: "Import issues" });
+  await expect(issues).toContainText("Line 2");
+  await expect(issues).toContainText("Use Ghostty palette syntax N=COLOR");
+  await expect(issues).toContainText("Line 3");
+  await expect(issues).toContainText("named X11 color");
+  await expect(issues).toContainText('Action "future_action"');
+  await expect(issues).toContainText("runtime support is unverified");
+  await expect(issues).toContainText("Line 10");
+  await expect(issues).toContainText("Duplicate modifier");
+
+  await page
+    .getByRole("button", { name: "Replace with 3 settings and skip 3 lines" })
+    .click();
+  await expect(page.getByText("3 modified", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "View Config" }).click();
+  const output = page.locator("pre");
+  await expect(output).toContainText("palette = 0=#ffffff");
+  await expect(output).toContainText("keybind = clear");
+  await expect(output).toContainText("keybind = ctrl+/=new_tab");
+  await expect(output).toContainText("keybind = ctrl+shift+x=future_action:arg");
+  await expect(output).toContainText("config-file = ?optional");
+  await expect(output).toContainText('config-file = ""?required""');
+  await expect(output).not.toContainText("palette = red");
+  await expect(output).not.toContainText("palette = 1=not-a-color");
+  await expect(output).not.toContainText("ctrl+ctrl+c=new_tab");
+
+  const outputText = await output.textContent();
+  expect(outputText!.indexOf("keybind = clear")).toBeLessThan(
+    outputText!.indexOf("keybind = chain=goto_split:left")
+  );
+  expect(outputText!.indexOf("keybind = chain=goto_split:left")).toBeLessThan(
+    outputText!.indexOf("keybind = resize/ctrl+h=resize_split:left,10")
+  );
+});
+
 test("a user can navigate and inspect configuration on a mobile screen", async ({
   page,
 }) => {

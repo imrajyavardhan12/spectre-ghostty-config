@@ -4,6 +4,7 @@ import {
   validateTriggerSequence,
   validateAction,
   validateKeybind,
+  validateImportedKeybind,
   KEYBIND_ACTIONS,
   getActionSuggestions,
   KEYBIND_EXAMPLES,
@@ -315,6 +316,53 @@ describe('keybind-validation', () => {
       const result = validateKeybind('resize/chain=goto_split:left');
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Chained actions cannot be prefixed with a key table');
+    });
+  });
+
+  describe('validateImportedKeybind', () => {
+    it('accepts future-compatible action names with valid keybind structure', () => {
+      const result = validateImportedKeybind(
+        'ctrl+shift+x=future_action:argument'
+      );
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([
+        'Action "future_action" is not in Spectre\'s Ghostty target. Ghostty runtime support is unverified.',
+      ]);
+    });
+
+    it('accepts equals-key triggers and empty string actions from Ghostty syntax', () => {
+      for (const keybind of [
+        'ctrl+==new_tab',
+        '==text:=hello',
+        'ctrl+==text:',
+        'ctrl++=new_tab',
+        'global:+=new_tab',
+      ]) {
+        expect(validateImportedKeybind(keybind).valid, keybind).toBe(true);
+      }
+    });
+
+    it('rejects malformed future actions and known actions missing required parameters', () => {
+      expect(validateImportedKeybind('ctrl+x=future action').valid).toBe(false);
+      expect(validateImportedKeybind('ctrl+x=text').valid).toBe(false);
+    });
+
+    it('rejects invalid known parameters, empty sequence parts, and duplicate flags', () => {
+      for (const keybind of [
+        'ctrl+x=goto_split:banana',
+        'ctrl+x=new_tab:garbage',
+        'ctrl+x>>c=new_tab',
+        'global:global:ctrl+a=new_tab',
+        'global::ctrl+a=new_tab',
+        ':ctrl+a=new_tab',
+        'global:=new_tab',
+        'global:ctrl+a>ctrl+b=new_tab',
+        'all:ctrl+a>ctrl+b=new_tab',
+      ]) {
+        expect(validateImportedKeybind(keybind).valid, keybind).toBe(false);
+      }
     });
   });
 
