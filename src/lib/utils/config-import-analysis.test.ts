@@ -771,6 +771,215 @@ search-foreground = cell-background
     expect(invalid.diagnostics[0].code).toBe('invalid-color');
   });
 
+  it('retains effective config-file directives without resolving included files', () => {
+    const analysis = analyzeGhosttyConfig(`config-file = base
+font-size = 16
+config-file = "?quoted-optional"
+config-file = ""
+config-file = ?after
+config-file = ""?required""`);
+
+    expect(analysis.candidateConfig).toEqual({
+      'font-size': 16,
+      'config-file': ['?after', '"?required"'],
+    });
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual([
+      'overridden',
+      'retained',
+      'overridden',
+      'reset',
+      'retained',
+      'retained',
+    ]);
+    expect(
+      analysis.diagnostics.filter(
+        (diagnostic) => diagnostic.code === 'config-file-not-resolved'
+      )
+    ).toEqual([
+      expect.objectContaining({
+        severity: 'info',
+        lineNumber: 5,
+        key: 'config-file',
+        rawValue: '?after',
+      }),
+      expect.objectContaining({
+        severity: 'info',
+        lineNumber: 6,
+        key: 'config-file',
+        rawValue: '""?required""',
+      }),
+    ]);
+    expect(analysis.summary).toEqual({
+      acceptedInstructionCount: 6,
+      effectiveInstructionCount: 4,
+      skippedLineCount: 0,
+      resultingSettingCount: 2,
+    });
+  });
+
+  it('preserves supported keybind forms and excludes invalid syntax without blocking future actions', () => {
+    const analysis = analyzeGhosttyConfig(`keybind = clear
+keybind = chain=goto_split:left
+keybind = resize/ctrl+h=resize_split:left,10
+keybind = resize/
+keybind = ctrl+/=new_tab
+keybind = ctrl+a=copy_to_clipboard
+keybind = ctrl+a=copy_to_clipboard
+keybind = ctrl+shift+x=future_action:arg
+keybind = ctrl+x=future action
+keybind = ctrl+c copy_to_clipboard
+keybind = ctrl+ctrl+c=new_tab
+keybind = chain=
+keybind = global:chain=goto_split:left
+keybind = resize/chain=goto_split:left`);
+
+    expect(analysis.candidateConfig.keybind).toEqual([
+      'clear',
+      'chain=goto_split:left',
+      'resize/ctrl+h=resize_split:left,10',
+      'resize/',
+      'ctrl+/=new_tab',
+      'ctrl+a=copy_to_clipboard',
+      'ctrl+a=copy_to_clipboard',
+      'ctrl+shift+x=future_action:arg',
+    ]);
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual([
+      'retained',
+      'retained',
+      'retained',
+      'retained',
+      'retained',
+      'retained',
+      'retained',
+      'retained',
+      'invalid',
+      'invalid',
+      'invalid',
+      'invalid',
+      'invalid',
+      'invalid',
+    ]);
+    expect(
+      analysis.diagnostics.filter(
+        (diagnostic) => diagnostic.code === 'invalid-keybind'
+      )
+    ).toHaveLength(6);
+    expect(analysis.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'keybind-runtime-dependent',
+          severity: 'warning',
+          lineNumber: 8,
+          key: 'keybind',
+        }),
+      ])
+    );
+    expect(analysis.summary).toEqual({
+      acceptedInstructionCount: 8,
+      effectiveInstructionCount: 8,
+      skippedLineCount: 6,
+      resultingSettingCount: 1,
+    });
+  });
+
+  it('imports equals and plus key triggers while rejecting invalid parameters, sequences, and flags', () => {
+    const analysis = analyzeGhosttyConfig(`keybind = ctrl+==new_tab
+keybind = ==text:=hello
+keybind = ctrl+==text:
+keybind = ctrl++=new_tab
+keybind = ctrl+x=goto_split:banana
+keybind = ctrl+x=new_tab:garbage
+keybind = ctrl+x>>c=new_tab
+keybind = global:global:ctrl+a=new_tab`);
+
+    expect(analysis.candidateConfig.keybind).toEqual([
+      'ctrl+==new_tab',
+      '==text:=hello',
+      'ctrl+==text:',
+      'ctrl++=new_tab',
+    ]);
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual([
+      'retained',
+      'retained',
+      'retained',
+      'retained',
+      'invalid',
+      'invalid',
+      'invalid',
+      'invalid',
+    ]);
+    expect(
+      analysis.diagnostics.filter(
+        (diagnostic) => diagnostic.code === 'invalid-keybind'
+      )
+    ).toHaveLength(4);
+    expect(analysis.summary).toMatchObject({
+      acceptedInstructionCount: 4,
+      effectiveInstructionCount: 4,
+      skippedLineCount: 4,
+    });
+  });
+
+  it('requires and validates Ghostty index=color palette syntax without positional fallback', () => {
+    const analysis = analyzeGhosttyConfig(`palette = 0=ffffff
+palette = 0b10=red
+palette = 0o10=#123
+palette = "0xF=medium spring green"
+palette = +1=blue
+palette = 1_0=yellow
+palette = #ffffff
+palette = nope=#ffffff
+palette = 256=#ffffff
+palette = 1=
+palette = 2=not-a-color
+palette = 3=cell-foreground`);
+
+    expect(analysis.candidateConfig.palette).toEqual([
+      '0=#ffffff',
+      '2=red',
+      '8=#123',
+      '15=medium spring green',
+      '1=blue',
+      '10=yellow',
+    ]);
+    expect(
+      analysis.instructions.map((instruction) => instruction.disposition)
+    ).toEqual([
+      'retained',
+      'retained',
+      'retained',
+      'retained',
+      'retained',
+      'retained',
+      'invalid',
+      'invalid',
+      'invalid',
+      'invalid',
+      'invalid',
+      'invalid',
+    ]);
+    expect(analysis.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      'palette-missing-separator',
+      'invalid-palette-index',
+      'invalid-palette-index',
+      'empty-palette-color',
+      'invalid-palette-color',
+      'invalid-palette-color',
+    ]);
+    expect(analysis.summary).toEqual({
+      acceptedInstructionCount: 6,
+      effectiveInstructionCount: 6,
+      skippedLineCount: 6,
+      resultingSettingCount: 1,
+    });
+  });
+
   it('accepts Ghostty custom icon color lists', () => {
     const valid = analyzeGhosttyConfig(
       'macos-icon-screen-color = #112233, medium spring green, abc'

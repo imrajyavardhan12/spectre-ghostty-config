@@ -42,6 +42,19 @@ function isGhosttyColor(value: string): boolean {
   );
 }
 
+export function validateGhosttyColor(value: unknown): ConfigValidationResult {
+  if (typeof value !== "string") {
+    return invalid(["Enter a color value."]);
+  }
+
+  const trimmedValue = value.trim();
+  if (trimmedValue === "") return valid("");
+  if (isGhosttyColor(trimmedValue)) return valid(trimmedValue);
+  return invalid([
+    "Use #RGB, RGB, #RRGGBB, RRGGBB, or a named X11 color.",
+  ]);
+}
+
 function validateColorValue(
   option: ConfigOption,
   value: unknown
@@ -72,9 +85,8 @@ function validateColorValue(
     ]);
   }
 
-  if (isGhosttyColor(trimmedValue)) {
-    return valid(trimmedValue);
-  }
+  const colorValidation = validateGhosttyColor(trimmedValue);
+  if (colorValidation.valid) return colorValidation;
 
   if (
     TERMINAL_RELATIVE_COLOR_OPTIONS.has(option.id) &&
@@ -83,11 +95,11 @@ function validateColorValue(
     return valid(trimmedValue);
   }
 
-  return invalid([
-    TERMINAL_RELATIVE_COLOR_OPTIONS.has(option.id)
-      ? "Use #RGB, RGB, #RRGGBB, RRGGBB, a named X11 color, cell-foreground, or cell-background."
-      : "Use #RGB, RGB, #RRGGBB, RRGGBB, or a named X11 color.",
-  ]);
+  return TERMINAL_RELATIVE_COLOR_OPTIONS.has(option.id)
+    ? invalid([
+        "Use #RGB, RGB, #RRGGBB, RRGGBB, a named X11 color, cell-foreground, or cell-background.",
+      ])
+    : colorValidation;
 }
 
 function readUnsignedInteger(input: string, startIndex: number) {

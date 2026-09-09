@@ -12,7 +12,12 @@ import {
   createConfigValues,
   normalizeConfigValues,
 } from "@/lib/utils/config-normalization";
-import { validateConfigValue } from "@/lib/utils/config-validation";
+import {
+  validateConfigValue,
+  validateGhosttyColor,
+} from "@/lib/utils/config-validation";
+import { parsePaletteEntryDetailed } from "@/lib/utils/palette";
+import { validateImportedKeybind } from "@/lib/utils/keybind-validation";
 
 export type ImportInstructionDisposition =
   | "retained"
@@ -44,6 +49,14 @@ export type ImportDiagnosticCode =
   | "reset-cleared-value"
   | "explicit-reset"
   | "quoted-empty-path-ignored"
+  | "palette-missing-separator"
+  | "invalid-palette-index"
+  | "empty-palette-color"
+  | "invalid-palette-color"
+  | "invalid-keybind"
+  | "keybind-warning"
+  | "keybind-runtime-dependent"
+  | "config-file-not-resolved"
   | "invalid-enum"
   | "invalid-color"
   | "invalid-duration";
@@ -392,6 +405,7 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
         severity: "error",
         lineNumber,
         key,
+        rawValue,
         message,
       });
     };
@@ -473,10 +487,68 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
         candidateConfig[key] = normalizedValue;
         break;
       }
-      case "keybind":
-      case "palette":
+      case "keybind": {
+        const validation = validateImportedKeybind(value);
+        if (!validation.valid) {
+          rejectValue("invalid-keybind", validation.errors.join(" "));
+          return;
+        }
         appendValue(candidateConfig, key, value);
+        const runtimeWarnings = new Set(
+          validation.runtimeDependentWarnings
+        );
+        for (const warning of validation.warnings) {
+          diagnostics.push({
+            code: runtimeWarnings.has(warning)
+              ? "keybind-runtime-dependent"
+              : "keybind-warning",
+            severity: "warning",
+            lineNumber,
+            key,
+            rawValue,
+            message: warning,
+          });
+        }
         break;
+      }
+      case "palette": {
+        const parsed = parsePaletteEntryDetailed(value);
+        if (parsed.status === "missing-separator") {
+          rejectValue(
+            "palette-missing-separator",
+            "Use Ghostty palette syntax N=COLOR."
+          );
+          return;
+        }
+        if (parsed.status === "invalid-index") {
+          rejectValue(
+            "invalid-palette-index",
+            "Use a palette index from 0 through 255 in decimal, binary, octal, or hexadecimal form."
+          );
+          return;
+        }
+        if (parsed.status === "empty-color") {
+          rejectValue("empty-palette-color", "Enter a palette color after =.");
+          return;
+        }
+
+        const colorValidation = validateGhosttyColor(parsed.entry.color);
+        if (!colorValidation.valid) {
+          rejectValue(
+            "invalid-palette-color",
+            colorValidation.errors.join(" ")
+          );
+          return;
+        }
+
+        const color = String(
+          colorValidation.normalizedValue ?? parsed.entry.color
+        );
+        const normalizedEntry = `${parsed.entry.index}=${color}`;
+        normalizedValue = normalizedEntry;
+        appendValue(candidateConfig, key, normalizedEntry);
+        break;
+      }
       case "string":
         if (option.repeatable) {
           appendValue(candidateConfig, key, value, false);
@@ -556,6 +628,24 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
         relatedLineNumbers: [winner.lineNumber],
       });
     }
+  }
+
+  for (const instruction of instructions) {
+    if (
+      instruction.key !== "config-file" ||
+      instruction.disposition !== "retained"
+    ) {
+      continue;
+    }
+    diagnostics.push({
+      code: "config-file-not-resolved",
+      severity: "info",
+      lineNumber: instruction.lineNumber,
+      key: instruction.key,
+      rawValue: instruction.rawValue,
+      message:
+        "Spectre did not read this referenced file. Ghostty may load it and change the final effective configuration at runtime.",
+    });
   }
 
   for (const [key, occurrence] of unknownOptions) {

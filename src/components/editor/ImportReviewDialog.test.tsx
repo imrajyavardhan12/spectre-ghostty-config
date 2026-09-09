@@ -197,6 +197,72 @@ config-file =`);
     expect(issues).toHaveTextContent(/Line 8.*Source value: """"/);
   });
 
+  it('reviews normalized palettes and ordered keybinds while exposing invalid lines', () => {
+    const analysis = analyzeGhosttyConfig(`palette = 0=ffffff
+palette = red
+keybind = clear
+keybind = ctrl+/=new_tab
+keybind = ctrl+ctrl+c=new_tab
+config-file = ?optional`);
+
+    render(
+      <ImportReviewDialog
+        open
+        fileName="config"
+        fileSize={128}
+        currentSettingCount={0}
+        analysis={analysis}
+        onOpenChange={vi.fn()}
+        onConfirm={vi.fn()}
+      />
+    );
+
+    const instructions = screen.getByRole('list', {
+      name: 'Imported instructions',
+    });
+    expect(instructions).toHaveTextContent('palette = 0=#ffffff');
+    expect(instructions).toHaveTextContent('keybind = clear');
+    expect(instructions).toHaveTextContent('keybind = ctrl+/=new_tab');
+    expect(instructions).not.toHaveTextContent('palette = red');
+    expect(instructions).not.toHaveTextContent('ctrl+ctrl+c=new_tab');
+    expectImportIssue(/Line 2.*Use Ghostty palette syntax N=COLOR/);
+    expectImportIssue(/Line 5.*Duplicate modifier/);
+    expect(
+      screen.getByRole('button', {
+        name: 'Replace with 3 settings and skip 2 lines',
+      })
+    ).toBeEnabled();
+  });
+
+  it('discloses that included config files were not read', () => {
+    const analysis = analyzeGhosttyConfig(`font-size = 16
+config-file = ?optional
+config-file = ""?required""`);
+
+    render(
+      <ImportReviewDialog
+        open
+        fileName="config"
+        fileSize={96}
+        currentSettingCount={0}
+        analysis={analysis}
+        onOpenChange={vi.fn()}
+        onConfirm={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByRole('note', { name: 'Included config files were not read' })
+    ).toHaveTextContent(
+      "Spectre did not read referenced config files. Counts cover only the selected file, not Ghostty's final effective configuration after includes."
+    );
+    expect(
+      screen.getAllByRole('link', { name: 'config-file' })
+    ).toHaveLength(2);
+    expectImportIssue(/Line 2.*Ghostty may load it.*Source value: \?optional/);
+    expectImportIssue(/Line 3.*Ghostty may load it.*Source value: ""\?required""/);
+  });
+
   it('shows invalid known values and explicit partial-import action copy', () => {
     const analysis = analyzeGhosttyConfig(`
 font-size = 16
