@@ -73,6 +73,22 @@ bun run build
 bun run start
 ```
 
+### Importing an existing Ghostty config
+
+Use the Import button in the editor header to bring in a `config` file. Imports are
+**review-before-replace**: Spectre analyzes the file locally, shows every effective
+instruction with line-level diagnostics, and only replaces your current settings when
+you confirm with an explicit action such as `Replace with 10 settings and skip 2 lines`.
+
+- Valid settings can be partially imported while invalid lines are skipped with
+  actionable messages — invalid values are never silently coerced.
+- Options Spectre does not recognize are retained as visibly **Unverified** strings
+  (last value wins); unsafe option names are rejected.
+- Files are checked locally before parsing: at most 1 MiB, 10,000 lines, 65,536
+  characters per line, and no binary (NUL-byte) content.
+- `config-file` include directives are listed but never followed — counts cover only
+  the selected file, not Ghostty's final effective configuration.
+
 ## Tech Stack
 
 - **Framework**: [Next.js 16](https://nextjs.org/) (App Router)

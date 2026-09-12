@@ -50,6 +50,8 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Prevented the editor's mobile category strip from widening the page beyond the viewport.
 - Preserved Ghostty's extensionless `config` filename when downloading from editor and shared-config views.
 - Rejected invalid imported booleans, numbers, enums, colors, and durations with line-level diagnostics instead of silently coercing them.
+- Gave import-review error diagnostics a contrast-safe red so they meet WCAG AA on dialog surfaces in both themes.
+- Kept the editor header within the viewport on 320-pixel screens and made long imported values wrap inside the review dialog instead of overflowing it.
 
 ## [0.3.0] - 2026-07-03
 

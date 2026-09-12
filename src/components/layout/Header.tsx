@@ -311,11 +311,11 @@ export function Header() {
             </Tooltip>
           </TooltipProvider>
 
-          {/* GitHub */}
+          {/* GitHub - hidden on very small screens to keep the header within 320px */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" asChild className="h-9 w-9">
+                <Button variant="ghost" size="icon" asChild className="hidden h-9 w-9 sm:inline-flex">
                   <a
                     href="https://github.com/imrajyavardhan12/spectre-ghostty-config"
                     target="_blank"
