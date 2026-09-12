@@ -52,6 +52,8 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Rejected invalid imported booleans, numbers, enums, colors, and durations with line-level diagnostics instead of silently coercing them.
 - Gave import-review error diagnostics a contrast-safe red so they meet WCAG AA on dialog surfaces in both themes.
 - Kept the editor header within the viewport on 320-pixel screens and made long imported values wrap inside the review dialog instead of overflowing it.
+- Retuned the `--destructive` token in both themes so error text meets WCAG AA contrast, and gave the color-swatch picker, empty select triggers, and keybind add/remove/help/action controls accessible names.
+- Used inverted severity colors for keybind errors and warnings shown inside tooltips, whose surfaces invert with the theme.
 
 ## [0.3.0] - 2026-07-03
 
