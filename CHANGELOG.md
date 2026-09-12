@@ -13,6 +13,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Added
 
+- Added a Ghostty target-version selector to the editor sidebar, persisted across reloads, so filtering and warnings can follow the release installed where a config will run.
 - Added Playwright browser tests for the landing-to-editor path, import/export, config sharing, mobile navigation, preview recovery, theme-service recovery, and automated WCAG A/AA checks.
 - Added focused unit coverage for theme loading concurrency, prioritization, and cancellation.
 - Added focused unit coverage for Ghostty preview lifecycle and supersession races.

@@ -9,6 +9,8 @@ import {
   normalizeConfigValues,
 } from "@/lib/utils/config-normalization";
 import { isThemeConfigKey } from "@/lib/utils/theme-config";
+import { GHOSTTY_COMPATIBILITY_VERSION } from "@/lib/compatibility";
+import { isKnownGhosttyRelease } from "@/lib/ghostty-versions";
 
 export type { ConfigValues };
 
@@ -19,6 +21,10 @@ interface ConfigStore {
   // Current applied theme name (for export comment)
   appliedTheme: string | null;
 
+  // Ghostty release the config targets (editor filtering, export/share warnings).
+  // A view preference: never modified by config edits, imports, or resets.
+  targetVersion: string;
+
   // Actions
   setValue: (key: string, value: unknown) => void;
   resetValue: (key: string) => void;
@@ -26,6 +32,7 @@ interface ConfigStore {
   applyImportedCandidate: (config: ConfigValues) => void;
   loadConfig: (config: ConfigValues, themeName?: string) => void;
   setAppliedTheme: (themeName: string | null) => void;
+  setTargetVersion: (version: string) => void;
 
   // Computed helpers
   getValue: (key: string) => unknown;
@@ -40,6 +47,7 @@ export const useConfigStore = create<ConfigStore>()(
     (set, get) => ({
       config: createConfigValues(),
       appliedTheme: null,
+      targetVersion: GHOSTTY_COMPATIBILITY_VERSION,
 
       setValue: (key: string, value: unknown) => {
         set((state) => {
@@ -74,6 +82,11 @@ export const useConfigStore = create<ConfigStore>()(
         set({ appliedTheme: themeName });
       },
 
+      setTargetVersion: (version: string) => {
+        if (!isKnownGhosttyRelease(version)) return;
+        set({ targetVersion: version });
+      },
+
       getValue: (key: string) => {
         const { config } = get();
         if (key in config) {
@@ -106,10 +119,10 @@ export const useConfigStore = create<ConfigStore>()(
     }),
     {
       name: "spectre-config",
-      partialize: (state) => ({ config: state.config, appliedTheme: state.appliedTheme }),
+      partialize: (state) => ({ config: state.config, appliedTheme: state.appliedTheme, targetVersion: state.targetVersion }),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<
-          Pick<ConfigStore, "config" | "appliedTheme">
+          Pick<ConfigStore, "config" | "appliedTheme" | "targetVersion">
         >;
         const config = persisted.config &&
           typeof persisted.config === "object" &&
@@ -119,8 +132,12 @@ export const useConfigStore = create<ConfigStore>()(
         const appliedTheme = typeof persisted.appliedTheme === "string"
           ? persisted.appliedTheme
           : null;
+        const targetVersion = typeof persisted.targetVersion === "string" &&
+          isKnownGhosttyRelease(persisted.targetVersion)
+          ? persisted.targetVersion
+          : GHOSTTY_COMPATIBILITY_VERSION;
 
-        return { ...currentState, config, appliedTheme };
+        return { ...currentState, config, appliedTheme, targetVersion };
       },
       skipHydration: true,
     }

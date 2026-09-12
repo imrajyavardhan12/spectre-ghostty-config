@@ -689,6 +689,71 @@ unknown-option = true
       expect(diff).toEqual({ 'font-size': 16 });
     });
   });
+
+  describe('targetVersion', () => {
+    it('should default to the compatibility stable version', () => {
+      expect(getStoreState().targetVersion).toBe(GHOSTTY_COMPATIBILITY_VERSION);
+    });
+
+    it('should accept known releases and ignore anything else', () => {
+      act(() => {
+        useConfigStore.getState().setTargetVersion('1.1.0');
+      });
+      expect(getStoreState().targetVersion).toBe('1.1.0');
+
+      act(() => {
+        useConfigStore.getState().setTargetVersion('9.9.9');
+      });
+      expect(getStoreState().targetVersion).toBe('1.1.0');
+
+      act(() => {
+        useConfigStore.getState().setTargetVersion(GHOSTTY_COMPATIBILITY_VERSION);
+      });
+    });
+
+    it('should survive config edits, imports, and resets untouched', () => {
+      act(() => {
+        useConfigStore.getState().setTargetVersion('1.2.0');
+      });
+      act(() => {
+        useConfigStore.getState().setValue('font-size', 16);
+      });
+      expect(getStoreState().targetVersion).toBe('1.2.0');
+
+      applyConfigImport('font-size = 18\n');
+      expect(getStoreState().targetVersion).toBe('1.2.0');
+
+      act(() => {
+        useConfigStore.getState().resetAll();
+      });
+      expect(getStoreState().targetVersion).toBe('1.2.0');
+      expect(getStoreState().config).toEqual({});
+
+      act(() => {
+        useConfigStore.getState().setTargetVersion(GHOSTTY_COMPATIBILITY_VERSION);
+      });
+    });
+
+    it('should coerce invalid or missing persisted target versions to default on merge', () => {
+      const merge = useConfigStore.persist.getOptions().merge!;
+      const current = getStoreState();
+
+      const valid = merge(
+        { config: {}, appliedTheme: null, targetVersion: '1.2.0' },
+        current
+      );
+      expect(valid.targetVersion).toBe('1.2.0');
+
+      const invalid = merge(
+        { config: {}, appliedTheme: null, targetVersion: '9.9.9' },
+        current
+      );
+      expect(invalid.targetVersion).toBe(GHOSTTY_COMPATIBILITY_VERSION);
+
+      const missing = merge({ config: {}, appliedTheme: null }, current);
+      expect(missing.targetVersion).toBe(GHOSTTY_COMPATIBILITY_VERSION);
+    });
+  });
 });
 
 // Helper to avoid repeating getStoreState
