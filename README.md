@@ -28,7 +28,7 @@
 - 🔤 **Font Configuration** - Configure font families, sizes, styles, and OpenType features
 - ⌨️ **Keybind Manager** - Create and manage custom keyboard shortcuts
 - 📦 **Complete Stable Schema** - All 202 public configuration option IDs from the verified Ghostty stable target, guarded by automated drift checks
-- 💾 **Import/Export** - Import existing configs and export ready-to-use config files
+- 💾 **Import/Export** - Review imported settings and line-level diagnostics before replacement, then export ready-to-use config files
 - 🔗 **Readable Share URLs** - Share configurations with human-readable theme slugs while keeping existing links compatible
 - 🌙 **Dark Mode** - Beautiful dark interface that matches your terminal aesthetic
 - 📱 **Responsive** - Works on desktop and mobile devices
@@ -72,6 +72,22 @@ bun run dev
 bun run build
 bun run start
 ```
+
+### Importing an existing Ghostty config
+
+Use the Import button in the editor header to bring in a `config` file. Imports are
+**review-before-replace**: Spectre analyzes the file locally, shows every effective
+instruction with line-level diagnostics, and only replaces your current settings when
+you confirm with an explicit action such as `Replace with 10 settings and skip 2 lines`.
+
+- Valid settings can be partially imported while invalid lines are skipped with
+  actionable messages — invalid values are never silently coerced.
+- Options Spectre does not recognize are retained as visibly **Unverified** strings
+  (last value wins); unsafe option names are rejected.
+- Files are checked locally before parsing: at most 1 MiB, 10,000 lines, 65,536
+  characters per line, and no binary (NUL-byte) content.
+- `config-file` include directives are listed but never followed — counts cover only
+  the selected file, not Ghostty's final effective configuration.
 
 ## Tech Stack
 

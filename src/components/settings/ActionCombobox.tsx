@@ -164,6 +164,7 @@ export function ActionCombobox({
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
+                    aria-label="Select keybind action"
                     className={cn(
                         "justify-between font-mono text-sm h-9",
                         !value && "text-muted-foreground",

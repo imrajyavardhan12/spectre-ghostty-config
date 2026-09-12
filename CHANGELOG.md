@@ -25,6 +25,12 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Kept canceled theme requests inside the six-request concurrency budget until they settle, with retry controls for individual download failures.
 - Expanded the schema drift check to verify both the live Ghostty reference and the pinned stable `Config.zig` source snapshot.
 - Generated config headers now identify Spectre's Ghostty schema target and warn when imported options fall outside it.
+- Config file imports now open a review step before atomically replacing the current editor state.
+- Import review now supports explicit partial replacement when known values are invalid.
+- Unknown imported options are retained as visibly unverified strings, while unsafe or non-Ghostty-style option names are rejected before apply.
+- Import review now preserves source order within repeatable options, explains scalar winners and reset-cleared values, and applies Ghostty's file-level quote normalization and path marker behavior.
+- Structured imports now validate Ghostty palette and keybind syntax, retain future-compatible keybind actions as runtime-unverified, and disclose that referenced `config-file` paths are not read by Spectre.
+- Browser imports now reject oversized, pathological, binary, and unreadable files locally, and stale asynchronous selections can no longer publish the wrong review or error.
 - Switched Dependabot to its Bun ecosystem so dependency updates include the committed `bun.lock` file.
 - Declared the repository's Bun package-manager version in `package.json` for consistent local and CI tooling.
 - Removed the unusable Prettier script; formatter adoption will be handled separately from functional changes.
@@ -43,6 +49,11 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - Added accessible names to editor actions, option reset controls, documentation links, and sliders.
 - Prevented the editor's mobile category strip from widening the page beyond the viewport.
 - Preserved Ghostty's extensionless `config` filename when downloading from editor and shared-config views.
+- Rejected invalid imported booleans, numbers, enums, colors, and durations with line-level diagnostics instead of silently coercing them.
+- Gave import-review error diagnostics a contrast-safe red so they meet WCAG AA on dialog surfaces in both themes.
+- Kept the editor header within the viewport on 320-pixel screens and made long imported values wrap inside the review dialog instead of overflowing it.
+- Retuned the `--destructive` token in both themes so error text meets WCAG AA contrast, and gave the color-swatch picker, empty select triggers, and keybind add/remove/help/action controls accessible names.
+- Used inverted severity colors for keybind errors and warnings shown inside tooltips, whose surfaces invert with the theme.
 
 ## [0.3.0] - 2026-07-03
 

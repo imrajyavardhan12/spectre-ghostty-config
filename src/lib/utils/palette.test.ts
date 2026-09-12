@@ -3,6 +3,7 @@ import {
   getPaletteColor,
   normalizePaletteEntries,
   parsePaletteEntry,
+  parsePaletteEntryDetailed,
   setPaletteColor,
 } from '@/lib/utils/palette';
 
@@ -13,10 +14,28 @@ describe('palette utilities', () => {
       expect(parsePaletteEntry('5=#BB78D9')).toEqual({ index: 5, color: '#BB78D9' });
     });
 
-    it('parses binary, octal, and hexadecimal palette indexes from Ghostty syntax', () => {
-      expect(parsePaletteEntry('0b101=#111111')).toEqual({ index: 5, color: '#111111' });
-      expect(parsePaletteEntry('0o10=#222222')).toEqual({ index: 8, color: '#222222' });
+    it('parses signed and separated Ghostty palette indexes across supported bases', () => {
+      expect(parsePaletteEntry('+1=#010101')).toEqual({ index: 1, color: '#010101' });
+      expect(parsePaletteEntry('-0=#000000')).toEqual({ index: 0, color: '#000000' });
+      expect(parsePaletteEntry('1_0=#101010')).toEqual({ index: 10, color: '#101010' });
+      expect(parsePaletteEntry('0b1_01=#111111')).toEqual({ index: 5, color: '#111111' });
+      expect(parsePaletteEntry('0o1_0=#222222')).toEqual({ index: 8, color: '#222222' });
       expect(parsePaletteEntry('0xF=#333333')).toEqual({ index: 15, color: '#333333' });
+    });
+
+    it('distinguishes malformed source-file palette fields', () => {
+      expect(parsePaletteEntryDetailed('#ffffff')).toEqual({
+        status: 'missing-separator',
+      });
+      expect(parsePaletteEntryDetailed('nope=#ffffff')).toEqual({
+        status: 'invalid-index',
+      });
+      expect(parsePaletteEntryDetailed('256=#ffffff')).toEqual({
+        status: 'invalid-index',
+      });
+      expect(parsePaletteEntryDetailed('15=')).toEqual({
+        status: 'empty-color',
+      });
     });
 
     it('returns null for invalid or out-of-range entries', () => {
