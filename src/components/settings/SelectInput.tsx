@@ -48,7 +48,7 @@ export function SelectInput({ option }: SelectInputProps) {
         value={toUiValue(value ?? option.default)}
         onValueChange={(v) => setValue(option.id, fromUiValue(v))}
       >
-        <SelectTrigger className="max-w-xs">
+        <SelectTrigger className="max-w-xs" aria-label={option.name}>
           <SelectValue placeholder="Select an option" />
         </SelectTrigger>
         <SelectContent>

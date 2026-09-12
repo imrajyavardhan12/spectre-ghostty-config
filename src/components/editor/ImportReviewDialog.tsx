@@ -225,10 +225,7 @@ export function ImportReviewDialog({
                     key={`${diagnostic.lineNumber}-${diagnostic.code}`}
                     className={
                       diagnostic.severity === "error"
-                        // Contrast-safe error red: the global --destructive token
-                        // fails WCAG AA on dialog surfaces (see follow-up to audit
-                        // it for all text uses).
-                        ? "wrap-anywhere text-red-700 dark:text-red-300"
+                        ? "wrap-anywhere text-destructive"
                         : "wrap-anywhere text-amber-600 dark:text-amber-400"
                     }
                   >

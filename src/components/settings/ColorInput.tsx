@@ -73,6 +73,7 @@ export function ColorInput({ option }: ColorInputProps) {
             <Button
               variant="outline"
               className="h-10 w-14 p-1"
+              aria-label={`Choose ${option.name} color`}
               style={{
                 backgroundColor: isDisplayableColor ? hexColor! : "transparent",
               }}

@@ -158,11 +158,13 @@ export function KeybindInput({ option }: KeybindInputProps) {
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs">
                           <div className="space-y-1">
+                            {/* Tooltip surfaces are inverted (light bg in dark theme), so severity
+                                colors use the opposite pairing from normal surfaces. */}
                             {validation.errors.map((err, i) => (
-                              <p key={i} className="text-xs text-destructive">{err}</p>
+                              <p key={i} className="text-xs text-red-300 dark:text-red-700">{err}</p>
                             ))}
                             {validation.warnings.map((warn, i) => (
-                              <p key={i} className="text-xs text-amber-500">{warn}</p>
+                              <p key={i} className="text-xs text-amber-300 dark:text-amber-800">{warn}</p>
                             ))}
                           </div>
                         </TooltipContent>
@@ -175,6 +177,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
                     size="icon"
                     className="h-6 w-6 shrink-0"
                     onClick={() => removeKeybind(index)}
+                    aria-label={`Remove keybind ${keybind}`}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -254,6 +257,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
               size="icon"
               onClick={addKeybind}
               disabled={!canAdd}
+              aria-label="Add keybind"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -261,7 +265,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
             {/* Help / Examples button */}
             <Popover open={showExamples} onOpenChange={setShowExamples}>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Show keybind examples">
                   <HelpCircle className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </PopoverTrigger>
