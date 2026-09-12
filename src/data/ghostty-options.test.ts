@@ -217,6 +217,35 @@ describe('ghostty-options', () => {
       expect(macosOptions.length).toBeGreaterThan(0);
     });
   });
+
+  describe('version availability', () => {
+    // Known Ghostty stable releases that may appear in sinceVersion.
+    // Absent sinceVersion means the 1.0 baseline. When Ghostty ships a new
+    // stable release, add it here and re-run scripts/audit-ghostty-version-availability.ts.
+    const knownReleases = [
+      '1.0.0', '1.0.1',
+      '1.1.0', '1.1.1', '1.1.2', '1.1.3',
+      '1.2.0', '1.2.1', '1.2.2', '1.2.3',
+      '1.3.0', '1.3.1',
+    ];
+
+    it('should only reference known Ghostty releases', () => {
+      for (const option of allOptions) {
+        if (option.sinceVersion !== undefined) {
+          expect(knownReleases).toContain(option.sinceVersion);
+        }
+      }
+    });
+
+    it('should match source-audited availability for spot-checked options', () => {
+      // Verified against Config.zig history (see local-docs/version-audit.md).
+      expect(getOptionById('link')?.sinceVersion).toBeUndefined();
+      expect(getOptionById('scroll-to-bottom')?.sinceVersion).toBe('1.2.0');
+      expect(getOptionById('window-titlebar-background')?.sinceVersion).toBe('1.0.1');
+      expect(getOptionById('progress-style')?.sinceVersion).toBe('1.3.1');
+      expect(getOptionById('font-size')?.sinceVersion).toBeUndefined();
+    });
+  });
 });
 
 describe('categories', () => {

@@ -77,6 +77,7 @@ const fontOptions: ConfigOption[] = [
     max: 255,
     step: 1,
     platform: ["macos"],
+    sinceVersion: "1.1.0",
   },
   {
     id: "font-style",
@@ -344,6 +345,7 @@ const colorOptions: ConfigOption[] = [
     type: "boolean",
     default: false,
     category: "colors",
+    sinceVersion: "1.2.0",
   },
   {
     id: "minimum-contrast",
@@ -625,6 +627,7 @@ const windowOptions: ConfigOption[] = [
     default: 0,
     category: "window",
     platform: ["macos"],
+    sinceVersion: "1.1.0",
   },
   {
     id: "window-position-y",
@@ -636,6 +639,7 @@ const windowOptions: ConfigOption[] = [
     default: 0,
     category: "window",
     platform: ["macos"],
+    sinceVersion: "1.1.0",
   },
   {
     id: "window-show-tab-bar",
@@ -687,6 +691,7 @@ const windowOptions: ConfigOption[] = [
     default: "",
     category: "window",
     platform: ["linux"],
+    sinceVersion: "1.0.1",
   },
   {
     id: "window-titlebar-foreground",
@@ -696,6 +701,7 @@ const windowOptions: ConfigOption[] = [
     default: "",
     category: "window",
     platform: ["linux"],
+    sinceVersion: "1.0.1",
   },
   {
     id: "window-title-font-family",
@@ -716,6 +722,7 @@ const windowOptions: ConfigOption[] = [
       { value: "false", label: "None" },
       { value: "working-directory", label: "Working Directory" },
     ],
+    sinceVersion: "1.1.0",
   },
   {
     id: "background-opacity",
@@ -743,6 +750,7 @@ const windowOptions: ConfigOption[] = [
       { value: "true", label: "Default (20)", description: "Default blur intensity" },
       { value: "20", label: "20", description: "Recommended blur intensity" },
     ],
+    sinceVersion: "1.1.0",
   },
   {
     id: "background-opacity-cells",
@@ -781,6 +789,7 @@ const windowOptions: ConfigOption[] = [
     type: "color",
     default: "",
     category: "window",
+    sinceVersion: "1.1.0",
   },
   {
     id: "resize-overlay",
@@ -929,7 +938,7 @@ const mouseOptions: ConfigOption[] = [
     default: "keystroke",
     category: "mouse",
     placeholder: "keystroke,no-output",
-    sinceVersion: "1.3.0",
+    sinceVersion: "1.2.0",
     validValues: [
       { value: "keystroke", label: "Keystroke", description: "Scroll on keypress (default)" },
       { value: "output", label: "Output", description: "Scroll on new output" },
@@ -951,6 +960,7 @@ const mouseOptions: ConfigOption[] = [
       { value: "copy-or-paste", label: "Copy or Paste" },
       { value: "ignore", label: "Ignore" },
     ],
+    sinceVersion: "1.2.0",
   },
   {
     id: "focus-follows-mouse",
@@ -1102,7 +1112,7 @@ const shellOptions: ConfigOption[] = [
     default: "",
     category: "shell",
     placeholder: "raw:Hello",
-    sinceVersion: "1.3.0",
+    sinceVersion: "1.2.0",
     repeatable: true,
   },
   {
@@ -1155,6 +1165,7 @@ const shellOptions: ConfigOption[] = [
     default: "",
     category: "shell",
     repeatable: true,
+    sinceVersion: "1.2.0",
   },
 ];
 
@@ -1207,7 +1218,6 @@ const applicationOptions: ConfigOption[] = [
     default: "",
     category: "application",
     repeatable: true,
-    sinceVersion: "1.3.0",
     placeholder: "https://.*=copy_to_clipboard",
     note: "Not yet implemented in Ghostty. This feature is documented but cannot be set until Ghostty adds support.",
   },
@@ -1265,6 +1275,7 @@ const applicationOptions: ConfigOption[] = [
       { value: "no-clipboard-copy", label: "No Clipboard Copy", description: "Disable clipboard copy notification" },
       { value: "no-config-reload", label: "No Config Reload", description: "Disable config reload notification" },
     ],
+    sinceVersion: "1.1.0",
   },
   {
     id: "command-palette-entry",
@@ -1275,6 +1286,7 @@ const applicationOptions: ConfigOption[] = [
     category: "application",
     repeatable: true,
     placeholder: "title:My Action,action:new_window",
+    sinceVersion: "1.2.0",
   },
   {
     id: "fullscreen",
@@ -1296,6 +1308,7 @@ const applicationOptions: ConfigOption[] = [
     type: "boolean",
     default: false,
     category: "application",
+    sinceVersion: "1.1.0",
   },
   {
     id: "initial-window",
@@ -1537,6 +1550,7 @@ const quickTerminalOptions: ConfigOption[] = [
       { value: "on-demand", label: "On Demand" },
       { value: "exclusive", label: "Exclusive" },
     ],
+    sinceVersion: "1.2.0",
   },
 ];
 
@@ -1611,6 +1625,7 @@ const macosOptions: ConfigOption[] = [
       { value: "new-tab", label: "New Tab" },
       { value: "new-window", label: "New Window" },
     ],
+    sinceVersion: "1.2.0",
   },
   {
     id: "macos-custom-icon",
@@ -1621,6 +1636,7 @@ const macosOptions: ConfigOption[] = [
     category: "macos",
     platform: ["macos"],
     placeholder: "~/.config/ghostty/Ghostty.icns",
+    sinceVersion: "1.2.0",
   },
   {
     id: "macos-option-as-alt",
@@ -1752,7 +1768,7 @@ const macosOptions: ConfigOption[] = [
     default: "ask",
     category: "macos",
     platform: ["macos"],
-    sinceVersion: "1.3.0",
+    sinceVersion: "1.2.0",
     options: [
       { value: "ask", label: "Ask" },
       { value: "allow", label: "Allow" },
@@ -1857,6 +1873,7 @@ const linuxOptions: ConfigOption[] = [
     default: false,
     category: "linux",
     platform: ["linux"],
+    sinceVersion: "1.1.0",
   },
   {
     id: "gtk-toolbar-style",
@@ -1871,6 +1888,7 @@ const linuxOptions: ConfigOption[] = [
       { value: "flat", label: "Flat" },
       { value: "raised-border", label: "Raised Border" },
     ],
+    sinceVersion: "1.2.0",
   },
   {
     id: "gtk-titlebar-style",
@@ -1884,6 +1902,7 @@ const linuxOptions: ConfigOption[] = [
       { value: "native", label: "Native" },
       { value: "tabs", label: "Tabs (merged)" },
     ],
+    sinceVersion: "1.2.0",
   },
   {
     id: "gtk-opengl-debug",
@@ -2082,6 +2101,7 @@ const advancedOptions: ConfigOption[] = [
     type: "boolean",
     default: true,
     category: "advanced",
+    sinceVersion: "1.0.1",
   },
   {
     id: "grapheme-width-method",
@@ -2234,6 +2254,7 @@ const advancedOptions: ConfigOption[] = [
       { value: "linear", label: "Linear" },
       { value: "linear-corrected", label: "Linear Corrected" },
     ],
+    sinceVersion: "1.1.0",
   },
 ];
 
