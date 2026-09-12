@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { validateConfigValue } from '@/lib/utils/config-validation';
+import {
+  validateConfigValue,
+  validateGhosttyColor,
+} from '@/lib/utils/config-validation';
 import type { ColorOption, DurationOption, NumberOption } from '@/lib/schema/types';
 
 const colorOption: ColorOption = {
@@ -25,6 +28,8 @@ const numberOption: NumberOption = {
   name: 'Cursor Opacity',
   description: 'Opacity of the cursor.',
   type: 'number',
+  numberKind: 'float',
+  floatBits: 64,
   default: 1,
   category: 'cursor',
   min: 0,
@@ -32,12 +37,35 @@ const numberOption: NumberOption = {
 };
 
 describe('validateConfigValue', () => {
+  it('validates general Ghostty colors without terminal-relative extensions', () => {
+    expect(validateGhosttyColor('#abc').valid).toBe(true);
+    expect(validateGhosttyColor('medium spring green').valid).toBe(true);
+    expect(validateGhosttyColor('cell-foreground').valid).toBe(false);
+    expect(validateGhosttyColor('not-a-color').valid).toBe(false);
+  });
+
   it('accepts Ghostty color syntax from docs and source', () => {
     expect(validateConfigValue(colorOption, '#aabbcc').valid).toBe(true);
     expect(validateConfigValue(colorOption, 'aabbcc').valid).toBe(true);
     expect(validateConfigValue(colorOption, '#abc').valid).toBe(true);
     expect(validateConfigValue(colorOption, 'black').valid).toBe(true);
     expect(validateConfigValue(colorOption, 'medium spring green').valid).toBe(true);
+  });
+
+  it('accepts terminal-relative colors only for supported Ghostty options', () => {
+    const cursorColorOption: ColorOption = {
+      ...colorOption,
+      id: 'cursor-color',
+      name: 'Cursor Color',
+    };
+
+    expect(
+      validateConfigValue(cursorColorOption, 'cell-foreground').valid
+    ).toBe(true);
+    expect(
+      validateConfigValue(cursorColorOption, 'cell-background').valid
+    ).toBe(true);
+    expect(validateConfigValue(colorOption, 'cell-foreground').valid).toBe(false);
   });
 
   it('rejects malformed color values and unknown color names', () => {

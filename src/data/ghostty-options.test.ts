@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { allOptions, getOptionById, getOptionsByCategory } from '@/data/ghostty-options';
 import { categories } from '@/data/categories';
 import type { Category } from '@/lib/schema/types';
+import { isSafeConfigKey } from '@/lib/security/config-key-safety';
 
 describe('ghostty-options', () => {
   describe('allOptions', () => {
@@ -43,9 +44,45 @@ describe('ghostty-options', () => {
       expect(uniqueIds.size).toBe(ids.length);
     });
 
-    it('should have string id format (kebab-case)', () => {
+    it('should match Ghostty 1.3.1 repeatable option metadata', () => {
+      const repeatableIds = allOptions
+        .filter(
+          (option) =>
+            option.type === 'keybind' ||
+            option.type === 'palette' ||
+            ('repeatable' in option && option.repeatable === true)
+        )
+        .map((option) => option.id)
+        .sort();
+
+      expect(repeatableIds).toEqual([
+        'clipboard-codepoint-map',
+        'command-palette-entry',
+        'config-file',
+        'custom-shader',
+        'env',
+        'font-codepoint-map',
+        'font-family',
+        'font-family-bold',
+        'font-family-bold-italic',
+        'font-family-italic',
+        'font-feature',
+        'font-variation',
+        'font-variation-bold',
+        'font-variation-bold-italic',
+        'font-variation-italic',
+        'gtk-custom-css',
+        'input',
+        'key-remap',
+        'keybind',
+        'link',
+        'palette',
+      ]);
+    });
+
+    it('should have safe Ghostty-style option ids', () => {
       for (const option of allOptions) {
-        expect(option.id).toMatch(/^[a-z][a-z0-9-]*$/);
+        expect(isSafeConfigKey(option.id), option.id).toBe(true);
       }
     });
   });
@@ -131,10 +168,17 @@ describe('ghostty-options', () => {
       }
     });
 
-    it('should have valid defaults for number options', () => {
+    it('should have valid defaults and upstream kinds for number options', () => {
       const numberOptions = allOptions.filter(o => o.type === 'number');
+      const numberKinds = ['float', 'signed-integer', 'unsigned-integer'];
       for (const option of numberOptions) {
         expect(typeof option.default).toBe('number');
+        expect(numberKinds).toContain(option.numberKind);
+        if (option.numberKind === 'float') {
+          expect([32, 64]).toContain(option.floatBits);
+        } else {
+          expect([8, 16, 32, 64]).toContain(option.integerBits);
+        }
       }
     });
 

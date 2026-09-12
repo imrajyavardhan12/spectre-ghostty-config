@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { exportGhosttyConfig } from '@/lib/utils/config-export';
 import { GHOSTTY_COMPATIBILITY_VERSION } from '@/lib/compatibility';
 import { SPECTRE_VERSION } from '@/lib/version';
+import { analyzeGhosttyConfig } from '@/lib/utils/config-import-analysis';
 
 describe('exportGhosttyConfig', () => {
   it('renders Ghostty config output without depending on the Zustand store', () => {
@@ -29,8 +30,43 @@ describe('exportGhosttyConfig', () => {
     expect(output).toContain('keybind = ctrl+shift+e=text:FOO=bar');
     expect(output).toContain('keybind = clear');
     expect(output).toContain('palette = 15=#ffffff');
-    expect(output).toContain('gtk-custom-css = "?required.css"');
+    expect(output).toContain('gtk-custom-css = ""?required.css""');
     expect(output).toContain('gtk-custom-css = ?optional.css');
+    expect(analyzeGhosttyConfig(output).candidateConfig['gtk-custom-css']).toEqual([
+      '"?required.css"',
+      '?optional.css',
+    ]);
     expect(output).toContain('unknown-option = "raw = value"');
+  });
+
+  it('round-trips normalized unverified string edge cases', () => {
+    const analysis = analyzeGhosttyConfig(`
+future-embedded = "say "hello" = now"
+future-empty = ""
+future-comment = #not-an-inline-comment
+future-leading-space = "  padded value  "
+future-unmatched-double = "literal
+future-unmatched-single = '
+`);
+
+    const exported = exportGhosttyConfig(analysis.normalizedConfig);
+    const reanalyzed = analyzeGhosttyConfig(exported);
+
+    expect(reanalyzed.normalizedConfig).toEqual(analysis.normalizedConfig);
+  });
+
+  it('exports only the retained value for repeated unverified options', () => {
+    const analysis = analyzeGhosttyConfig(`
+future-option = first
+future-option = "second = value"
+`);
+
+    const output = exportGhosttyConfig(analysis.normalizedConfig);
+
+    expect(output).toContain(
+      '# Warning: contains 1 option outside this schema target; validate with your Ghostty build.'
+    );
+    expect(output).toContain('future-option = "second = value"');
+    expect(output).not.toContain('future-option = first');
   });
 });

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test, type Route } from "@playwright/test";
 import compatibility from "../compatibility.json";
 import { encodeConfig } from "../src/lib/utils/url-share";
+import { IMPORT_FILE_LIMITS } from "../src/lib/utils/config-import-file";
 
 test("a user can open the configuration editor", async ({ page }) => {
   await page.goto("/");
@@ -92,16 +93,42 @@ test("the payload theme remains authoritative when a share slug is renamed", asy
 test("a user can import and export a Ghostty configuration", async ({ page }) => {
   await page.goto("/editor");
 
-  const fileChooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Import Config" }).click();
-  const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles({
+  const importedFile = {
     name: "config",
     mimeType: "text/plain",
     buffer: Buffer.from("font-size = 18\ncursor-style = bar\n"),
-  });
+  };
+
+  const importButton = page.getByRole("button", { name: "Import Config" });
+  let fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  let fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(importedFile);
+
+  await expect(
+    page.getByRole("heading", { name: "Review imported configuration" })
+  ).toBeVisible();
+  await expect(page.getByText("font-size = 18")).toBeVisible();
+  await expect(page.getByText("cursor-style = bar")).toBeVisible();
+
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review imported configuration" })
+  ).not.toBeVisible();
+  await expect(
+    page.locator("#option-font-size").getByRole("spinbutton")
+  ).toHaveValue("13");
+  await expect(importButton).toBeFocused();
+
+  fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(importedFile);
+  await page.getByRole("button", { name: "Replace with 2 settings" }).click();
 
   await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
+  await expect(page.getByText("Imported 2 settings.", { exact: true })).toBeAttached();
+  await expect(importButton).toBeFocused();
   await expect(
     page.locator("#option-font-size").getByRole("spinbutton")
   ).toHaveValue("18");
@@ -119,6 +146,330 @@ test("a user can import and export a Ghostty configuration", async ({ page }) =>
   );
   expect(downloadedConfig).toContain("font-size = 18");
   expect(downloadedConfig).toContain("cursor-style = bar");
+});
+
+test("a user can explicitly import valid settings from a partially invalid file", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import Config" }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      "font-size = 16\nmouse-hide-while-typing = maybe\ncursor-style = bar\n"
+    ),
+  });
+
+  await expect(
+    page.getByRole("list", { name: "Import issues" })
+  ).toContainText(
+    "Error — Line 2 · mouse-hide-while-typing: Use 1, 0, t, T, f, F, true, or false."
+  );
+  await page
+    .getByRole("button", { name: "Replace with 2 settings and skip 1 line" })
+    .click();
+
+  await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Imported 2 settings and skipped 1 line.", {
+      exact: true,
+    })
+  ).toBeAttached();
+  await page.getByRole("button", { name: "View Config" }).click();
+  await expect(page.locator("pre")).toContainText("font-size = 16");
+  await expect(page.locator("pre")).toContainText("cursor-style = bar");
+  await expect(page.locator("pre")).not.toContainText("mouse-hide-while-typing");
+});
+
+test("a user can retain unverified options while unsafe names are rejected", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import Config" }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      'font-szie = 15\nfuture-option = first\nfuture-option = "second = value"\n__proto__ = polluted\nconstructor = polluted\n'
+    ),
+  });
+
+  const typoInstruction = page.getByRole("link", {
+    name: "font-szie",
+    exact: true,
+  });
+  await expect(typoInstruction.locator("..")).toContainText("font-szie = 15");
+  const futureInstruction = page.getByRole("link", {
+    name: "future-option",
+    exact: true,
+  });
+  await expect(futureInstruction).toHaveCount(1);
+  await expect(futureInstruction.locator("..")).toContainText(
+    "future-option = second = value"
+  );
+  await expect(page.getByText("Unverified", { exact: true })).toHaveCount(2);
+  await expect(
+    page.getByRole("list", { name: "Import issues" })
+  ).toContainText(
+    "Error — Line 4 · __proto__: This option name is reserved and cannot be imported safely."
+  );
+
+  await page
+    .getByRole("button", { name: "Replace with 2 settings and skip 2 lines" })
+    .click();
+  await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "View Config" }).click();
+  const output = page.locator("pre");
+  await expect(output).toContainText(
+    "Warning: contains 2 options outside this schema target"
+  );
+  await expect(output).toContainText("font-szie = 15");
+  await expect(output).toContainText('future-option = "second = value"');
+  await expect(output).not.toContainText("future-option = first");
+  await expect(output).not.toContainText("__proto__");
+  await expect(output).not.toContainText("constructor =");
+});
+
+test("a user can review and apply duplicate, reset, repeatable, and path semantics", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import Config" }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      'font-size = 14\nfont-size = 16\nfont-family = Before\nfont-family = ""\nfont-family = Primary\nfont-family = Fallback\nenv = BEFORE=1\nenv =\nenv = AFTER=2\nconfig-file = before\nconfig-file = """"\nconfig-file =\nconfig-file = ?after\n'
+    ),
+  });
+
+  await expect(page.getByText("12 accepted instructions")).toBeVisible();
+  await expect(page.getByText("8 effective instructions")).toBeVisible();
+
+  const imported = page.getByRole("list", { name: "Imported instructions" });
+  await expect(imported).toContainText("Line 2 font-size = 16");
+  const fontInstructions = imported
+    .getByRole("link", { name: "font-family", exact: true })
+    .locator("..");
+  await expect(fontInstructions).toHaveText([
+    /Line 4.*reset to default/,
+    /Line 5.*Primary/,
+    /Line 6.*Fallback/,
+  ]);
+  await expect(imported).toContainText("Line 8 env = (reset to default)");
+  await expect(imported).toContainText("Line 9 env = AFTER=2");
+  await expect(imported).toContainText(
+    "Line 12 config-file = (reset to default)"
+  );
+  await expect(imported).toContainText("Line 13 config-file = ?after");
+  await expect(
+    page.getByText(
+      "Repeatable values keep their order within each option. Export may regroup different option keys."
+    )
+  ).toBeVisible();
+
+  const issues = page.getByRole("list", { name: "Import issues" });
+  await expect(issues).toContainText("Line 1");
+  await expect(issues).toContainText("Source value: 14");
+  await expect(issues).toContainText("Source value: Before");
+  await expect(issues).toContainText('Source value: """"');
+
+  await page
+    .getByRole("button", { name: "Replace with 4 settings and skip 1 line" })
+    .click();
+  await expect(page.getByText("4 modified", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "View Config" }).click();
+  const output = page.locator("pre");
+  await expect(output).toContainText("font-size = 16");
+  await expect(output).toContainText("font-family = Primary");
+  await expect(output).toContainText("font-family = Fallback");
+  await expect(output).toContainText("env = AFTER=2");
+  await expect(output).toContainText("config-file = ?after");
+  await expect(output).not.toContainText("font-size = 14");
+  await expect(output).not.toContainText("font-family = Before");
+  await expect(output).not.toContainText("env = BEFORE=1");
+  await expect(output).not.toContainText("config-file = before");
+
+  const outputText = await output.textContent();
+  expect(outputText!.indexOf("font-family = Primary")).toBeLessThan(
+    outputText!.indexOf("font-family = Fallback")
+  );
+});
+
+test("a user can review structured palette, keybind, and config-file instructions", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import Config" }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      'palette = 0=ffffff\npalette = red\npalette = 1=not-a-color\nkeybind = clear\nkeybind = chain=goto_split:left\nkeybind = resize/ctrl+h=resize_split:left,10\nkeybind = resize/\nkeybind = ctrl+/=new_tab\nkeybind = ctrl+shift+x=future_action:arg\nkeybind = ctrl+ctrl+c=new_tab\nconfig-file = "?optional"\nconfig-file = ""?required""\n'
+    ),
+  });
+
+  await expect(page.getByText("9 accepted instructions")).toBeVisible();
+  const imported = page.getByRole("list", { name: "Imported instructions" });
+  await expect(imported).toContainText("palette = 0=#ffffff");
+  await expect(imported).toContainText("keybind = clear");
+  await expect(imported).toContainText("keybind = chain=goto_split:left");
+  await expect(imported).toContainText(
+    "keybind = resize/ctrl+h=resize_split:left,10"
+  );
+  await expect(imported).toContainText("keybind = resize/");
+  await expect(imported).toContainText("keybind = ctrl+/=new_tab");
+  await expect(imported).toContainText(
+    "keybind = ctrl+shift+x=future_action:arg"
+  );
+  await expect(
+    page.getByRole("note", { name: "Included config files were not read" })
+  ).toContainText("Counts cover only the selected file");
+
+  const issues = page.getByRole("list", { name: "Import issues" });
+  await expect(issues).toContainText("Line 2");
+  await expect(issues).toContainText("Use Ghostty palette syntax N=COLOR");
+  await expect(issues).toContainText("Line 3");
+  await expect(issues).toContainText("named X11 color");
+  await expect(issues).toContainText('Action "future_action"');
+  await expect(issues).toContainText("runtime support is unverified");
+  await expect(issues).toContainText("Line 10");
+  await expect(issues).toContainText("Duplicate modifier");
+
+  await page
+    .getByRole("button", { name: "Replace with 3 settings and skip 3 lines" })
+    .click();
+  await expect(page.getByText("3 modified", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "View Config" }).click();
+  const output = page.locator("pre");
+  await expect(output).toContainText("palette = 0=#ffffff");
+  await expect(output).toContainText("keybind = clear");
+  await expect(output).toContainText("keybind = ctrl+/=new_tab");
+  await expect(output).toContainText("keybind = ctrl+shift+x=future_action:arg");
+  await expect(output).toContainText("config-file = ?optional");
+  await expect(output).toContainText('config-file = ""?required""');
+  await expect(output).not.toContainText("palette = red");
+  await expect(output).not.toContainText("palette = 1=not-a-color");
+  await expect(output).not.toContainText("ctrl+ctrl+c=new_tab");
+
+  const outputText = await output.textContent();
+  expect(outputText!.indexOf("keybind = clear")).toBeLessThan(
+    outputText!.indexOf("keybind = chain=goto_split:left")
+  );
+  expect(outputText!.indexOf("keybind = chain=goto_split:left")).toBeLessThan(
+    outputText!.indexOf("keybind = resize/ctrl+h=resize_split:left,10")
+  );
+});
+
+test("a user can recover from a rejected config file without reloading", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fontSize = page.locator('#option-font-size input[type="number"]');
+  await fontSize.fill("16");
+
+  const importButton = page.getByRole("button", { name: "Import Config" });
+  let fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  let fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "too-large",
+    mimeType: "application/octet-stream",
+    buffer: Buffer.alloc(IMPORT_FILE_LIMITS.maxBytes + 1, "x"),
+  });
+
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Choose a config file no larger than 1 MiB." })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Review imported configuration" })
+  ).not.toBeVisible();
+  await expect(fontSize).toHaveValue("16");
+
+  fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "",
+    buffer: Buffer.from("font-size = 18\n"),
+  });
+
+  await expect(
+    page.getByRole("heading", { name: "Review imported configuration" })
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Choose a config file no larger than 1 MiB." })
+  ).not.toBeAttached();
+  await expect(fontSize).toHaveValue("16");
+
+  await page.getByRole("button", { name: "Replace with 1 setting" }).click();
+  await expect(fontSize).toHaveValue("18");
+});
+
+test("a user can dismiss the import review by keyboard or overlay without losing state", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fontSize = page.locator('#option-font-size input[type="number"]');
+  await fontSize.fill("16");
+
+  const importButton = page.getByRole("button", { name: "Import Config" });
+  const reviewHeading = page.getByRole("heading", {
+    name: "Review imported configuration",
+  });
+  const reviewFile = {
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from("font-size = 18\n"),
+  };
+
+  // Escape dismisses, preserves state, and returns focus to the trigger.
+  let fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  let fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(reviewFile);
+  await expect(reviewHeading).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(reviewHeading).not.toBeVisible();
+  await expect(importButton).toBeFocused();
+  await expect(fontSize).toHaveValue("16");
+
+  // Overlay dismissal behaves the same.
+  fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(reviewFile);
+  await expect(reviewHeading).toBeVisible();
+  await page
+    .locator('[data-slot="dialog-overlay"]')
+    .click({ position: { x: 5, y: 5 } });
+  await expect(reviewHeading).not.toBeVisible();
+  await expect(importButton).toBeFocused();
+  await expect(fontSize).toHaveValue("16");
 });
 
 test("a user can navigate and inspect configuration on a mobile screen", async ({

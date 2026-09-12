@@ -1,12 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useConfigStore } from '@/lib/store/config-store';
 import { GHOSTTY_COMPATIBILITY_VERSION } from '@/lib/compatibility';
+import { parseGhosttyConfig } from '@/lib/utils/config-import';
 import { SPECTRE_VERSION } from '@/lib/version';
 import { act } from '@testing-library/react';
 
 // Helper to run hooks inside a test
 function getStoreState() {
   return useConfigStore.getState();
+}
+
+function applyConfigImport(configString: string) {
+  useConfigStore.getState().applyImportedCandidate(
+    parseGhosttyConfig(configString)
+  );
 }
 
 describe('config-store', () => {
@@ -166,11 +173,87 @@ describe('config-store', () => {
     });
   });
 
-  describe('importConfig', () => {
+  describe('applyImportedCandidate', () => {
+    it('stores reviewed candidates in a null-prototype dictionary and drops unsafe keys', () => {
+      const candidate = JSON.parse(
+        '{"__proto__":{"polluted":true},"constructor":"bad","prototype":"bad","future-option":"safe"}'
+      );
+
+      act(() => {
+        useConfigStore.getState().applyImportedCandidate(candidate);
+      });
+
+      const stored = getStoreState().config;
+      expect(stored).toEqual({ 'future-option': 'safe' });
+      expect(Object.getPrototypeOf(stored)).toBeNull();
+      expect(Object.hasOwn(stored, '__proto__')).toBe(false);
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    });
+
+    it('keeps imported config dictionaries prototype-free after resets', () => {
+      act(() => {
+        useConfigStore.getState().applyImportedCandidate({
+          'font-size': 16,
+          'future-option': 'safe',
+        });
+        useConfigStore.getState().resetValue('font-size');
+      });
+
+      expect(getStoreState().config).toEqual({ 'future-option': 'safe' });
+      expect(Object.getPrototypeOf(getStoreState().config)).toBeNull();
+
+      act(() => {
+        useConfigStore.getState().resetAll();
+      });
+      expect(Object.getPrototypeOf(getStoreState().config)).toBeNull();
+    });
+
+    it('atomically replaces config, clears theme metadata, and clones arrays', () => {
+      const candidate = {
+        'font-size': 16,
+        'font-family': ['JetBrains Mono', 'Symbols Nerd Font'],
+      };
+
+      act(() => {
+        useConfigStore.getState().loadConfig({ background: '#000000' }, 'Dracula');
+        useConfigStore.getState().applyImportedCandidate(candidate);
+      });
+
+      candidate['font-family'].push('Later Mutation');
+      const state = getStoreState();
+      expect(state.config).toEqual({
+        'font-size': 16,
+        'font-family': ['JetBrains Mono', 'Symbols Nerd Font'],
+      });
+      expect(state.appliedTheme).toBeNull();
+    });
+  });
+
+  describe('persistence safety', () => {
+    it('normalizes persisted config before hydrating the store', async () => {
+      localStorage.setItem(
+        'spectre-config',
+        '{"state":{"config":{"__proto__":{"polluted":true},"constructor":"bad","future-option":"safe"},"appliedTheme":"Dracula"},"version":0}'
+      );
+
+      await act(async () => {
+        await useConfigStore.persist.rehydrate();
+      });
+
+      const state = getStoreState();
+      expect(state.config).toEqual({ 'future-option': 'safe' });
+      expect(Object.getPrototypeOf(state.config)).toBeNull();
+      expect(Object.hasOwn(state.config, '__proto__')).toBe(false);
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+      expect(state.appliedTheme).toBe('Dracula');
+    });
+  });
+
+  describe('reviewed import candidates', () => {
     it('should clear applied theme when importing a config string', () => {
       act(() => {
         useConfigStore.getState().loadConfig({ background: '#000000' }, 'Dracula');
-        useConfigStore.getState().importConfig('font-size = 16');
+        applyConfigImport('font-size = 16');
       });
 
       const state = getStoreState();
@@ -186,7 +269,7 @@ cursor-style-blink = true
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -204,7 +287,7 @@ keybind = clear
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -228,7 +311,7 @@ unknown-option = "raw = value with spaces"
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -257,7 +340,7 @@ gtk-custom-css = gtk/overrides.css
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -295,24 +378,65 @@ gtk-custom-css = gtk/overrides.css
       expect(output).toContain('gtk-custom-css = gtk/overrides.css');
     });
 
+    it('should apply and export only effective repeatable values in per-key order', () => {
+      const configString = `
+font-family = Primary
+font-family = Fallback One
+env = BEFORE=1
+env = ""
+env = AFTER=2
+config-file = before
+config-file = """"
+config-file =
+config-file = ?after
+font-family = Fallback Two
+`;
+
+      act(() => {
+        applyConfigImport(configString);
+      });
+
+      const state = getStoreState();
+      expect(state.config['font-family']).toEqual([
+        'Primary',
+        'Fallback One',
+        'Fallback Two',
+      ]);
+      expect(state.config['env']).toBe('AFTER=2');
+      expect(state.config['config-file']).toBe('?after');
+
+      const lines = state.exportConfig().split('\n');
+      expect(lines.filter((line) => line.startsWith('font-family ='))).toEqual([
+        'font-family = Primary',
+        'font-family = "Fallback One"',
+        'font-family = "Fallback Two"',
+      ]);
+      expect(lines.filter((line) => line.startsWith('env ='))).toEqual([
+        'env = AFTER=2',
+      ]);
+      expect(lines.filter((line) => line.startsWith('config-file ='))).toEqual([
+        'config-file = ?after',
+      ]);
+    });
+
     it('should preserve Ghostty path optional marker semantics', () => {
       const configString = `
 config-file = first
-config-file = ""
+config-file = """"
 config-file = second
 config-file =
 config-file = after-reset
-gtk-custom-css = "?required.css"
+gtk-custom-css = ""?required.css""
 gtk-custom-css = ?optional.css
 custom-shader = first.glsl
-custom-shader = ""
+custom-shader = """"
 custom-shader = second.glsl
 custom-shader = reset
 custom-shader = ignore
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -332,7 +456,7 @@ custom-shader = ignore
       expect(output).not.toContain('config-file = first');
       expect(output).not.toContain('config-file = second');
       expect(output).toContain('config-file = after-reset');
-      expect(output).toContain('gtk-custom-css = "?required.css"');
+      expect(output).toContain('gtk-custom-css = ""?required.css""');
       expect(output).toContain('gtk-custom-css = ?optional.css');
       expect(output).toContain('custom-shader = first.glsl');
       expect(output).toContain('custom-shader = second.glsl');
@@ -351,7 +475,7 @@ palette = 0xF=ffffff
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -378,7 +502,7 @@ font-size = 16
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -398,7 +522,7 @@ keybind =
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();
@@ -424,7 +548,7 @@ unknown-option = true
 `;
 
       act(() => {
-        useConfigStore.getState().importConfig(configString);
+        applyConfigImport(configString);
       });
 
       const state = getStoreState();

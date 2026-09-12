@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Ghost, Code2, Download, Upload, RotateCcw, Check, Loader2, Palette, Sparkles, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,8 +11,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useConfigStore } from "@/lib/store/config-store";
+import { ImportReviewDialog } from "@/components/editor/ImportReviewDialog";
 import { PresetsDialog } from "@/components/editor/PresetsDialog";
 import { cn } from "@/lib/utils";
+import {
+  ImportFileCoordinator,
+  type PendingImportFile,
+} from "@/lib/utils/config-import-coordinator";
+import type { ConfigValues } from "@/lib/schema/types";
 import { SPECTRE_VERSION } from "@/lib/version";
 
 export function Header() {
@@ -23,6 +29,53 @@ export function Header() {
   const modifiedCount = Object.keys(config).length;
   const [exportState, setExportState] = useState<"idle" | "loading" | "success">("idle");
   const [importState, setImportState] = useState<"idle" | "loading" | "success">("idle");
+  const [importStatusMessage, setImportStatusMessage] = useState("");
+  const [importErrorMessage, setImportErrorMessage] = useState("");
+  const [pendingImport, setPendingImport] = useState<PendingImportFile | null>(null);
+  const importButtonRef = useRef<HTMLButtonElement>(null);
+  const importFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const importCoordinatorRef = useRef<ImportFileCoordinator | null>(null);
+
+  const clearImportFeedbackTimer = () => {
+    if (importFeedbackTimerRef.current !== null) {
+      clearTimeout(importFeedbackTimerRef.current);
+      importFeedbackTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    const coordinator = new ImportFileCoordinator({
+      getCurrentSettingCount: () =>
+        Object.keys(useConfigStore.getState().config).length,
+      onStart: () => {
+        if (importFeedbackTimerRef.current !== null) {
+          clearTimeout(importFeedbackTimerRef.current);
+          importFeedbackTimerRef.current = null;
+        }
+        setPendingImport(null);
+        setImportStatusMessage("");
+        setImportErrorMessage("");
+        setImportState("loading");
+      },
+      onSuccess: (pending) => {
+        setPendingImport(pending);
+        setImportState("idle");
+      },
+      onError: (error) => {
+        setImportErrorMessage(error.message);
+        setImportState("idle");
+      },
+    });
+    importCoordinatorRef.current = coordinator;
+
+    return () => {
+      coordinator.cancel();
+      importCoordinatorRef.current = null;
+      if (importFeedbackTimerRef.current !== null) {
+        clearTimeout(importFeedbackTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleExport = async () => {
     setExportState("loading");
@@ -48,17 +101,43 @@ export function Header() {
   const handleImport = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        setImportState("loading");
-        const text = await file.text();
-        useConfigStore.getState().importConfig(text);
-        setImportState("success");
-        setTimeout(() => setImportState("idle"), 2000);
-      }
+    input.onchange = (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) void importCoordinatorRef.current?.select(file);
     };
     input.click();
+  };
+
+  const restoreImportFocus = () => {
+    setTimeout(() => importButtonRef.current?.focus(), 0);
+  };
+
+  const closeImportReview = () => {
+    setPendingImport(null);
+    restoreImportFocus();
+  };
+
+  const handleConfirmImport = (candidate: ConfigValues) => {
+    const resultingCount = pendingImport?.analysis.summary.resultingSettingCount ?? 0;
+    const skippedCount = pendingImport?.analysis.summary.skippedLineCount ?? 0;
+    useConfigStore.getState().applyImportedCandidate(candidate);
+    setPendingImport(null);
+    setImportErrorMessage("");
+    setImportState("success");
+    const resultMessage = resultingCount === 0
+      ? "Imported configuration defaults"
+      : `Imported ${resultingCount} ${resultingCount === 1 ? "setting" : "settings"}`;
+    const skippedMessage = skippedCount > 0
+      ? ` and skipped ${skippedCount} ${skippedCount === 1 ? "line" : "lines"}`
+      : "";
+    setImportStatusMessage(`${resultMessage}${skippedMessage}.`);
+    restoreImportFocus();
+    clearImportFeedbackTimer();
+    importFeedbackTimerRef.current = setTimeout(() => {
+      setImportState("idle");
+      setImportStatusMessage("");
+      importFeedbackTimerRef.current = null;
+    }, 2000);
   };
 
   return (
@@ -112,9 +191,10 @@ export function Header() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  ref={importButtonRef}
+                  variant="ghost"
+                  size="icon"
                   onClick={handleImport}
                   aria-label="Import Config"
                   className="relative h-9 w-9"
@@ -231,11 +311,11 @@ export function Header() {
             </Tooltip>
           </TooltipProvider>
 
-          {/* GitHub */}
+          {/* GitHub - hidden on very small screens to keep the header within 320px */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" asChild className="h-9 w-9">
+                <Button variant="ghost" size="icon" asChild className="hidden h-9 w-9 sm:inline-flex">
                   <a
                     href="https://github.com/imrajyavardhan12/spectre-ghostty-config"
                     target="_blank"
@@ -253,6 +333,29 @@ export function Header() {
           </TooltipProvider>
         </div>
       </div>
+
+      {pendingImport && (
+        <ImportReviewDialog
+          open
+          fileName={pendingImport.fileName}
+          fileSize={pendingImport.fileSize}
+          currentSettingCount={pendingImport.currentSettingCount}
+          analysis={pendingImport.analysis}
+          onOpenChange={(open) => {
+            if (!open) closeImportReview();
+          }}
+          onConfirm={handleConfirmImport}
+        />
+      )}
+
+      <p className="sr-only" role="status" aria-live="polite">
+        {importStatusMessage}
+      </p>
+      {importErrorMessage && (
+        <p className="sr-only" role="alert">
+          {importErrorMessage}
+        </p>
+      )}
     </header>
   );
 }

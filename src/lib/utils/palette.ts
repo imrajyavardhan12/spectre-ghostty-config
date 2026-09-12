@@ -8,30 +8,47 @@ export interface ParsedPaletteEntry {
   color: string;
 }
 
+export type PaletteEntryParseResult =
+  | { status: "valid"; entry: ParsedPaletteEntry }
+  | { status: "missing-separator" }
+  | { status: "invalid-index" }
+  | { status: "empty-color" };
+
 const HEX_COLOR_WITHOUT_HASH = /^[0-9a-f]{6}$/i;
 const MIN_PALETTE_INDEX = 0;
 const MAX_PALETTE_INDEX = 255;
 
 function parsePaletteIndex(rawIndex: string): number | null {
-  const token = rawIndex.trim().toLowerCase();
-
-  if (/^0b[01]+$/.test(token)) {
-    return parseInt(token.slice(2), 2);
+  let token = rawIndex.trim().toLowerCase();
+  let negative = false;
+  if (token.startsWith("+") || token.startsWith("-")) {
+    negative = token[0] === "-";
+    token = token.slice(1);
   }
 
-  if (/^0o[0-7]+$/.test(token)) {
-    return parseInt(token.slice(2), 8);
+  let base = 10;
+  let digitPattern = /^[0-9]+$/;
+  if (token.startsWith("0b")) {
+    base = 2;
+    digitPattern = /^[01]+$/;
+    token = token.slice(2);
+  } else if (token.startsWith("0o")) {
+    base = 8;
+    digitPattern = /^[0-7]+$/;
+    token = token.slice(2);
+  } else if (token.startsWith("0x")) {
+    base = 16;
+    digitPattern = /^[0-9a-f]+$/;
+    token = token.slice(2);
   }
 
-  if (/^0x[0-9a-f]+$/.test(token)) {
-    return parseInt(token.slice(2), 16);
-  }
+  if (!token || token.startsWith("_") || token.endsWith("_")) return null;
+  const digits = token.replaceAll("_", "");
+  if (!digitPattern.test(digits)) return null;
 
-  if (/^\d+$/.test(token)) {
-    return parseInt(token, 10);
-  }
-
-  return null;
+  const parsed = parseInt(digits, base);
+  if (negative && parsed !== 0) return null;
+  return parsed;
 }
 
 export function normalizePaletteColor(color: string): string {
@@ -39,20 +56,26 @@ export function normalizePaletteColor(color: string): string {
   return HEX_COLOR_WITHOUT_HASH.test(trimmed) ? `#${trimmed}` : trimmed;
 }
 
-export function parsePaletteEntry(entry: string): ParsedPaletteEntry | null {
+export function parsePaletteEntryDetailed(entry: string): PaletteEntryParseResult {
   const equalsIndex = entry.indexOf("=");
-  if (equalsIndex === -1) return null;
+  if (equalsIndex === -1) return { status: "missing-separator" };
 
   const rawIndex = entry.slice(0, equalsIndex);
   const rawColor = entry.slice(equalsIndex + 1);
   const index = parsePaletteIndex(rawIndex);
-  const color = normalizePaletteColor(rawColor);
-
-  if (index === null || index < MIN_PALETTE_INDEX || index > MAX_PALETTE_INDEX || !color) {
-    return null;
+  if (index === null || index < MIN_PALETTE_INDEX || index > MAX_PALETTE_INDEX) {
+    return { status: "invalid-index" };
   }
 
-  return { index, color };
+  const color = normalizePaletteColor(rawColor);
+  if (!color) return { status: "empty-color" };
+
+  return { status: "valid", entry: { index, color } };
+}
+
+export function parsePaletteEntry(entry: string): ParsedPaletteEntry | null {
+  const result = parsePaletteEntryDetailed(entry);
+  return result.status === "valid" ? result.entry : null;
 }
 
 export function normalizePaletteEntries(entries: string[]): string[] {
