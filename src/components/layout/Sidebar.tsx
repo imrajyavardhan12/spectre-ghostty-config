@@ -22,6 +22,14 @@ import {
 import { Category } from "@/lib/schema/types";
 import { useConfigStore } from "@/lib/store/config-store";
 import { getOptionsByCategory } from "@/data/ghostty-options";
+import { GHOSTTY_RELEASES } from "@/lib/ghostty-versions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Type,
@@ -46,6 +54,8 @@ interface SidebarProps {
 
 export function Sidebar({ activeCategory, onCategoryChange }: SidebarProps) {
   const config = useConfigStore((state) => state.config);
+  const targetVersion = useConfigStore((state) => state.targetVersion);
+  const setTargetVersion = useConfigStore((state) => state.setTargetVersion);
 
   const getModifiedCount = (categoryId: Category): number => {
     const options = getOptionsByCategory(categoryId);
@@ -56,6 +66,23 @@ export function Sidebar({ activeCategory, onCategoryChange }: SidebarProps) {
     <aside className="w-60 border-r border-border bg-background hidden md:flex flex-col">
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-1">
+          <div className="px-3 py-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Ghostty version
+            </p>
+            <Select value={targetVersion} onValueChange={setTargetVersion}>
+              <SelectTrigger aria-label="Ghostty target version" className="mt-1.5 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GHOSTTY_RELEASES.map((release) => (
+                  <SelectItem key={release} value={release} className="text-xs">
+                    {release}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Categories
           </p>
