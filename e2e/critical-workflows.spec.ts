@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test, type Route } from "@playwright/test";
 import compatibility from "../compatibility.json";
 import { encodeConfig } from "../src/lib/utils/url-share";
+import { IMPORT_FILE_LIMITS } from "../src/lib/utils/config-import-file";
 
 test("a user can open the configuration editor", async ({ page }) => {
   await page.goto("/");
@@ -374,6 +375,57 @@ test("a user can review structured palette, keybind, and config-file instruction
   expect(outputText!.indexOf("keybind = chain=goto_split:left")).toBeLessThan(
     outputText!.indexOf("keybind = resize/ctrl+h=resize_split:left,10")
   );
+});
+
+test("a user can recover from a rejected config file without reloading", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fontSize = page.locator('#option-font-size input[type="number"]');
+  await fontSize.fill("16");
+
+  const importButton = page.getByRole("button", { name: "Import Config" });
+  let fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  let fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "too-large",
+    mimeType: "application/octet-stream",
+    buffer: Buffer.alloc(IMPORT_FILE_LIMITS.maxBytes + 1, "x"),
+  });
+
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Choose a config file no larger than 1 MiB." })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Review imported configuration" })
+  ).not.toBeVisible();
+  await expect(fontSize).toHaveValue("16");
+
+  fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "",
+    buffer: Buffer.from("font-size = 18\n"),
+  });
+
+  await expect(
+    page.getByRole("heading", { name: "Review imported configuration" })
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Choose a config file no larger than 1 MiB." })
+  ).not.toBeAttached();
+  await expect(fontSize).toHaveValue("16");
+
+  await page.getByRole("button", { name: "Replace with 1 setting" }).click();
+  await expect(fontSize).toHaveValue("18");
 });
 
 test("a user can navigate and inspect configuration on a mobile screen", async ({
