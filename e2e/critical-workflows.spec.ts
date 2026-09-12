@@ -428,6 +428,50 @@ test("a user can recover from a rejected config file without reloading", async (
   await expect(fontSize).toHaveValue("18");
 });
 
+test("a user can dismiss the import review by keyboard or overlay without losing state", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+
+  const fontSize = page.locator('#option-font-size input[type="number"]');
+  await fontSize.fill("16");
+
+  const importButton = page.getByRole("button", { name: "Import Config" });
+  const reviewHeading = page.getByRole("heading", {
+    name: "Review imported configuration",
+  });
+  const reviewFile = {
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from("font-size = 18\n"),
+  };
+
+  // Escape dismisses, preserves state, and returns focus to the trigger.
+  let fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  let fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(reviewFile);
+  await expect(reviewHeading).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(reviewHeading).not.toBeVisible();
+  await expect(importButton).toBeFocused();
+  await expect(fontSize).toHaveValue("16");
+
+  // Overlay dismissal behaves the same.
+  fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(reviewFile);
+  await expect(reviewHeading).toBeVisible();
+  await page
+    .locator('[data-slot="dialog-overlay"]')
+    .click({ position: { x: 5, y: 5 } });
+  await expect(reviewHeading).not.toBeVisible();
+  await expect(importButton).toBeFocused();
+  await expect(fontSize).toHaveValue("16");
+});
+
 test("a user can navigate and inspect configuration on a mobile screen", async ({
   page,
 }) => {

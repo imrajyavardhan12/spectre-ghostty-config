@@ -151,7 +151,7 @@ export function ImportReviewDialog({
               aria-label="Imported instructions"
             >
               {effectiveInstructions.map((instruction) => (
-                <li key={`${instruction.lineNumber}-${instruction.key}`} className="break-words">
+                <li key={`${instruction.lineNumber}-${instruction.key}`} className="wrap-anywhere">
                   <span className="mr-2 text-muted-foreground">
                     Line {instruction.lineNumber}
                   </span>{" "}
@@ -225,8 +225,11 @@ export function ImportReviewDialog({
                     key={`${diagnostic.lineNumber}-${diagnostic.code}`}
                     className={
                       diagnostic.severity === "error"
-                        ? "break-words text-destructive"
-                        : "break-words text-amber-600 dark:text-amber-400"
+                        // Contrast-safe error red: the global --destructive token
+                        // fails WCAG AA on dialog surfaces (see follow-up to audit
+                        // it for all text uses).
+                        ? "wrap-anywhere text-red-700 dark:text-red-300"
+                        : "wrap-anywhere text-amber-600 dark:text-amber-400"
                     }
                   >
                     {`${formatDiagnosticSeverity(diagnostic)} — Line ${diagnostic.lineNumber}`}
