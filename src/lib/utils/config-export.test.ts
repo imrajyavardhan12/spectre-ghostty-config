@@ -69,4 +69,60 @@ future-option = "second = value"
     expect(output).toContain('future-option = "second = value"');
     expect(output).not.toContain('future-option = first');
   });
+
+  it('warns about newer-than-target options without dropping them', () => {
+    const output = exportGhosttyConfig(
+      { 'font-size': 16, 'background-image': '/tmp/bg.png', 'progress-style': true },
+      null,
+      '1.1.0'
+    );
+
+    expect(output).toContain(
+      '# Warning: 2 options require Ghostty newer than 1.1.0: background-image, progress-style.'
+    );
+    expect(output).toContain('font-size = 16');
+    expect(output).toContain('background-image = /tmp/bg.png');
+    expect(output).toContain('progress-style = true');
+  });
+
+  it('stays silent when everything is supported or no target is given', () => {
+    const supported = exportGhosttyConfig({ 'font-size': 16 }, null, '1.0.0');
+    expect(supported).not.toContain('newer than');
+
+    const untargeted = exportGhosttyConfig(
+      { 'progress-style': true },
+      null,
+      undefined
+    );
+    expect(untargeted).not.toContain('newer than');
+    expect(untargeted).toContain('progress-style = true');
+
+    const unknownTarget = exportGhosttyConfig({ 'progress-style': 'bar' }, null, 'tip');
+    expect(unknownTarget).not.toContain('newer than');
+  });
+
+  it('warns at patch granularity for patch-release options', () => {
+    const older = exportGhosttyConfig({ 'window-titlebar-background': '#000000' }, null, '1.0.0');
+    expect(older).toContain(
+      '# Warning: 1 option requires Ghostty newer than 1.0.0: window-titlebar-background.'
+    );
+
+    const current = exportGhosttyConfig({ 'window-titlebar-background': '#000000' }, null, '1.0.1');
+    expect(current).not.toContain('newer than');
+  });
+
+  it('keeps the unknown-option warning separate from version warnings', () => {
+    const output = exportGhosttyConfig(
+      { 'future-option': 'x', 'progress-style': true },
+      null,
+      '1.0.0'
+    );
+
+    expect(output).toContain(
+      '# Warning: contains 1 option outside this schema target; validate with your Ghostty build.'
+    );
+    expect(output).toContain(
+      '# Warning: 1 option requires Ghostty newer than 1.0.0: progress-style.'
+    );
+  });
 });

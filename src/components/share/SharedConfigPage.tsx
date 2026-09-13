@@ -14,6 +14,7 @@ function SharePageContent() {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const loadConfig = useConfigStore((state) => state.loadConfig);
+  const targetVersion = useConfigStore((state) => state.targetVersion);
 
   const { sharedConfig, error } = useMemo(() => {
     const urlConfig = getConfigFromUrl(searchParams);
@@ -27,7 +28,7 @@ function SharePageContent() {
   }, [searchParams]);
 
   const configString = sharedConfig
-    ? exportGhosttyConfig(sharedConfig.config, sharedConfig.theme)
+    ? exportGhosttyConfig(sharedConfig.config, sharedConfig.theme, targetVersion)
     : "";
   const modifiedCount = sharedConfig ? Object.keys(sharedConfig.config).length : 0;
 

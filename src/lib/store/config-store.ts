@@ -123,8 +123,8 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       exportConfig: () => {
-        const { config, appliedTheme } = get();
-        return exportGhosttyConfig(config, appliedTheme);
+        const { config, appliedTheme, targetVersion } = get();
+        return exportGhosttyConfig(config, appliedTheme, targetVersion);
       },
     }),
     {
