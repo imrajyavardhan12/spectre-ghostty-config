@@ -127,7 +127,7 @@ export default function HomePage() {
               <span className="font-medium">nothing you don&apos;t</span>
             </h2>
             <p className="text-muted-foreground">
-              100+ configuration options organized in a way that makes sense.
+              200+ configuration options organized in a way that makes sense.
             </p>
           </div>
 
@@ -160,8 +160,7 @@ export default function HomePage() {
             <FeatureCard
               icon={<Share2 className="h-5 w-5" />}
               title="Share"
-              description="Generate shareable URLs for your setup"
-              badge="Soon"
+              description="Generate readable shareable URLs for your setup"
             />
           </div>
         </div>
