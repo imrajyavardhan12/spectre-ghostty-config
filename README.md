@@ -89,6 +89,22 @@ you confirm with an explicit action such as `Replace with 10 settings and skip 2
 - `config-file` include directives are listed but never followed — counts cover only
   the selected file, not Ghostty's final effective configuration.
 
+### Targeting an older Ghostty release
+
+If the machine that will run the config uses an older Ghostty, pick that release in
+the editor's Ghostty version selector (sidebar on desktop, category bar on mobile).
+Spectre then:
+
+- badges every option the selected release does not support yet;
+- offers a hide-newer toggle that filters navigation, search, and option lists
+  while showing what is hidden;
+- names unsupported options in a warning comment on export instead of dropping them;
+- flags them when you open a share link, relative to your own selected target.
+
+The default target is the current stable release (see Ghostty Source of Truth below),
+which behaves exactly as previous versions: everything is supported, nothing is hidden,
+no warnings appear.
+
 ## Tech Stack
 
 - **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
