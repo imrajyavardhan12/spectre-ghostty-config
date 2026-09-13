@@ -476,6 +476,27 @@ test("a user can filter options by Ghostty target version", async ({
   ).not.toBeVisible();
 });
 
+test("a user exporting for an older Ghostty target gets explicit warnings", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await page.getByRole("combobox", { name: "Ghostty target version" }).click();
+  await page.getByRole("option", { name: "1.1.0" }).click();
+  await page.getByRole("button", { name: "Colors", exact: true }).click();
+  await page.locator("#option-background-image input").fill("/tmp/bg.png");
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Config" }).click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  const downloadedConfig = await readFile(downloadPath!, "utf8");
+  expect(downloadedConfig).toContain(
+    "# Warning: 1 option requires Ghostty newer than 1.1.0: background-image."
+  );
+  expect(downloadedConfig).toContain("background-image = /tmp/bg.png");
+});
+
 test("a user can dismiss the import review by keyboard or overlay without losing state", async ({
   page,
 }) => {

@@ -746,6 +746,19 @@ unknown-option = true
       expect(getStoreState().hideUnsupported).toBe(false);
     });
 
+    it('should export with the target version applied', () => {
+      act(() => {
+        useConfigStore.getState().setTargetVersion('1.1.0');
+        useConfigStore.getState().setValue('background-image', '/tmp/bg.png');
+      });
+      expect(useConfigStore.getState().exportConfig()).toContain(
+        '# Warning: 1 option requires Ghostty newer than 1.1.0: background-image.'
+      );
+      act(() => {
+        useConfigStore.getState().setTargetVersion(GHOSTTY_COMPATIBILITY_VERSION);
+      });
+    });
+
     it('should coerce invalid persisted view preferences to defaults on merge', () => {
       const merge = useConfigStore.persist.getOptions().merge!;
       const current = getStoreState();
