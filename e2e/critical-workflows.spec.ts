@@ -513,6 +513,31 @@ test("a user opening a share link sees newer-than-target flags", async ({
   await expect(page.locator("pre")).toContainText("font-size = 16");
 });
 
+test("a user can target, hide, and still export newer options with warnings", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await page.getByRole("combobox", { name: "Ghostty target version" }).click();
+  await page.getByRole("option", { name: "1.1.0" }).click();
+  await page.getByRole("button", { name: "Colors", exact: true }).click();
+  await page.locator("#option-background-image input").fill("/tmp/bg.png");
+
+  // Hiding filters the editor but must not drop the setting from export.
+  await page.getByRole("switch", { name: /Hide newer/ }).click();
+  await expect(page.locator("#option-background-image")).not.toBeAttached();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Config" }).click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  const downloadedConfig = await readFile(downloadPath!, "utf8");
+  expect(downloadedConfig).toContain(
+    "# Warning: 1 option requires Ghostty newer than 1.1.0: background-image."
+  );
+  expect(downloadedConfig).toContain("background-image = /tmp/bg.png");
+});
+
 test("a user can dismiss the import review by keyboard or overlay without losing state", async ({
   page,
 }) => {

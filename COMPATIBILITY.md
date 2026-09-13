@@ -10,7 +10,7 @@ Spectre treats Ghostty—not Spectre's UI, preview, or local schema—as the fin
 
 The machine-readable source for this row is [`compatibility.json`](compatibility.json). The stable schema is pinned to Ghostty's immutable [`v1.3.1` Config.zig snapshot](https://github.com/ghostty-org/ghostty/blob/v1.3.1/src/config/Config.zig). Spectre's 202 local option IDs match both that stable source snapshot and the current [official configuration reference](https://ghostty.org/docs/config/reference).
 
-**This is a stable target, not a blanket minimum-version claim.** A config using only older options may work with an older Ghostty release. Spectre does not yet filter the editor or generated output by a selected Ghostty version, so users of older Ghostty releases must avoid options introduced after their installed version.
+**This is a stable target, not a blanket minimum-version claim.** A config using only older options may work with an older Ghostty release. The editor's Ghostty version selector (persisted, defaulting to the stable target above) marks options newer than the selected release, can hide them from navigation and search, and exports and shared links warn about them explicitly instead of failing silently.
 
 ## What is covered
 
@@ -48,7 +48,7 @@ This is the verified stable target for Spectre `0.3.x`. Option IDs are checked a
 
 ### Older Ghostty releases
 
-Generated files may work when they contain only options and values supported by that release. Spectre currently shows newer options in the same editor and does not prevent exporting them for an older installation. Use each option's availability note and the upstream release documentation.
+Pick the installed release in the editor's Ghostty version selector (sidebar on desktop, category bar on mobile). Options it does not support are badged with their introducing release, can be hidden from navigation, search, and option lists with visible counts, and exports name them in a warning comment. Shared links flag them against the viewer's selected target. Filtering is advisory: it never deletes settings. Availability metadata (`sinceVersion`, absent meaning the 1.0 baseline) is audited against upstream `Config.zig` history; see `scripts/audit-ghostty-version-availability.ts`.
 
 ### Newer stable or nightly builds
 
