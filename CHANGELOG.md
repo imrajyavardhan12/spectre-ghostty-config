@@ -15,6 +15,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 - Added a Ghostty target-version selector to the editor sidebar, persisted across reloads, so filtering and warnings can follow the release installed where a config will run.
 - Exported configs now name options that need a Ghostty release newer than the selected target instead of failing silently on older installations.
+- Opening a share link flags payload options newer than the viewer's Ghostty target without dropping them.
 - Marked editor options newer than the Ghostty target with an explicit requires-newer badge, and added a persisted hide-newer toggle that filters navigation, search, and option lists with visible counts.
 - Added Playwright browser tests for the landing-to-editor path, import/export, config sharing, mobile navigation, preview recovery, theme-service recovery, and automated WCAG A/AA checks.
 - Added focused unit coverage for theme loading concurrency, prioritization, and cancellation.

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { getConfigFromUrl } from "@/lib/utils/url-share";
 import { exportGhosttyConfig } from "@/lib/utils/config-export";
 import { useConfigStore } from "@/lib/store/config-store";
+import { getConfigOption } from "@/lib/utils/config-options";
+import { isKnownGhosttyRelease, isOptionSupportedIn } from "@/lib/ghostty-versions";
 
 function SharePageContent() {
   const searchParams = useSearchParams();
@@ -31,6 +33,15 @@ function SharePageContent() {
     ? exportGhosttyConfig(sharedConfig.config, sharedConfig.theme, targetVersion)
     : "";
   const modifiedCount = sharedConfig ? Object.keys(sharedConfig.config).length : 0;
+
+  // Flags payload options newer than the viewer's target without dropping
+  // them: the validated payload stays authoritative (trust boundary).
+  const newerSharedOptions = useMemo(() => {
+    if (!sharedConfig || !isKnownGhosttyRelease(targetVersion)) return [];
+    return Object.keys(sharedConfig.config)
+      .filter((key) => getConfigOption(key) && !isOptionSupportedIn(key, targetVersion))
+      .sort();
+  }, [sharedConfig, targetVersion]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(configString);
@@ -122,6 +133,19 @@ function SharePageContent() {
           <p className="text-muted-foreground">
             {modifiedCount} setting{modifiedCount !== 1 ? "s" : ""} configured
           </p>
+          {newerSharedOptions.length > 0 && (
+            <div
+              role="status"
+              className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3"
+            >
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                {newerSharedOptions.length} {newerSharedOptions.length === 1 ? "setting" : "settings"} in this shared config {newerSharedOptions.length === 1 ? "requires" : "require"} Ghostty newer than {targetVersion}
+              </p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground break-words">
+                {newerSharedOptions.join(", ")}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
