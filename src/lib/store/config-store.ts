@@ -25,6 +25,10 @@ interface ConfigStore {
   // A view preference: never modified by config edits, imports, or resets.
   targetVersion: string;
 
+  // Hide options newer than the target version from navigation and search.
+  // Same view-preference lifecycle as targetVersion.
+  hideUnsupported: boolean;
+
   // Actions
   setValue: (key: string, value: unknown) => void;
   resetValue: (key: string) => void;
@@ -33,6 +37,7 @@ interface ConfigStore {
   loadConfig: (config: ConfigValues, themeName?: string) => void;
   setAppliedTheme: (themeName: string | null) => void;
   setTargetVersion: (version: string) => void;
+  setHideUnsupported: (hide: boolean) => void;
 
   // Computed helpers
   getValue: (key: string) => unknown;
@@ -48,6 +53,7 @@ export const useConfigStore = create<ConfigStore>()(
       config: createConfigValues(),
       appliedTheme: null,
       targetVersion: GHOSTTY_COMPATIBILITY_VERSION,
+      hideUnsupported: false,
 
       setValue: (key: string, value: unknown) => {
         set((state) => {
@@ -87,6 +93,10 @@ export const useConfigStore = create<ConfigStore>()(
         set({ targetVersion: version });
       },
 
+      setHideUnsupported: (hide: boolean) => {
+        set({ hideUnsupported: hide });
+      },
+
       getValue: (key: string) => {
         const { config } = get();
         if (key in config) {
@@ -119,10 +129,10 @@ export const useConfigStore = create<ConfigStore>()(
     }),
     {
       name: "spectre-config",
-      partialize: (state) => ({ config: state.config, appliedTheme: state.appliedTheme, targetVersion: state.targetVersion }),
+      partialize: (state) => ({ config: state.config, appliedTheme: state.appliedTheme, targetVersion: state.targetVersion, hideUnsupported: state.hideUnsupported }),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<
-          Pick<ConfigStore, "config" | "appliedTheme" | "targetVersion">
+          Pick<ConfigStore, "config" | "appliedTheme" | "targetVersion" | "hideUnsupported">
         >;
         const config = persisted.config &&
           typeof persisted.config === "object" &&
@@ -136,8 +146,9 @@ export const useConfigStore = create<ConfigStore>()(
           isKnownGhosttyRelease(persisted.targetVersion)
           ? persisted.targetVersion
           : GHOSTTY_COMPATIBILITY_VERSION;
+        const hideUnsupported = persisted.hideUnsupported === true;
 
-        return { ...currentState, config, appliedTheme, targetVersion };
+        return { ...currentState, config, appliedTheme, targetVersion, hideUnsupported };
       },
       skipHydration: true,
     }

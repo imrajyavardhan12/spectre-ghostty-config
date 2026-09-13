@@ -256,6 +256,50 @@ test("theme download errors meet WCAG contrast", async ({ page }) => {
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
 
+test("the version-filtered editor has no automatically detectable WCAG A or AA violations", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await page.getByRole("combobox", { name: "Ghostty target version" }).click();
+  await page.getByRole("option", { name: "1.1.0" }).click();
+  await page.getByRole("button", { name: "Colors", exact: true }).click();
+  await expect(
+    page.getByText("Requires Ghostty 1.2.0+", { exact: true }).first()
+  ).toBeVisible();
+
+  await page.getByRole("switch", { name: /Hide newer/ }).click();
+  await expect(page.getByText(/newer Ghostty than 1.1.0/)).toBeVisible();
+
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
+test("the mobile version filter remains usable without horizontal overflow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/editor");
+  await expect(page.getByRole("heading", { name: "Fonts" })).toBeVisible();
+
+  const targetSelect = page.getByRole("combobox", { name: "Ghostty target version" });
+  await expect(targetSelect).toBeVisible();
+  await targetSelect.click();
+  await page.getByRole("option", { name: "1.0.0" }).click();
+  await page.getByRole("button", { name: "Colors", exact: true }).click();
+  await expect(
+    page.getByText("Requires Ghostty 1.2.0+", { exact: true }).first()
+  ).toBeVisible();
+
+  const hideSwitch = page.getByRole("switch", { name: /Hide newer/ });
+  await hideSwitch.click();
+  await expect(hideSwitch).toHaveAttribute("aria-checked", "true");
+
+  const hasHorizontalPageOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth
+  );
+  expect(hasHorizontalPageOverflow).toBe(false);
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
 test("the mobile theme browser supports keyboard navigation without horizontal overflow", async ({
   page,
 }) => {

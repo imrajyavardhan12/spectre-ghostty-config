@@ -1,3 +1,4 @@
+import type { ConfigOption } from "@/lib/schema/types";
 import { getConfigOption } from "@/lib/utils/config-options";
 
 /** Baseline Ghostty release: options without sinceVersion metadata date to 1.0. */
@@ -54,4 +55,19 @@ export function getOptionIntroducedIn(optionId: string): string {
  */
 export function isOptionSupportedIn(optionId: string, targetVersion: string): boolean {
   return compareGhosttyVersions(targetVersion, getOptionIntroducedIn(optionId)) >= 0;
+}
+
+export interface VersionSupportSplit {
+  supported: ConfigOption[];
+  unsupported: ConfigOption[];
+}
+
+/** Partition options by target support. Unknown IDs land in supported. */
+export function splitOptionsBySupport(options: ConfigOption[], targetVersion: string): VersionSupportSplit {
+  const supported: ConfigOption[] = [];
+  const unsupported: ConfigOption[] = [];
+  for (const option of options) {
+    (isOptionSupportedIn(option.id, targetVersion) ? supported : unsupported).push(option);
+  }
+  return { supported, unsupported };
 }
