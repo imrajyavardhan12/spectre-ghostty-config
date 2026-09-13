@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ConfigOption } from "@/lib/schema/types";
 import {
   GHOSTTY_BASELINE_VERSION,
   GHOSTTY_RELEASES,
@@ -6,6 +7,7 @@ import {
   getOptionIntroducedIn,
   isKnownGhosttyRelease,
   isOptionSupportedIn,
+  splitOptionsBySupport,
 } from "@/lib/ghostty-versions";
 
 describe("ghostty versions", () => {
@@ -40,6 +42,17 @@ describe("ghostty versions", () => {
     expect(getOptionIntroducedIn("link")).toBe("1.0.0");
     expect(getOptionIntroducedIn("progress-style")).toBe("1.3.1");
     expect(getOptionIntroducedIn("scroll-to-bottom")).toBe("1.2.0");
+  });
+
+  it("partitions option lists preserving order", () => {
+    const options = [
+      { id: "font-size" },
+      { id: "progress-style" },
+      { id: "window-titlebar-background" },
+    ] as ConfigOption[];
+    const { supported, unsupported } = splitOptionsBySupport(options, "1.1.0");
+    expect(supported.map((o) => o.id)).toEqual(["font-size", "window-titlebar-background"]);
+    expect(unsupported.map((o) => o.id)).toEqual(["progress-style"]);
   });
 
   it("supports same-or-older options and treats unknown ids as supported", () => {

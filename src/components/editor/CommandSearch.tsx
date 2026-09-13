@@ -28,6 +28,8 @@ import { allOptions } from "@/data/ghostty-options";
 import { categories } from "@/data/categories";
 import { Category, ConfigOption } from "@/lib/schema/types";
 import { Badge } from "@/components/ui/badge";
+import { useConfigStore } from "@/lib/store/config-store";
+import { isOptionSupportedIn } from "@/lib/ghostty-versions";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Type,
@@ -52,6 +54,11 @@ interface CommandSearchProps {
 
 export function CommandSearch({ onSelectOption, onSelectCategory }: CommandSearchProps) {
   const [open, setOpen] = useState(false);
+  const targetVersion = useConfigStore((state) => state.targetVersion);
+  const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
+
+  const isUnsupported = (option: ConfigOption) =>
+    !isOptionSupportedIn(option.id, targetVersion);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -97,8 +104,10 @@ export function CommandSearch({ onSelectOption, onSelectCategory }: CommandSearc
     }
   };
 
-  // Filter out hidden options
-  const visibleOptions = allOptions.filter((opt) => !opt.hidden);
+  // Filter out hidden options, plus newer-than-target options when hiding.
+  const visibleOptions = allOptions.filter(
+    (opt) => !opt.hidden && (!hideUnsupported || !isUnsupported(opt))
+  );
 
   return (
     <CommandDialog 
@@ -170,6 +179,14 @@ export function CommandSearch({ onSelectOption, onSelectCategory }: CommandSearc
                             className="text-[10px] px-1.5 py-0 h-4"
                           >
                             {option.platform.join(", ")}
+                          </Badge>
+                        )}
+                        {isUnsupported(option) && option.sinceVersion && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 h-4 border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          >
+                            Requires Ghostty {option.sinceVersion}+
                           </Badge>
                         )}
                       </div>

@@ -3,6 +3,8 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingRenderer } from "@/components/settings";
 import { getOptionsByCategory } from "@/data/ghostty-options";
+import { splitOptionsBySupport } from "@/lib/ghostty-versions";
+import { useConfigStore } from "@/lib/store/config-store";
 import { categories } from "@/data/categories";
 import { Category } from "@/lib/schema/types";
 import { cn } from "@/lib/utils";
@@ -45,7 +47,12 @@ interface ConfigPanelProps {
 }
 
 export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
-  const options = getOptionsByCategory(category);
+  const targetVersion = useConfigStore((state) => state.targetVersion);
+  const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
+  const allCategoryOptions = getOptionsByCategory(category);
+  const { supported, unsupported } = splitOptionsBySupport(allCategoryOptions, targetVersion);
+  const options = hideUnsupported ? supported : allCategoryOptions;
+  const hiddenCount = hideUnsupported ? unsupported.length : 0;
   const categoryInfo = categories.find((c) => c.id === category);
   const Icon = iconMap[categoryInfo?.icon || "Settings"] || Settings;
 
@@ -88,6 +95,12 @@ export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
           </div>
         )}
 
+        {hiddenCount > 0 && (
+          <p role="status" className="mb-4 text-xs text-muted-foreground">
+            {hiddenCount} {hiddenCount === 1 ? "option needs" : "options need"} a newer Ghostty than {targetVersion} and {hiddenCount === 1 ? "is" : "are"} hidden.
+          </p>
+        )}
+
         {/* Options list */}
         <div className="space-y-3">
           {options.map((option, index) => (
@@ -112,7 +125,9 @@ export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
               <Icon className="h-8 w-8 text-muted-foreground" />
             </div>
             <p className="text-muted-foreground">
-              No options available for this category.
+              {hiddenCount > 0
+                ? `Every option here needs a newer Ghostty than ${targetVersion}.`
+                : "No options available for this category."}
             </p>
           </div>
         )}

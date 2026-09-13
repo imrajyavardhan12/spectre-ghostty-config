@@ -22,14 +22,8 @@ import {
 import { Category } from "@/lib/schema/types";
 import { useConfigStore } from "@/lib/store/config-store";
 import { getOptionsByCategory } from "@/data/ghostty-options";
-import { GHOSTTY_RELEASES } from "@/lib/ghostty-versions";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { splitOptionsBySupport } from "@/lib/ghostty-versions";
+import { VersionFilterControls } from "@/components/editor/VersionFilterControls";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Type,
@@ -55,7 +49,10 @@ interface SidebarProps {
 export function Sidebar({ activeCategory, onCategoryChange }: SidebarProps) {
   const config = useConfigStore((state) => state.config);
   const targetVersion = useConfigStore((state) => state.targetVersion);
-  const setTargetVersion = useConfigStore((state) => state.setTargetVersion);
+  const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
+
+  const hasSupportedOptions = (categoryId: Category): boolean =>
+    splitOptionsBySupport(getOptionsByCategory(categoryId), targetVersion).supported.length > 0;
 
   const getModifiedCount = (categoryId: Category): number => {
     const options = getOptionsByCategory(categoryId);
@@ -67,21 +64,7 @@ export function Sidebar({ activeCategory, onCategoryChange }: SidebarProps) {
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-1">
           <div className="px-3 py-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Ghostty version
-            </p>
-            <Select value={targetVersion} onValueChange={setTargetVersion}>
-              <SelectTrigger aria-label="Ghostty target version" className="mt-1.5 h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {GHOSTTY_RELEASES.map((release) => (
-                  <SelectItem key={release} value={release} className="text-xs">
-                    {release}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <VersionFilterControls />
           </div>
           <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Categories
@@ -90,7 +73,8 @@ export function Sidebar({ activeCategory, onCategoryChange }: SidebarProps) {
             const Icon = iconMap[category.icon || "Settings"] || Settings;
             const isActive = activeCategory === category.id;
             const modifiedCount = getModifiedCount(category.id);
-            
+            if (hideUnsupported && !hasSupportedOptions(category.id)) return null;
+
             return (
               <button
                 key={category.id}
@@ -170,6 +154,11 @@ export function MobileCategoryBar({
   onCategoryChange,
 }: MobileSidebarProps) {
   const config = useConfigStore((state) => state.config);
+  const targetVersion = useConfigStore((state) => state.targetVersion);
+  const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
+
+  const hasSupportedOptions = (categoryId: Category): boolean =>
+    splitOptionsBySupport(getOptionsByCategory(categoryId), targetVersion).supported.length > 0;
 
   const getModifiedCount = (categoryId: Category): number => {
     const options = getOptionsByCategory(categoryId);
@@ -178,13 +167,17 @@ export function MobileCategoryBar({
 
   return (
     <div className="md:hidden border-b border-border bg-background sticky top-14 z-40">
+      <div className="px-3 pt-2">
+        <VersionFilterControls compact />
+      </div>
       <div className="overflow-x-auto scrollbar-none">
         <div className="flex p-2 gap-1.5">
           {categories.map((category) => {
             const Icon = iconMap[category.icon || "Settings"] || Settings;
             const isActive = activeCategory === category.id;
             const modifiedCount = getModifiedCount(category.id);
-            
+            if (hideUnsupported && !hasSupportedOptions(category.id)) return null;
+
             return (
               <button
                 key={category.id}

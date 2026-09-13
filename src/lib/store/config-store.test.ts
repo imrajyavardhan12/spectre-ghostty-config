@@ -734,7 +734,19 @@ unknown-option = true
       });
     });
 
-    it('should coerce invalid or missing persisted target versions to default on merge', () => {
+    it('should toggle and persist the hide-unsupported preference', () => {
+      expect(getStoreState().hideUnsupported).toBe(false);
+      act(() => {
+        useConfigStore.getState().setHideUnsupported(true);
+      });
+      expect(getStoreState().hideUnsupported).toBe(true);
+      act(() => {
+        useConfigStore.getState().setHideUnsupported(false);
+      });
+      expect(getStoreState().hideUnsupported).toBe(false);
+    });
+
+    it('should coerce invalid persisted view preferences to defaults on merge', () => {
       const merge = useConfigStore.persist.getOptions().merge!;
       const current = getStoreState();
 
@@ -752,6 +764,18 @@ unknown-option = true
 
       const missing = merge({ config: {}, appliedTheme: null }, current);
       expect(missing.targetVersion).toBe(GHOSTTY_COMPATIBILITY_VERSION);
+
+      const hidden = merge(
+        { config: {}, appliedTheme: null, targetVersion: '1.2.0', hideUnsupported: true },
+        current
+      );
+      expect(hidden.hideUnsupported).toBe(true);
+
+      const coerced = merge(
+        { config: {}, appliedTheme: null, hideUnsupported: 'yes' },
+        current
+      );
+      expect(coerced.hideUnsupported).toBe(false);
     });
   });
 });

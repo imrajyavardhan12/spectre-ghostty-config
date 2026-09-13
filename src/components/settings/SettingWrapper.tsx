@@ -2,6 +2,8 @@
 
 import { ReactNode, useState } from "react";
 import { RotateCcw, Info, ExternalLink } from "lucide-react";
+import { useConfigStore } from "@/lib/store/config-store";
+import { isOptionSupportedIn } from "@/lib/ghostty-versions";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -39,6 +41,8 @@ export function SettingWrapper({
   platform,
 }: SettingWrapperProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const targetVersion = useConfigStore((state) => state.targetVersion);
+  const needsNewerGhostty = !isOptionSupportedIn(id, targetVersion);
 
   return (
     <div
@@ -116,6 +120,11 @@ export function SettingWrapper({
                 {platform && platform.length > 0 && (
                   <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-muted text-muted-foreground">
                     {platform.join(", ")}
+                  </span>
+                )}
+                {needsNewerGhostty && sinceVersion && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                    Requires Ghostty {sinceVersion}+
                   </span>
                 )}
               </div>
