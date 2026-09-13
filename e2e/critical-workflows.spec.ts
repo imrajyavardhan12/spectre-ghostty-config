@@ -497,6 +497,22 @@ test("a user exporting for an older Ghostty target gets explicit warnings", asyn
   expect(downloadedConfig).toContain("background-image = /tmp/bg.png");
 });
 
+test("a user opening a share link sees newer-than-target flags", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await page.getByRole("combobox", { name: "Ghostty target version" }).click();
+  await page.getByRole("option", { name: "1.1.0" }).click();
+
+  const encoded = encodeConfig({ "font-size": 16, "progress-style": true });
+  await page.goto(`/share/custom-config?c=${encoded}`);
+  await expect(
+    page.getByText("1 setting in this shared config requires Ghostty newer than 1.1.0")
+  ).toBeVisible();
+  await expect(page.locator("pre")).toContainText("progress-style = true");
+  await expect(page.locator("pre")).toContainText("font-size = 16");
+});
+
 test("a user can dismiss the import review by keyboard or overlay without losing state", async ({
   page,
 }) => {
