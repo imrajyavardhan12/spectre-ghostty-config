@@ -538,6 +538,60 @@ test("a user can target, hide, and still export newer options with warnings", as
   expect(downloadedConfig).toContain("background-image = /tmp/bg.png");
 });
 
+test("a user can undo and redo editor changes", async ({ page }) => {
+  await page.goto("/editor");
+  const fontSize = page.locator('#option-font-size input[type="number"]');
+  await fontSize.fill("16");
+  await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(fontSize).toHaveValue("13");
+  await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
+  await expect(page.getByText("Undid change (no settings).")).toBeAttached();
+
+  await page.getByRole("button", { name: "Redo" }).click();
+  await expect(fontSize).toHaveValue("16");
+  await expect(page.getByText("Redid change (1 setting).")).toBeAttached();
+
+  // Keyboard shortcuts apply outside text inputs, covering both redo chords.
+  await page.getByRole("heading", { name: "Fonts" }).click();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(fontSize).toHaveValue("13");
+  await page.keyboard.press("ControlOrMeta+y");
+  await expect(fontSize).toHaveValue("16");
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(fontSize).toHaveValue("13");
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(fontSize).toHaveValue("16");
+
+  // Reset-all recovery.
+  await page.getByRole("button", { name: "Reset All" }).click();
+  await expect(fontSize).toHaveValue("13");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(fontSize).toHaveValue("16");
+});
+
+test("a user can undo an import replacement", async ({ page }) => {
+  await page.goto("/editor");
+  const fontSize = page.locator('#option-font-size input[type="number"]');
+  await fontSize.fill("16");
+
+  const importButton = page.getByRole("button", { name: "Import Config" });
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await importButton.click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: "config",
+    mimeType: "text/plain",
+    buffer: Buffer.from("font-size = 18\n"),
+  });
+  await page.getByRole("button", { name: "Replace with 1 setting" }).click();
+  await expect(fontSize).toHaveValue("18");
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(fontSize).toHaveValue("16");
+});
+
 test("a user can dismiss the import review by keyboard or overlay without losing state", async ({
   page,
 }) => {

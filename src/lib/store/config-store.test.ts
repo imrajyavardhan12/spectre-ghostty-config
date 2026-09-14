@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useConfigStore } from '@/lib/store/config-store';
+import { useHistoryStore } from '@/lib/store/history-store';
 import { GHOSTTY_COMPATIBILITY_VERSION } from '@/lib/compatibility';
 import { parseGhosttyConfig } from '@/lib/utils/config-import';
 import { SPECTRE_VERSION } from '@/lib/version';
@@ -687,6 +688,105 @@ unknown-option = true
 
       const diff = useConfigStore.getState().getDiff();
       expect(diff).toEqual({ 'font-size': 16 });
+    });
+  });
+
+  describe('history wiring', () => {
+    const resetHistoryAndConfig = () => {
+      act(() => {
+        useConfigStore.getState().resetAll();
+        useHistoryStore.getState().clear();
+      });
+    };
+
+    it('should undo and redo a value change', () => {
+      resetHistoryAndConfig();
+      act(() => {
+        useConfigStore.getState().setValue('font-size', 16);
+      });
+      expect(getStoreState().config).toEqual({ 'font-size': 16 });
+
+      act(() => {
+        useConfigStore.getState().undo();
+      });
+      expect(getStoreState().config).toEqual({});
+
+      act(() => {
+        useConfigStore.getState().redo();
+      });
+      expect(getStoreState().config).toEqual({ 'font-size': 16 });
+    });
+
+    it('should recover resetValue and resetAll with one undo', () => {
+      resetHistoryAndConfig();
+      act(() => {
+        useConfigStore.getState().setValue('font-size', 16);
+        useConfigStore.getState().setValue('background', '#000000');
+      });
+      act(() => {
+        useConfigStore.getState().resetValue('background');
+      });
+      expect(getStoreState().config).toEqual({ 'font-size': 16 });
+
+      act(() => {
+        useConfigStore.getState().undo();
+      });
+      expect(getStoreState().config).toEqual({ 'font-size': 16, background: '#000000' });
+
+      act(() => {
+        useConfigStore.getState().resetAll();
+      });
+      expect(getStoreState().config).toEqual({});
+      act(() => {
+        useConfigStore.getState().undo();
+      });
+      expect(getStoreState().config).toEqual({ 'font-size': 16, background: '#000000' });
+    });
+
+    it('should recover import replacement and config loads', () => {
+      resetHistoryAndConfig();
+      act(() => {
+        useConfigStore.getState().setValue('font-size', 16);
+      });
+      applyConfigImport('font-size = 18\n');
+      expect(getStoreState().config['font-size']).toBe(18);
+      act(() => {
+        useConfigStore.getState().undo();
+      });
+      expect(getStoreState().config).toEqual({ 'font-size': 16 });
+
+      act(() => {
+        useConfigStore.getState().loadConfig({ 'font-size': 20 }, 'Dracula');
+      });
+      act(() => {
+        useConfigStore.getState().undo();
+      });
+      expect(getStoreState().config).toEqual({ 'font-size': 16 });
+    });
+
+    it('should not record undo and redo applications themselves', () => {
+      resetHistoryAndConfig();
+      act(() => {
+        useConfigStore.getState().setValue('font-size', 16);
+      });
+      const announcements = useHistoryStore.getState().past.length;
+      act(() => {
+        useConfigStore.getState().undo();
+        useConfigStore.getState().redo();
+      });
+      expect(useHistoryStore.getState().past.length).toBe(announcements);
+      expect(useHistoryStore.getState().future.length).toBe(0);
+    });
+
+    it('should invalidate redo on a new edit', () => {
+      resetHistoryAndConfig();
+      act(() => {
+        useConfigStore.getState().setValue('font-size', 16);
+        useConfigStore.getState().undo();
+        useConfigStore.getState().setValue('font-size', 18);
+        useConfigStore.getState().redo();
+      });
+      expect(getStoreState().config).toEqual({ 'font-size': 18 });
     });
   });
 
