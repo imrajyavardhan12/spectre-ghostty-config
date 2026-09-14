@@ -11,6 +11,7 @@ import {
 import { isThemeConfigKey } from "@/lib/utils/theme-config";
 import { GHOSTTY_COMPATIBILITY_VERSION } from "@/lib/compatibility";
 import { isKnownGhosttyRelease } from "@/lib/ghostty-versions";
+import { useHistoryStore } from "@/lib/store/history-store";
 
 export type { ConfigValues };
 
@@ -38,6 +39,12 @@ interface ConfigStore {
   setAppliedTheme: (themeName: string | null) => void;
   setTargetVersion: (version: string) => void;
   setHideUnsupported: (hide: boolean) => void;
+  /** Replace config without recording (undo/redo internals only). */
+  restoreSnapshot: (snapshot: ConfigValues) => void;
+  /** Undo the last recorded mutation; no-op with empty history. */
+  undo: () => void;
+  /** Redo the last undone mutation; no-op with empty redo stack. */
+  redo: () => void;
 
   // Computed helpers
   getValue: (key: string) => unknown;
@@ -56,6 +63,7 @@ export const useConfigStore = create<ConfigStore>()(
       hideUnsupported: false,
 
       setValue: (key: string, value: unknown) => {
+        useHistoryStore.getState().record(get().config, key);
         set((state) => {
           const newConfig = normalizeConfigValues({
             ...state.config,
@@ -70,6 +78,9 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       resetValue: (key: string) => {
+        // Keyless on purpose: removals stand alone and never coalesce with
+        // neighboring value sets, so set-then-reset recovers the set value.
+        useHistoryStore.getState().record(get().config);
         set((state) => {
           const newConfig = normalizeConfigValues(state.config);
           delete newConfig[key];
@@ -81,6 +92,7 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       resetAll: () => {
+        useHistoryStore.getState().record(get().config);
         set({ config: createConfigValues(), appliedTheme: null });
       },
       
@@ -115,11 +127,29 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       loadConfig: (newConfig: ConfigValues, themeName?: string) => {
+        useHistoryStore.getState().record(get().config);
         set({ config: normalizeConfigValues(newConfig), appliedTheme: themeName || null });
       },
 
       applyImportedCandidate: (candidate: ConfigValues) => {
+        useHistoryStore.getState().record(get().config);
         set({ config: normalizeConfigValues(candidate), appliedTheme: null });
+      },
+
+      restoreSnapshot: (snapshot: ConfigValues) => {
+        // Applied-theme metadata is preserved: undo/redo rewind values, and
+        // setValue already clears the theme only when a theme key changes.
+        set({ config: normalizeConfigValues(snapshot) });
+      },
+
+      undo: () => {
+        const snapshot = useHistoryStore.getState().undo(get().config);
+        if (snapshot) get().restoreSnapshot(snapshot);
+      },
+
+      redo: () => {
+        const snapshot = useHistoryStore.getState().redo(get().config);
+        if (snapshot) get().restoreSnapshot(snapshot);
       },
 
       exportConfig: () => {
