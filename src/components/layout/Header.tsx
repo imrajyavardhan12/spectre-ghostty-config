@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { Ghost, Code2, Download, Upload, RotateCcw, Check, Loader2, Palette, Sparkles, Search } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Ghost, Code2, Download, Upload, RotateCcw, Check, Loader2, Palette, Sparkles, Search, Undo2, Redo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useConfigStore } from "@/lib/store/config-store";
+import { useCanRedo, useCanUndo, useHistoryStore } from "@/lib/store/history-store";
 import { ImportReviewDialog } from "@/components/editor/ImportReviewDialog";
 import { PresetsDialog } from "@/components/editor/PresetsDialog";
 import { cn } from "@/lib/utils";
@@ -21,11 +22,21 @@ import {
 import type { ConfigValues } from "@/lib/schema/types";
 import { SPECTRE_VERSION } from "@/lib/version";
 
+function describeConfigCount(): string {
+  const count = Object.keys(useConfigStore.getState().config).length;
+  return count === 0 ? "no settings" : `${count} ${count === 1 ? "setting" : "settings"}`;
+}
+
 export function Header() {
   // Use selectors to properly subscribe to config changes
   const config = useConfigStore((state) => state.config);
   const exportConfig = useConfigStore((state) => state.exportConfig);
   const resetAll = useConfigStore((state) => state.resetAll);
+  const undo = useConfigStore((state) => state.undo);
+  const redo = useConfigStore((state) => state.redo);
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
+  const [historyMessage, setHistoryMessage] = useState("");
   const modifiedCount = Object.keys(config).length;
   const [exportState, setExportState] = useState<"idle" | "loading" | "success">("idle");
   const [importState, setImportState] = useState<"idle" | "loading" | "success">("idle");
@@ -42,6 +53,50 @@ export function Header() {
       importFeedbackTimerRef.current = null;
     }
   };
+
+  const announceHistory = useCallback((message: string) => {
+    setHistoryMessage(message);
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (useHistoryStore.getState().past.length === 0) {
+      announceHistory("Nothing to undo.");
+      return;
+    }
+    undo();
+    announceHistory(`Undid change (${describeConfigCount()}).`);
+  }, [undo, announceHistory]);
+
+  const handleRedo = useCallback(() => {
+    if (useHistoryStore.getState().future.length === 0) {
+      announceHistory("Nothing to redo.");
+      return;
+    }
+    redo();
+    announceHistory(`Redid change (${describeConfigCount()}).`);
+  }, [redo, announceHistory]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      // Native text undo wins inside editable fields; store history applies
+      // everywhere else. This precedence is intentional and documented.
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return;
+      }
+      if (!event.metaKey && !event.ctrlKey) return;
+      const key = event.key.toLowerCase();
+      if (key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+      } else if ((key === "z" && event.shiftKey) || key === "y") {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [handleUndo, handleRedo]);
 
   useEffect(() => {
     const coordinator = new ImportFileCoordinator({
@@ -146,7 +201,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
           <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
-          <span className="font-medium">Spectre</span>
+          <span className="font-medium sr-only min-[400px]:not-sr-only">Spectre</span>
           <span className="hidden sm:inline text-xs text-muted-foreground">
             v{SPECTRE_VERSION}
           </span>
@@ -240,6 +295,48 @@ export function Header() {
             </Tooltip>
           </TooltipProvider>
 
+          {/* Undo button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleUndo}
+                  aria-label="Undo"
+                  disabled={!canUndo}
+                  className="h-9 w-9"
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Undo</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          {/* Redo button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRedo}
+                  aria-label="Redo"
+                  disabled={!canRedo}
+                  className="h-9 w-9"
+                >
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Redo</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {/* Reset button */}
           <TooltipProvider>
             <Tooltip>
@@ -274,7 +371,7 @@ export function Header() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="inline-flex">
+                <span className="hidden sm:inline-flex">
                   <PresetsDialog
                     trigger={
                       <Button
@@ -350,6 +447,9 @@ export function Header() {
 
       <p className="sr-only" role="status" aria-live="polite">
         {importStatusMessage}
+      </p>
+      <p className="sr-only" role="status" aria-live="polite">
+        {historyMessage}
       </p>
       {importErrorMessage && (
         <p className="sr-only" role="alert">
