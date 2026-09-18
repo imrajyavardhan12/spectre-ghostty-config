@@ -571,6 +571,21 @@ test("a user can undo and redo editor changes", async ({ page }) => {
   await expect(fontSize).toHaveValue("16");
 });
 
+test("a user can undo a typing burst in a single step", async ({ page }) => {
+  await page.goto("/editor");
+  const fontStyle = page.locator("#option-font-style input");
+  await fontStyle.pressSequentially("Heavy", { delay: 20 });
+  await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(fontStyle).toHaveValue("");
+  await expect(page.getByText("1 modified", { exact: true })).not.toBeVisible();
+  await expect(page.getByText("Undid change (no settings).")).toBeAttached();
+
+  await page.getByRole("button", { name: "Redo" }).click();
+  await expect(fontStyle).toHaveValue("Heavy");
+});
+
 test("a user can undo an import replacement", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');
