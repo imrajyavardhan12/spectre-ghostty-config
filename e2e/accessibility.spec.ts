@@ -273,6 +273,18 @@ test("the version-filtered editor has no automatically detectable WCAG A or AA v
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
 
+test("the editor with undo history has no automatically detectable WCAG A or AA violations", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await page.locator('#option-font-size input[type="number"]').fill("16");
+  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("button", { name: "Redo" })).toBeEnabled();
+
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
 test("the mobile version filter remains usable without horizontal overflow", async ({
   page,
 }) => {

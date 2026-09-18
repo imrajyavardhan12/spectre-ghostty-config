@@ -105,6 +105,14 @@ The default target is the current stable release (see Ghostty Source of Truth be
 which behaves exactly as previous versions: everything is supported, nothing is hidden,
 no warnings appear.
 
+### Undo and redo
+
+Every editor change is undoable from the header Undo/Redo buttons or the standard
+`Ctrl/⌘+Z`, `Ctrl/⌘+Shift+Z`, and `Ctrl+Y` shortcuts (typing fields keep their native
+text undo). Destructive actions such as Reset All or confirmed imports are recovered
+with a single undo. History is local-only and in-memory: the last 50 steps are kept,
+rapid typing on one setting collapses into a single step, and a new edit clears redo.
+
 ## Tech Stack
 
 - **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
