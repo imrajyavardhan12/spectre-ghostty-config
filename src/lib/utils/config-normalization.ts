@@ -56,3 +56,11 @@ export function normalizeConfigValues(config: ConfigValues): ConfigValues {
 
   return normalized;
 }
+
+/** True when two normalized configs hold the same keys and values. */
+export function configValuesEqual(a: ConfigValues, b: ConfigValues): boolean {
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+
+  return aKeys.every((key) => key in b && valuesEqual(a[key], b[key]));
+}
