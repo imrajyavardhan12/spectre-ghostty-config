@@ -5,3 +5,20 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    # Packages that must move in lockstep are grouped so a bump can't leave
+    # the toolchain skewed (e.g. @tailwindcss/postcss pins its own tailwindcss,
+    # and @vitest/* peer-depend on an exact vitest version).
+    groups:
+      next:
+        patterns: ["next", "eslint-config-next", "@next/*"]
+      tailwind:
+        patterns: ["tailwindcss", "@tailwindcss/*"]
+      vitest:
+        patterns: ["vitest", "@vitest/*"]
+      radix:
+        patterns: ["@radix-ui/*"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

@@ -5,6 +5,7 @@ import type { ConfigValues } from "@/lib/schema/types";
 import { exportGhosttyConfig } from "@/lib/utils/config-export";
 import { getDefaultValue } from "@/lib/utils/config-options";
 import {
+  configValuesEqual,
   createConfigValues,
   normalizeConfigValues,
 } from "@/lib/utils/config-normalization";
@@ -54,6 +55,14 @@ interface ConfigStore {
 }
 
 
+// History records only real changes: a no-op mutation would add an empty
+// undo step and discard the redo stack.
+function recordIfChanged(current: ConfigValues, next: ConfigValues, key?: string): boolean {
+  if (configValuesEqual(current, next)) return false;
+  useHistoryStore.getState().record(current, key);
+  return true;
+}
+
 export const useConfigStore = create<ConfigStore>()(
   persist(
     (set, get) => ({
@@ -63,37 +72,34 @@ export const useConfigStore = create<ConfigStore>()(
       hideUnsupported: false,
 
       setValue: (key: string, value: unknown) => {
-        useHistoryStore.getState().record(get().config, key);
-        set((state) => {
-          const newConfig = normalizeConfigValues({
-            ...state.config,
-            [key]: value,
-          });
+        const { config, appliedTheme } = get();
+        const newConfig = normalizeConfigValues({ ...config, [key]: value });
+        if (!recordIfChanged(config, newConfig, key)) return;
 
-          return {
-            config: newConfig,
-            appliedTheme: isThemeConfigKey(key) ? null : state.appliedTheme,
-          };
+        set({
+          config: newConfig,
+          appliedTheme: isThemeConfigKey(key) ? null : appliedTheme,
         });
       },
 
       resetValue: (key: string) => {
+        const { config, appliedTheme } = get();
+        const newConfig = normalizeConfigValues(config);
+        delete newConfig[key];
         // Keyless on purpose: removals stand alone and never coalesce with
         // neighboring value sets, so set-then-reset recovers the set value.
-        useHistoryStore.getState().record(get().config);
-        set((state) => {
-          const newConfig = normalizeConfigValues(state.config);
-          delete newConfig[key];
-          return {
-            config: newConfig,
-            appliedTheme: isThemeConfigKey(key) ? null : state.appliedTheme,
-          };
+        if (!recordIfChanged(config, newConfig)) return;
+
+        set({
+          config: newConfig,
+          appliedTheme: isThemeConfigKey(key) ? null : appliedTheme,
         });
       },
 
       resetAll: () => {
-        useHistoryStore.getState().record(get().config);
-        set({ config: createConfigValues(), appliedTheme: null });
+        const newConfig = createConfigValues();
+        recordIfChanged(get().config, newConfig);
+        set({ config: newConfig, appliedTheme: null });
       },
       
       setAppliedTheme: (themeName: string | null) => {
@@ -127,13 +133,15 @@ export const useConfigStore = create<ConfigStore>()(
       },
 
       loadConfig: (newConfig: ConfigValues, themeName?: string) => {
-        useHistoryStore.getState().record(get().config);
-        set({ config: normalizeConfigValues(newConfig), appliedTheme: themeName || null });
+        const normalized = normalizeConfigValues(newConfig);
+        recordIfChanged(get().config, normalized);
+        set({ config: normalized, appliedTheme: themeName || null });
       },
 
       applyImportedCandidate: (candidate: ConfigValues) => {
-        useHistoryStore.getState().record(get().config);
-        set({ config: normalizeConfigValues(candidate), appliedTheme: null });
+        const normalized = normalizeConfigValues(candidate);
+        recordIfChanged(get().config, normalized);
+        set({ config: normalized, appliedTheme: null });
       },
 
       restoreSnapshot: (snapshot: ConfigValues) => {
