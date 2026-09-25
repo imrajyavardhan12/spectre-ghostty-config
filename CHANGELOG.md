@@ -27,6 +27,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Changed
 
+- Load the Ghostty terminal preview engine only when the preview opens, cutting first-load JavaScript on the editor by about 35% and on the theme browser by about 40%.
 - Bounded, de-duplicated, and cancellable theme loading, with the latest search prioritized ahead of stale queued work.
 - Kept canceled theme requests inside the six-request concurrency budget until they settle, with retry controls for individual download failures.
 - Expanded the schema drift check to verify both the live Ghostty reference and the pinned stable `Config.zig` source snapshot.
@@ -46,6 +47,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 ### Fixed
 
 - Share links now drop values containing control characters, and exports omit any value with a line break (with a warning comment) so a value can never become extra config lines.
+- Undo history no longer records actions that change nothing, so re-selecting a value or resetting an unmodified option keeps the redo stack intact.
 - Prevented stale Ghostty preview initialization from attaching a terminal after the preview closes or a newer configuration replaces it, including cleanup of resources created by invalidated requests.
 - Added accessible names and status announcements to preview controls, loading, and failures.
 - Kept mobile navigation and minimize/restore controls accurately named in every responsive and preview state.

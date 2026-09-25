@@ -788,6 +788,54 @@ unknown-option = true
       });
       expect(getStoreState().config).toEqual({ 'font-size': 18 });
     });
+
+    it('should not record no-op mutations or discard redo', () => {
+      resetHistoryAndConfig();
+      act(() => {
+        useConfigStore.getState().setValue('font-size', 16);
+        useConfigStore.getState().setValue('background', '#000000');
+        useConfigStore.getState().undo();
+      });
+      const { past, future } = useHistoryStore.getState();
+      expect(past).toHaveLength(1);
+      expect(future).toHaveLength(1);
+
+      act(() => {
+        const state = useConfigStore.getState();
+        state.setValue('font-size', 16);
+        state.resetValue('cursor-style');
+        state.loadConfig({ 'font-size': 16 });
+        state.applyImportedCandidate({ 'font-size': 16, 'cursor-style': 'block' });
+      });
+
+      expect(getStoreState().config).toEqual({ 'font-size': 16 });
+      expect(useHistoryStore.getState().past).toBe(past);
+      expect(useHistoryStore.getState().future).toBe(future);
+    });
+
+    it('should not record resetAll on an unmodified config', () => {
+      resetHistoryAndConfig();
+      act(() => {
+        useConfigStore.getState().setAppliedTheme('Dracula');
+        useConfigStore.getState().resetAll();
+      });
+      expect(useHistoryStore.getState().past).toHaveLength(0);
+      expect(getStoreState().appliedTheme).toBeNull();
+    });
+
+    it('should still record a burst that changes a value', () => {
+      resetHistoryAndConfig();
+      act(() => {
+        useConfigStore.getState().setValue('font-size', 16);
+        useConfigStore.getState().setValue('font-size', 16);
+        useConfigStore.getState().setValue('font-size', 17);
+      });
+      expect(useHistoryStore.getState().past).toHaveLength(1);
+      act(() => {
+        useConfigStore.getState().undo();
+      });
+      expect(getStoreState().config).toEqual({});
+    });
   });
 
   describe('targetVersion', () => {
