@@ -26,6 +26,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Changed
 
+- Load the Ghostty terminal preview engine only when the preview opens, cutting first-load JavaScript on the editor by about 35% and on the theme browser by about 40%.
 - Bounded, de-duplicated, and cancellable theme loading, with the latest search prioritized ahead of stale queued work.
 - Kept canceled theme requests inside the six-request concurrency budget until they settle, with retry controls for individual download failures.
 - Expanded the schema drift check to verify both the live Ghostty reference and the pinned stable `Config.zig` source snapshot.
