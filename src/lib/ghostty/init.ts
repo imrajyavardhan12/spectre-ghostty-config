@@ -1,5 +1,3 @@
-import { init as ghosttyInit } from "ghostty-web";
-
 let initialized = false;
 let initPromise: Promise<void> | null = null;
 
@@ -14,7 +12,10 @@ export async function initGhostty(): Promise<void> {
 
   initPromise = (async () => {
     try {
-      await ghosttyInit();
+      // Dynamic import keeps ghostty-web (and its WASM loader) out of the
+      // page bundle until the preview is opened.
+      const { init } = await import("ghostty-web");
+      await init();
       initialized = true;
     } catch (error) {
       initPromise = null;
