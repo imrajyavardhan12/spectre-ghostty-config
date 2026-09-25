@@ -17,6 +17,7 @@
 import type { ConfigOption } from "@/lib/schema/types";
 import { allOptions } from "@/data/ghostty-options";
 import { validateConfigValue } from "@/lib/utils/config-validation";
+import { containsUnsafeValueCharacters } from "@/lib/security/config-value-safety";
 
 /** Hard caps applied during validation. Generous enough for any realistic
  *  hand-crafted config, small enough to bound memory and render cost. */
@@ -250,6 +251,13 @@ export function validateSharedConfig(
     const keyResult = validateKey(rawKey, ctx);
     if (keyResult.kind === "drop") {
       dropped.push({ key: keyResult.key, reason: keyResult.reason });
+      continue;
+    }
+
+    // Checked before type rules so every option type is covered: a line
+    // break in any value would become extra lines in the exported config.
+    if (containsUnsafeValueCharacters(rawValue)) {
+      dropped.push({ key: keyResult.key, reason: "control characters" });
       continue;
     }
 

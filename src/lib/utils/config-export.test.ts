@@ -125,4 +125,20 @@ future-option = "second = value"
       '# Warning: 1 option requires Ghostty newer than 1.0.0: progress-style.'
     );
   });
+  it('omits values with line breaks instead of writing injected lines', () => {
+    const output = exportGhosttyConfig({
+      title: 'Harmless\ncommand = /tmp/evil.sh',
+      keybind: ['ctrl+a=copy_to_clipboard', 'ctrl+b=paste\rinitial-command = x'],
+      'font-size': 14,
+    });
+
+    expect(output).toContain(
+      '# Warning: omitted 2 options with line breaks in the value: keybind, title.'
+    );
+    expect(output).toContain('font-size = 14');
+    expect(output).not.toMatch(/^command = /m);
+    expect(output).not.toContain('keybind = ctrl+a=copy_to_clipboard');
+    expect(output).not.toContain('\r');
+    expect(Object.keys(analyzeGhosttyConfig(output).candidateConfig)).toEqual(['font-size']);
+  });
 });

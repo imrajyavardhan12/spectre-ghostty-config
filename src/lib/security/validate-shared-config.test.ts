@@ -262,6 +262,26 @@ describe("validateSharedConfig", () => {
     const result = validateSharedConfig({ "resize-overlay-duration": "0" });
     expect(result.config).toEqual({ "resize-overlay-duration": "0" });
   });
+  it("drops values whose control characters would inject config lines", () => {
+    const result = validateSharedConfig({
+      title: "Harmless\ncommand = /tmp/evil.sh",
+      "font-family": ["JetBrains Mono", "Fira\rCode"],
+      "background-opacity": "0.9\n",
+      "font-size": 14,
+    });
+
+    expect(result.config).toEqual({ "font-size": 14 });
+    expect(result.dropped).toEqual([
+      { key: "title", reason: "control characters" },
+      { key: "font-family", reason: "control characters" },
+      { key: "background-opacity", reason: "control characters" },
+    ]);
+  });
+
+  it("keeps tabs, which are ordinary whitespace in Ghostty values", () => {
+    const result = validateSharedConfig({ title: "left\tright" });
+    expect(result.config).toEqual({ title: "left\tright" });
+  });
 });
 
 describe("validateSharedThemeName", () => {
