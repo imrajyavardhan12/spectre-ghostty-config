@@ -17,6 +17,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
+- Keybind validation now matches Ghostty's case-sensitive parsing, so miscased modifiers, prefixes, key names, and actions (`Ctrl+a`, `ctrl+ENTER`, `ctrl+a=New_Tab`) are flagged with the correct spelling instead of being exported and rejected by Ghostty.
 - Kept editor option cards within the viewport on narrow screens, where wide content such as the keybind editor was clipped.
 
 ## [0.4.0] - 2026-09-26
