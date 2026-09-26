@@ -40,7 +40,9 @@ interface KeybindInputProps {
 
 export function KeybindInput({ option }: KeybindInputProps) {
   const { getValue, setValue, resetValue } = useConfigStore();
-  const value = (getValue(option.id) as string[]) || [];
+  const stored = getValue(option.id) as string[] | undefined;
+  // Stable empty array so the conflict analyses below don't rerun every render.
+  const value = useMemo(() => stored ?? [], [stored]);
   const modified = useIsModified(option.id);
 
   const [newKey, setNewKey] = useState("");

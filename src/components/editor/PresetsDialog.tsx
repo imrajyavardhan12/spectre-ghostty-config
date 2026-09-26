@@ -10,7 +10,6 @@ import {
   Monitor,
   Moon,
   Sun,
-  Gauge,
   Presentation,
   Search,
   Check,
@@ -30,6 +29,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConfigStore } from "@/lib/store/config-store";
+import { exportGhosttyConfig } from "@/lib/utils/config-export";
+import { normalizeConfigValues } from "@/lib/utils/config-normalization";
 import { presets, presetCategories, searchPresets, ConfigPreset } from "@/data/presets";
 import { cn } from "@/lib/utils";
 
@@ -43,9 +44,102 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Monitor,
   Moon,
   Sun,
-  Gauge,
   Presentation,
 };
+
+const PLATFORM_LABELS: Record<string, string> = { macos: "macOS", linux: "Linux", windows: "Windows" };
+
+/** The exact Ghostty lines a preset writes, as the exporter would emit them. */
+function presetConfigLines(preset: ConfigPreset): string[] {
+  return exportGhosttyConfig(normalizeConfigValues(preset.config))
+    .split("\n")
+    .filter((line) => line && !line.startsWith("#"));
+}
+
+interface PresetCardProps {
+  preset: ConfigPreset;
+  applied: boolean;
+  onApply: (preset: ConfigPreset) => void;
+}
+
+function PresetCard({ preset, applied, onApply }: PresetCardProps) {
+  const Icon = iconMap[preset.icon] || Sparkles;
+  const headingId = `preset-${preset.id}-name`;
+  const lines = presetConfigLines(preset);
+
+  return (
+    <article
+      aria-labelledby={headingId}
+      className={cn(
+        "rounded-xl border p-4 transition-colors duration-200",
+        applied ? "border-primary bg-primary/10" : "hover:border-primary/50"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "p-2 rounded-lg transition-colors",
+            applied ? "bg-primary text-primary-foreground" : "bg-muted"
+          )}
+        >
+          {applied ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h4 id={headingId} className="font-medium text-sm">{preset.name}</h4>
+            {applied && (
+              <Badge variant="default" className="text-[10px] h-4">
+                Applied
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">{preset.description}</p>
+
+          {(preset.fonts.length > 0 || preset.platforms) && (
+            <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+              {preset.fonts.length > 0 && (
+                <li>Requires font: {preset.fonts.join(", ")}</li>
+              )}
+              {preset.platforms && (
+                <li>
+                  Fully applies on {preset.platforms.map((platform) => PLATFORM_LABELS[platform]).join(", ")}
+                </li>
+              )}
+            </ul>
+          )}
+
+          <details className="mt-2 group">
+            <summary className="cursor-pointer text-xs font-medium text-foreground/80 hover:text-foreground">
+              What it sets ({lines.length} {lines.length === 1 ? "line" : "lines"})
+            </summary>
+            <pre className="mt-2 max-h-48 overflow-auto rounded-md bg-muted/60 p-2 text-[11px] leading-relaxed font-mono whitespace-pre-wrap break-all">
+              {lines.join("\n")}
+            </pre>
+          </details>
+
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1">
+              {preset.tags.slice(0, 3).map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-[10px] h-4 px-1.5">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+            <Button
+              size="sm"
+              variant={applied ? "secondary" : "default"}
+              onClick={() => onApply(preset)}
+              aria-label={`Apply ${preset.name} preset`}
+              className="shrink-0"
+            >
+              {applied ? "Applied" : "Apply"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 interface PresetsDialogProps {
   trigger?: React.ReactNode;
@@ -54,76 +148,27 @@ interface PresetsDialogProps {
 export function PresetsDialog({ trigger }: PresetsDialogProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [appliedPreset, setAppliedPreset] = useState<string | null>(null);
-  const { loadConfig, resetAll } = useConfigStore();
+  const [appliedPreset, setAppliedPreset] = useState<ConfigPreset | null>(null);
+  const loadConfig = useConfigStore((state) => state.loadConfig);
 
-  const filteredPresets = searchQuery 
+  const filteredPresets = searchQuery
     ? searchPresets(searchQuery)
     : presets;
 
   const handleApplyPreset = (preset: ConfigPreset) => {
-    resetAll();
+    // loadConfig replaces the whole config as a single undo step.
     loadConfig(preset.config);
-    setAppliedPreset(preset.id);
-    
-    // Clear the applied indicator after a delay but keep dialog open
-    setTimeout(() => {
-      setAppliedPreset(null);
-    }, 2000);
+    setAppliedPreset(preset);
   };
 
-  const PresetCard = ({ preset }: { preset: ConfigPreset }) => {
-    const Icon = iconMap[preset.icon] || Sparkles;
-    const isApplied = appliedPreset === preset.id;
-
-    return (
-      <button
-        onClick={() => handleApplyPreset(preset)}
-        className={cn(
-          "w-full text-left p-4 rounded-xl border transition-all duration-200",
-          "hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm",
-          isApplied && "border-primary bg-primary/10"
-        )}
-      >
-        <div className="flex items-start gap-3">
-          <div className={cn(
-            "p-2 rounded-lg transition-colors",
-            isApplied ? "bg-primary text-primary-foreground" : "bg-muted"
-          )}>
-            {isApplied ? (
-              <Check className="h-5 w-5" />
-            ) : (
-              <Icon className="h-5 w-5" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className="font-medium text-sm">{preset.name}</h4>
-              {isApplied && (
-                <Badge variant="default" className="text-[10px] h-4">
-                  Applied
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-              {preset.description}
-            </p>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {preset.tags.slice(0, 3).map(tag => (
-                <Badge 
-                  key={tag} 
-                  variant="secondary" 
-                  className="text-[10px] h-4 px-1.5"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </div>
-      </button>
-    );
-  };
+  const renderCard = (preset: ConfigPreset) => (
+    <PresetCard
+      key={preset.id}
+      preset={preset}
+      applied={appliedPreset?.id === preset.id}
+      onApply={handleApplyPreset}
+    />
+  );
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -142,9 +187,15 @@ export function PresetsDialog({ trigger }: PresetsDialogProps) {
             Configuration Presets
           </SheetTitle>
           <SheetDescription>
-            Quick-start configurations for different use cases. Applying a preset will replace your current settings.
+            Curated configurations checked against the Ghostty reference. Applying one replaces your current settings; Undo brings them back.
           </SheetDescription>
         </SheetHeader>
+
+        <p role="status" className="sr-only">
+          {appliedPreset
+            ? `${appliedPreset.name} preset applied. Undo restores your previous settings.`
+            : ""}
+        </p>
 
         <div className="mt-6 space-y-4">
           {/* Search */}
@@ -164,9 +215,7 @@ export function PresetsDialog({ trigger }: PresetsDialogProps) {
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="space-y-3 pr-4">
                 {filteredPresets.length > 0 ? (
-                  filteredPresets.map(preset => (
-                    <PresetCard key={preset.id} preset={preset} />
-                  ))
+                  filteredPresets.map(renderCard)
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p className="text-sm">No presets found</p>
@@ -177,7 +226,7 @@ export function PresetsDialog({ trigger }: PresetsDialogProps) {
           ) : (
             // Show categorized presets
             <Tabs defaultValue="starter" className="w-full">
-              <TabsList className="w-full grid grid-cols-4 bg-muted/50 p-1 rounded-xl">
+              <TabsList className="w-full grid grid-cols-3 bg-muted/50 p-1 rounded-xl">
                 {presetCategories.map(cat => (
                   <TabsTrigger 
                     key={cat.id} 
@@ -198,9 +247,7 @@ export function PresetsDialog({ trigger }: PresetsDialogProps) {
                       </p>
                       {presets
                         .filter(p => p.category === cat.id)
-                        .map(preset => (
-                          <PresetCard key={preset.id} preset={preset} />
-                        ))}
+                        .map(renderCard)}
                     </div>
                   </ScrollArea>
                 </TabsContent>
