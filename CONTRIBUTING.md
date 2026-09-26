@@ -41,6 +41,7 @@ Open <http://localhost:3000>.
 | `bun run test:e2e:ui` | Open Playwright's interactive test runner |
 | `bun run build` | Create a production build |
 | `bun run schema:check` | Compare local options with Ghostty's reference |
+| `bun run keybinds:defaults` | Regenerate Ghostty's default keybinds from the pinned source (`--check` to verify) |
 
 Install Playwright's Chromium build before running browser tests for the first time:
 

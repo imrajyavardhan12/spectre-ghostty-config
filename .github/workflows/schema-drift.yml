@@ -32,3 +32,6 @@ jobs:
 
       - name: Check Ghostty schema drift
         run: bun run schema:check
+
+      - name: Check Ghostty default keybinds
+        run: bun run keybinds:defaults --check

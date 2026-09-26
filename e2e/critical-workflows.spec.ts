@@ -605,6 +605,33 @@ test("a user sees which keybinds have no effect and why", async ({ page }) => {
   await expect(keybinds.getByText(/^No effect:/)).toHaveCount(0);
 });
 
+test("a user sees which Ghostty default keybinds their rows change", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "spectre-config",
+      JSON.stringify({
+        state: {
+          config: { keybind: ["ctrl+shift+c=new_tab", "ctrl+tab=new_window"] },
+          appliedTheme: null,
+        },
+        version: 0,
+      })
+    );
+  });
+  await page.goto("/editor");
+  await page.getByRole("button", { name: /Keybinds/ }).click();
+
+  const keybinds = page.locator("#option-keybind");
+  await expect(
+    keybinds.getByText("Replaces Ghostty default ctrl+shift+c → copy_to_clipboard:mixed (Linux).")
+  ).toBeVisible();
+  await expect(
+    keybinds.getByText("Replaces Ghostty default ctrl+tab → next_tab (macOS, Linux).")
+  ).toBeVisible();
+  // Changing a default is a choice, not a conflict.
+  await expect(keybinds.locator('[role="status"]')).toHaveText("");
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');

@@ -31,6 +31,7 @@ import {
   analyzeKeybindConflicts,
   describeKeybindConflict,
 } from "@/lib/utils/keybind-conflicts";
+import { describeDefaultKeybindOverrides } from "@/lib/utils/keybind-default-overrides";
 import { cn } from "@/lib/utils";
 
 interface KeybindInputProps {
@@ -70,6 +71,9 @@ export function KeybindInput({ option }: KeybindInputProps) {
     () => new Map(analyzeKeybindConflicts(value).map((conflict) => [conflict.row, conflict])),
     [value]
   );
+
+  // Which of Ghostty's own default keybinds each row changes.
+  const defaultNotes = useMemo(() => describeDefaultKeybindOverrides(value), [value]);
 
   // Validate existing keybinds
   const validateExistingKeybind = (keybind: string) => {
@@ -211,6 +215,11 @@ export function KeybindInput({ option }: KeybindInputProps) {
                       {describeKeybindConflict(conflict)}
                     </p>
                   )}
+                  {defaultNotes.get(index)?.map((note) => (
+                    <p key={note} className="mt-1 pl-7 text-xs text-muted-foreground">
+                      {note}
+                    </p>
+                  ))}
                 </div>
               );
             })}

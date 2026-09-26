@@ -21,6 +21,7 @@ The machine-readable source for this row is [`compatibility.json`](compatibility
 | Import | Spectre parses Ghostty's `key = value` format into its structured model, including repeatable known values. For an unknown key, Spectre retains only its last value as a normalized string. Repeated unknown values, comments, ordering, and original quoting are not preserved. This is best-effort forward compatibility, not a lossless parser. |
 | Export | Spectre emits the current non-default configuration values in Ghostty's text format. The header names Spectre's schema target and warns when unknown options are present; it does not certify those options for the target release. Ghostty remains the runtime validator, especially for filesystem paths, installed fonts, platform-specific behavior, commands, shaders, and values whose validity depends on the host system. |
 | Share URLs | New links include a sanitized, human-readable path slug plus the compressed config payload. The slug is descriptive only; the validated payload remains authoritative. Legacy query-only links remain supported, and share routes are marked `noindex`. Shared payloads accept only options known to the current Spectre schema, so share URLs are not a lossless transport for future or nightly Ghostty options. |
+| Default keybinds | Keybind rows note which of Ghostty's default keybinds they change on macOS and Linux. The default tables are generated from the pinned stable `Config.zig` (`Keybinds.init`, evaluated per platform) into `src/data/ghostty-default-keybinds.ts`. Windows and other platforms are not modeled. |
 | Themes | Imported theme colors are translated to Ghostty color and palette options. The theme catalog is provided by iTerm2-Color-Schemes and is not part of Ghostty's compatibility contract. |
 | Browser preview | The preview is a focused visual aid, not a native Ghostty runtime. See [Preview scope](#preview-scope). |
 
@@ -61,7 +62,9 @@ Existing options usually continue to work, but compatibility is unverified until
 1. compares local option IDs with the moving official Ghostty config reference, catching upstream additions and removals;
 2. verifies that the declared release tag and immutable commit contain the same `Config.zig`, then compares its public option IDs with the local schema.
 
-The weekly [Ghostty Schema Drift workflow](.github/workflows/schema-drift.yml) runs the same command. Full compatibility updates also require maintainers to:
+`bun run keybinds:defaults --check` re-generates the default keybind tables from the pinned `Config.zig` and fails if the committed tables differ; the evaluator rejects any construct it does not recognize instead of guessing. Run `bun run keybinds:defaults` to regenerate after changing the pinned commit.
+
+The weekly [Ghostty Schema Drift workflow](.github/workflows/schema-drift.yml) runs both commands. Full compatibility updates also require maintainers to:
 
 1. review Ghostty release notes and source changes;
 2. update option types, defaults, values, platform restrictions, and availability metadata where needed;

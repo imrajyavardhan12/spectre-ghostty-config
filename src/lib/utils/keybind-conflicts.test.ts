@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeKeybindConflicts,
   describeKeybindConflict,
+  findDefaultKeybindOverrides,
 } from "@/lib/utils/keybind-conflicts";
 
 describe("analyzeKeybindConflicts", () => {
@@ -231,5 +232,51 @@ describe("describeKeybindConflict", () => {
     expect(describeKeybindConflict({ row: 1, kind: "cleared", byRow: 4 })).toBe(
       "No effect: removed by keybind = clear on row 5."
     );
+  });
+});
+
+describe("findDefaultKeybindOverrides", () => {
+  const defaults = [
+    { trigger: "super+c", action: "copy_to_clipboard:mixed" },
+    { trigger: "super+t", action: "new_tab" },
+    { trigger: "super+d", action: "new_split:right" },
+    { trigger: "super+k", action: "clear_screen" },
+  ];
+
+  it("reports defaults replaced by a different action, not rebinds to the same action", () => {
+    expect(
+      findDefaultKeybindOverrides(["cmd+c=paste_from_clipboard", "super+t=new_tab"], defaults)
+    ).toEqual([{ row: 0, kind: "replaces", default: defaults[0] }]);
+  });
+
+  it("reports sequences that take over a default trigger", () => {
+    expect(findDefaultKeybindOverrides(["super+d>r=new_split:right"], defaults)).toEqual([
+      { row: 0, kind: "sequence-prefix", default: defaults[2] },
+    ]);
+  });
+
+  it("reports unbinds and clear", () => {
+    expect(findDefaultKeybindOverrides(["super+k=unbind", "clear"], defaults)).toEqual([
+      { row: 0, kind: "unbound", default: defaults[3] },
+      { row: 1, kind: "cleared", default: defaults[0] },
+      { row: 1, kind: "cleared", default: defaults[1] },
+      { row: 1, kind: "cleared", default: defaults[2] },
+    ]);
+  });
+
+  it("attributes a displaced default to the row that finally owns its trigger", () => {
+    expect(
+      findDefaultKeybindOverrides(
+        ["super+c=new_window", "super+c=paste_from_clipboard", "super+t>x=close_tab", "super+t=new_window"],
+        defaults
+      )
+    ).toEqual([
+      { row: 1, kind: "replaces", default: defaults[0] },
+      { row: 3, kind: "replaces", default: defaults[1] },
+    ]);
+  });
+
+  it("ignores key tables, which never touch the default set", () => {
+    expect(findDefaultKeybindOverrides(["vim/super+c=new_tab"], defaults)).toEqual([]);
   });
 });
