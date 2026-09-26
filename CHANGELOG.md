@@ -11,6 +11,14 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+### Added
+
+- The keybind editor now flags rows that have no effect in Ghostty and names the row responsible: a later duplicate trigger, a key sequence that takes over the trigger, a sequence whose prefix is rebound, `unbind`, `keybind = clear`, or a key table reset. Resolution follows Ghostty 1.3's rules, including prefix-insensitive triggers, modifier aliases, case-folded characters, and 1.1.x key names.
+
+### Fixed
+
+- Kept editor option cards within the viewport on narrow screens, where wide content such as the keybind editor was clipped.
+
 ## [0.4.0] - 2026-09-26
 
 ### Added
