@@ -887,7 +887,7 @@ const EMPTY_PARAMETER_ACTIONS = new Set([
   "text",
 ]);
 
-function findKeybindDelimiter(input: string): number {
+export function findKeybindDelimiter(input: string): number {
   let offset = 0;
   while (offset < input.length) {
     const equalsIndex = input.indexOf("=", offset);
