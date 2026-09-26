@@ -42,6 +42,7 @@ Open <http://localhost:3000>.
 | `bun run build` | Create a production build |
 | `bun run schema:check` | Compare local options with Ghostty's reference |
 | `bun run keybinds:defaults` | Regenerate Ghostty's default keybinds from the pinned source (`--check` to verify) |
+| `bun run themes:builtin` | Regenerate the pinned release's built-in theme names (`--check` to verify) |
 
 Install Playwright's Chromium build before running browser tests for the first time:
 
@@ -78,6 +79,10 @@ Only advance Spectre's stable target for an official Ghostty release. In the sam
 5. run the complete validation suite, including schema and browser checks.
 
 Do not describe nightly or unreleased Ghostty behavior as stable compatibility.
+
+## Contributing presets
+
+Curated presets follow the rules in [docs/PRESETS.md](docs/PRESETS.md), which `src/data/presets.test.ts` enforces. Propose one with the [preset proposal template](https://github.com/imrajyavardhan12/spectre-ghostty-config/issues/new?template=preset_proposal.yml) or a pull request.
 
 ## Pull request workflow
 

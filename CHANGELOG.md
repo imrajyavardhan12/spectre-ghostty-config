@@ -11,7 +11,13 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+### Changed
+
+- Rewrote the built-in presets so each one sets only values that differ from Ghostty's defaults, uses built-in Ghostty themes (including automatic light/dark pairs) instead of partial hand-copied colors, declares required fonts, and keeps Ghostty's default keybinds. New presets include tmux-style Leader Keys, Rosé Pine, and Catppuccin; per-terminal scrollback is now sized conservatively.
+
 ### Added
+
+- A CI quality gate for presets (valid values, no default-equal values, conflict-free keybinds, themes bundled with the target Ghostty release, declared fonts and platforms), and a generated list of Ghostty 1.3.1's built-in theme names, checked weekly for drift.
 
 - Keybind rows now note which of Ghostty's default keybinds they replace, take over with a sequence, unbind, or clear, per platform (macOS and Linux). The defaults are generated from Ghostty 1.3.1's `Keybinds.init` source and checked weekly for drift.
 - The keybind editor now flags rows that have no effect in Ghostty and names the row responsible: a later duplicate trigger, a key sequence that takes over the trigger, a sequence whose prefix is rebound, `unbind`, `keybind = clear`, or a key table reset. Resolution follows Ghostty 1.3's rules, including prefix-insensitive triggers, modifier aliases, case-folded characters, and 1.1.x key names.
