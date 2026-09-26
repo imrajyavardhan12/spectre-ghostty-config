@@ -3,6 +3,11 @@ import { presets, getPresetsByCategory, searchPresets, presetCategories, type Co
 import { allOptions } from '@/data/ghostty-options';
 import type { ConfigOption, StringOption } from '@/lib/schema/types';
 import { validateKeybind } from '@/lib/utils/keybind-validation';
+import { validateConfigValue } from '@/lib/utils/config-validation';
+import { normalizeConfigValues } from '@/lib/utils/config-normalization';
+import { analyzeKeybindConflicts, findDefaultKeybindOverrides } from '@/lib/utils/keybind-conflicts';
+import { GHOSTTY_DEFAULT_KEYBINDS } from '@/data/ghostty-default-keybinds';
+import { GHOSTTY_BUILTIN_THEMES } from '@/data/ghostty-builtin-themes';
 
 function getPresetValueValidationError(option: ConfigOption, value: unknown): string | null {
   const typeName = Array.isArray(value) ? 'array' : typeof value;
@@ -65,7 +70,7 @@ describe('presets', () => {
     });
 
     it('should have valid categories', () => {
-      const validCategories: ConfigPreset['category'][] = ['starter', 'workflow', 'aesthetic', 'performance'];
+      const validCategories: ConfigPreset['category'][] = ['starter', 'workflow', 'aesthetic'];
       for (const preset of presets) {
         expect(validCategories).toContain(preset.category);
       }
@@ -130,12 +135,6 @@ describe('presets', () => {
       expect(aestheticPresets.every(p => p.category === 'aesthetic')).toBe(true);
     });
 
-    it('should return performance presets', () => {
-      const performancePresets = getPresetsByCategory('performance');
-      expect(performancePresets.length).toBeGreaterThan(0);
-      expect(performancePresets.every(p => p.category === 'performance')).toBe(true);
-    });
-
     it('should return empty array for unknown category', () => {
       const unknownPresets = getPresetsByCategory('unknown' as ConfigPreset['category']);
       expect(unknownPresets).toEqual([]);
@@ -170,20 +169,15 @@ describe('presets', () => {
   });
 
   describe('presetCategories', () => {
-    it('should have 4 categories', () => {
-      expect(presetCategories).toHaveLength(4);
-    });
-
     it('should have unique ids', () => {
       const ids = presetCategories.map(c => c.id);
-      const uniqueIds = new Set(ids);
-      expect(uniqueIds.size).toBe(ids.length);
+      expect(new Set(ids).size).toBe(ids.length);
     });
 
-    it('should have all expected category ids', () => {
-      const expectedIds = ['starter', 'workflow', 'aesthetic', 'performance'];
+    it('should cover every category used by a preset', () => {
       const categoryIds = presetCategories.map(c => c.id);
-      expect(categoryIds).toEqual(expect.arrayContaining(expectedIds));
+      expect(categoryIds).toEqual(['starter', 'workflow', 'aesthetic']);
+      for (const preset of presets) expect(categoryIds).toContain(preset.category);
     });
 
     it('should have descriptions for all categories', () => {
@@ -194,25 +188,16 @@ describe('presets', () => {
   });
 
   describe('specific presets', () => {
-    it('minimal preset should have reasonable font-size', () => {
-      const minimal = presets.find(p => p.id === 'minimal');
-      expect(minimal?.config['font-size']).toBe(14);
+    it('leader keys send ctrl+a to the shell when pressed twice', () => {
+      const leader = presets.find(p => p.id === 'leader-keys');
+      expect(leader?.config.keybind).toContain('ctrl+a>ctrl+a=text:\\x01');
     });
 
-    it('developer preset should have font-feature for ligatures', () => {
-      const developer = presets.find(p => p.id === 'developer');
-      expect(developer?.config['font-feature']).toContain('liga');
-    });
-
-    it('poweruser preset should have keybinds', () => {
-      const poweruser = presets.find(p => p.id === 'poweruser');
-      expect(poweruser?.config['keybind']).toBeDefined();
-      expect(Array.isArray(poweruser?.config['keybind'])).toBe(true);
-    });
-
-    it('retro preset should have green colors', () => {
-      const retro = presets.find(p => p.id === 'retro');
-      expect(retro?.config['foreground']).toBe('#33ff33');
+    it('auto light/dark presets name both themes', () => {
+      for (const id of ['rose-pine', 'catppuccin']) {
+        const theme = presets.find(p => p.id === id)?.config.theme as string;
+        expect(theme).toMatch(/^light:[^,]+,dark:.+$/);
+      }
     });
 
     it('presentation preset should have large font-size', () => {
@@ -222,27 +207,71 @@ describe('presets', () => {
   });
 });
 
-describe('presets integration with config store', () => {
-  it('minimal preset should be loadable into config format', () => {
-    const minimal = presets.find(p => p.id === 'minimal');
-    expect(minimal).toBeDefined();
+// The rules in docs/PRESETS.md. Every preset must pass all of them.
+describe('preset quality gate', () => {
+  const optionsById = new Map(allOptions.map(option => [option.id, option]));
 
-    // Verify config structure matches what config-store expects
-    const config = minimal!.config;
-    expect(typeof config['font-size']).toBe('number');
-    expect(typeof config['window-padding-x']).toBe('string');
-  });
+  /** Theme names referenced by a `theme` value, including light:/dark: pairs. */
+  function themeNames(value: string): string[] {
+    if (!/(^|,)\s*(light|dark):/.test(value)) return [value.trim()];
+    return value.split(',').map(part => part.replace(/^\s*(light|dark):/, '').trim());
+  }
 
-  it('poweruser keybinds should be valid keybind format', () => {
-    const poweruser = presets.find(p => p.id === 'poweruser');
-    const keybinds = poweruser?.config['keybind'] as string[] | undefined;
-    expect(keybinds).toBeDefined();
-    
-    for (const keybind of keybinds!) {
-      expect(keybind).toContain('=');
-      const [trigger, action] = keybind.split('=');
-      expect(trigger.length).toBeGreaterThan(0);
-      expect(action.length).toBeGreaterThan(0);
-    }
+  for (const preset of presets) {
+    describe(preset.id, () => {
+      it('passes the editor validators for every value', () => {
+        for (const [key, value] of Object.entries(preset.config)) {
+          const option = optionsById.get(key)!;
+          const result = validateConfigValue(option, value as never);
+          expect(result.valid, `${key}: ${JSON.stringify(result)}`).toBe(true);
+        }
+      });
+
+      it('sets no value equal to Ghostty\'s default', () => {
+        const effective = normalizeConfigValues(preset.config);
+        expect(Object.keys(preset.config).filter(key => !(key in effective))).toEqual([]);
+      });
+
+      it('uses keybinds that are valid, effective, and keep Ghostty\'s defaults', () => {
+        const keybinds = (preset.config.keybind as string[] | undefined) ?? [];
+        for (const keybind of keybinds) {
+          expect(validateKeybind(keybind), keybind).toEqual({ valid: true, errors: [], warnings: [] });
+        }
+        expect(analyzeKeybindConflicts(keybinds)).toEqual([]);
+        expect(findDefaultKeybindOverrides(keybinds, GHOSTTY_DEFAULT_KEYBINDS.macos)).toEqual([]);
+        expect(findDefaultKeybindOverrides(keybinds, GHOSTTY_DEFAULT_KEYBINDS.linux)).toEqual([]);
+      });
+
+      it('only references themes bundled with the target Ghostty release', () => {
+        const theme = preset.config.theme;
+        if (theme === undefined) return;
+        for (const name of themeNames(theme as string)) {
+          expect(GHOSTTY_BUILTIN_THEMES, `theme "${name}"`).toContain(name);
+        }
+      });
+
+      it('declares every font it uses, and only those', () => {
+        const families = ['font-family', 'font-family-bold', 'font-family-italic', 'font-family-bold-italic']
+          .flatMap(key => {
+            const value = preset.config[key];
+            return value === undefined ? [] : Array.isArray(value) ? value : [value];
+          }) as string[];
+        expect([...new Set(families)].sort()).toEqual([...preset.fonts].sort());
+      });
+
+      it('declares platforms when it uses platform-specific options', () => {
+        for (const key of Object.keys(preset.config)) {
+          const platforms = optionsById.get(key)!.platform;
+          if (!platforms || platforms.length === 0) continue;
+          expect(preset.platforms, `${key} is limited to ${platforms.join(', ')}`).toBeDefined();
+          for (const platform of preset.platforms!) expect(platforms, key).toContain(platform);
+        }
+      });
+    });
+  }
+
+  it('recognizes light/dark theme pairs', () => {
+    expect(themeNames('light:Rose Pine Dawn,dark:Rose Pine')).toEqual(['Rose Pine Dawn', 'Rose Pine']);
+    expect(themeNames('TokyoNight')).toEqual(['TokyoNight']);
   });
 });

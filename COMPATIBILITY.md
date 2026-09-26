@@ -22,6 +22,7 @@ The machine-readable source for this row is [`compatibility.json`](compatibility
 | Export | Spectre emits the current non-default configuration values in Ghostty's text format. The header names Spectre's schema target and warns when unknown options are present; it does not certify those options for the target release. Ghostty remains the runtime validator, especially for filesystem paths, installed fonts, platform-specific behavior, commands, shaders, and values whose validity depends on the host system. |
 | Share URLs | New links include a sanitized, human-readable path slug plus the compressed config payload. The slug is descriptive only; the validated payload remains authoritative. Legacy query-only links remain supported, and share routes are marked `noindex`. Shared payloads accept only options known to the current Spectre schema, so share URLs are not a lossless transport for future or nightly Ghostty options. |
 | Default keybinds | Keybind rows note which of Ghostty's default keybinds they change on macOS and Linux. The default tables are generated from the pinned stable `Config.zig` (`Keybinds.init`, evaluated per platform) into `src/data/ghostty-default-keybinds.ts`. Windows and other platforms are not modeled. |
+| Built-in theme names | `src/data/ghostty-builtin-themes.ts` lists the themes bundled with the pinned release (the `iterm2_themes` dependency in its `build.zig.zon`). Curated presets may only reference these names. |
 | Themes | Imported theme colors are translated to Ghostty color and palette options. The theme catalog is provided by iTerm2-Color-Schemes and is not part of Ghostty's compatibility contract. |
 | Browser preview | The preview is a focused visual aid, not a native Ghostty runtime. See [Preview scope](#preview-scope). |
 
@@ -64,7 +65,9 @@ Existing options usually continue to work, but compatibility is unverified until
 
 `bun run keybinds:defaults --check` re-generates the default keybind tables from the pinned `Config.zig` and fails if the committed tables differ; the evaluator rejects any construct it does not recognize instead of guessing. Run `bun run keybinds:defaults` to regenerate after changing the pinned commit.
 
-The weekly [Ghostty Schema Drift workflow](.github/workflows/schema-drift.yml) runs both commands. Full compatibility updates also require maintainers to:
+`bun run themes:builtin --check` does the same for the built-in theme names.
+
+The weekly [Ghostty Schema Drift workflow](.github/workflows/schema-drift.yml) runs all three commands. Full compatibility updates also require maintainers to:
 
 1. review Ghostty release notes and source changes;
 2. update option types, defaults, values, platform restrictions, and availability metadata where needed;

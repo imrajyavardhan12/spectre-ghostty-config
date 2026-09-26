@@ -169,6 +169,7 @@ Current priorities are upstream Ghostty correctness, end-to-end confidence, acce
 
 Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for setup, testing, Ghostty source-of-truth requirements, and the pull request workflow.
 
+- Propose a curated preset: see [docs/PRESETS.md](docs/PRESETS.md) for the rules every preset follows.
 - Browse [`good first issue`](https://github.com/imrajyavardhan12/spectre-ghostty-config/labels/good%20first%20issue) and [`help wanted`](https://github.com/imrajyavardhan12/spectre-ghostty-config/labels/help%20wanted) work.
 - Ask questions or explore early ideas in [GitHub Discussions](https://github.com/imrajyavardhan12/spectre-ghostty-config/discussions).
 - Read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.

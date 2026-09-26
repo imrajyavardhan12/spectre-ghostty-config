@@ -1,0 +1,53 @@
+name: Preset proposal
+description: Suggest a curated preset for Spectre's presets gallery
+title: "preset: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Presets must follow the rules in [docs/PRESETS.md](https://github.com/imrajyavardhan12/spectre-ghostty-config/blob/main/docs/PRESETS.md). CI enforces them, so checking them first saves a round trip.
+
+  - type: textarea
+    id: need
+    attributes:
+      label: Who is it for?
+      description: The one need this preset serves, such as reading comfort, screen sharing, or a theme.
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Config
+      description: Only values that differ from Ghostty's defaults, in Ghostty's `key = value` format.
+      render: ini
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why each setting
+      description: For each line, link the Ghostty config reference section and explain the chosen value.
+    validations:
+      required: true
+
+  - type: input
+    id: fonts
+    attributes:
+      label: Fonts that must be installed
+      placeholder: None, or e.g. VT323
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: Every value differs from Ghostty's default.
+          required: true
+        - label: Keybinds don't replace or unbind Ghostty's default keybinds.
+          required: true
+        - label: Any `theme` is built into the Ghostty release Spectre targets.
+          required: true

@@ -35,3 +35,6 @@ jobs:
 
       - name: Check Ghostty default keybinds
         run: bun run keybinds:defaults --check
+
+      - name: Check Ghostty built-in themes
+        run: bun run themes:builtin --check
