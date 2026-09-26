@@ -632,6 +632,29 @@ test("a user sees which Ghostty default keybinds their rows change", async ({ pa
   await expect(keybinds.locator('[role="status"]')).toHaveText("");
 });
 
+test("a user can inspect a preset, apply it, and undo it in one step", async ({ page }) => {
+  await page.goto("/editor");
+  const fontSize = page.locator("#option-font-size").getByRole("spinbutton");
+  await fontSize.fill("16");
+  await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Configuration Presets" }).click();
+  const comfortable = page.getByRole("article", { name: "Comfortable" });
+  await comfortable.getByText(/What it sets/).click();
+  await expect(comfortable.locator("pre")).toContainText("font-size = 15");
+  await expect(comfortable.locator("pre")).toContainText("adjust-cell-height = 8%");
+
+  await comfortable.getByRole("button", { name: "Apply Comfortable preset" }).click();
+  await expect(page.locator('[role="status"]').filter({ hasText: "Comfortable preset applied" })).toBeAttached();
+  await page.keyboard.press("Escape");
+  await expect(fontSize).toHaveValue("15");
+
+  // Applying is a single history step: one undo restores the previous config.
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(fontSize).toHaveValue("16");
+  await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');

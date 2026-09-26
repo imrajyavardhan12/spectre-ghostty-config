@@ -371,3 +371,15 @@ test("keybind conflict warnings meet WCAG A and AA", async ({ page }) => {
 
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
+
+test("the presets panel has no automatically detectable WCAG A or AA violations", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await page.getByRole("button", { name: "Configuration Presets" }).click();
+  const minimal = page.getByRole("article", { name: "Minimal" });
+  await minimal.getByText(/What it sets/).click();
+  await expect(minimal.locator("pre")).toContainText("window-padding-balance = true");
+
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
