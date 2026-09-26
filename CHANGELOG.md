@@ -13,6 +13,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Changed
 
+- Preset cards now show exactly which Ghostty lines a preset writes, required fonts, and platforms, with an explicit Apply button instead of applying on any click.
 - Rewrote the built-in presets so each one sets only values that differ from Ghostty's defaults, uses built-in Ghostty themes (including automatic light/dark pairs) instead of partial hand-copied colors, declares required fonts, and keeps Ghostty's default keybinds. New presets include tmux-style Leader Keys, Rosé Pine, and Catppuccin; per-terminal scrollback is now sized conservatively.
 
 ### Added
@@ -24,6 +25,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
+- Applying a preset is now a single undo step; previously one Undo left an empty config instead of the settings you had before.
 - Keybind validation now matches Ghostty's case-sensitive parsing, so miscased modifiers, prefixes, key names, and actions (`Ctrl+a`, `ctrl+ENTER`, `ctrl+a=New_Tab`) are flagged with the correct spelling instead of being exported and rejected by Ghostty.
 - Kept editor option cards within the viewport on narrow screens, where wide content such as the keybind editor was clipped.
 
