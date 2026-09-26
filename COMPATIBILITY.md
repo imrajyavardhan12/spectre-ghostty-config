@@ -6,7 +6,7 @@ Spectre treats Ghostty—not Spectre's UI, preview, or local schema—as the fin
 
 | Spectre release line | Verified Ghostty stable release | Public config option IDs | Last verified |
 | --- | --- | ---: | --- |
-| `0.3.x` | [`1.3.1`](https://ghostty.org/docs/install/release-notes/1-3-1) | 202 | 2026-08-22 |
+| `0.4.x` | [`1.3.1`](https://ghostty.org/docs/install/release-notes/1-3-1) | 202 | 2026-09-26 |
 
 The machine-readable source for this row is [`compatibility.json`](compatibility.json). The stable schema is pinned to Ghostty's immutable [`v1.3.1` Config.zig snapshot](https://github.com/ghostty-org/ghostty/blob/v1.3.1/src/config/Config.zig). Spectre's 202 local option IDs match both that stable source snapshot and the current [official configuration reference](https://ghostty.org/docs/config/reference).
 
@@ -44,7 +44,7 @@ Always validate a final exported config with the Ghostty version and platform wh
 
 ### Ghostty 1.3.1
 
-This is the verified stable target for Spectre `0.3.x`. Option IDs are checked against the immutable release source and the live official reference. Ghostty 1.3.1 introduced [`progress-style`](https://ghostty.org/docs/install/release-notes/1-3-1), which Spectre marks at the patch-level version where it first appears.
+This is the verified stable target for Spectre `0.4.x`. Option IDs are checked against the immutable release source and the live official reference. Ghostty 1.3.1 introduced [`progress-style`](https://ghostty.org/docs/install/release-notes/1-3-1), which Spectre marks at the patch-level version where it first appears.
 
 ### Older Ghostty releases
 

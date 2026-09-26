@@ -77,7 +77,7 @@ body:
     attributes:
       label: Spectre version
       description: Shown in the app and generated config header.
-      placeholder: 0.3.0
+      placeholder: 0.4.0
     validations:
       required: true
 

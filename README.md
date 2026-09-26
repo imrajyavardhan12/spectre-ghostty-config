@@ -127,7 +127,7 @@ rapid typing on one setting collapses into a single step, and a new edit clears 
 
 ## Ghostty Source of Truth
 
-Spectre `0.3.x` currently targets [Ghostty 1.3.1](https://ghostty.org/docs/install/release-notes/1-3-1). The local schema contains all 202 public option IDs from that stable release. See the [compatibility policy](COMPATIBILITY.md) for the exact guarantees, version behavior, verification snapshot, and browser-preview limits.
+Spectre `0.4.x` currently targets [Ghostty 1.3.1](https://ghostty.org/docs/install/release-notes/1-3-1). The local schema contains all 202 public option IDs from that stable release. See the [compatibility policy](COMPATIBILITY.md) for the exact guarantees, version behavior, verification snapshot, and browser-preview limits.
 
 Spectre treats the official Ghostty project as the source of truth for configuration behavior:
 
