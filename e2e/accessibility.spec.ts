@@ -349,3 +349,25 @@ test("a share page with a security warning has no automatically detectable WCAG 
 
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
+
+test("keybind conflict warnings meet WCAG A and AA", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "spectre-config",
+      JSON.stringify({
+        state: {
+          config: { keybind: ["ctrl+a=new_window", "ctrl+a>n=new_tab", "clear"] },
+          appliedTheme: null,
+        },
+        version: 0,
+      })
+    );
+  });
+  await page.goto("/editor");
+  await page.getByRole("button", { name: /Keybinds/ }).click();
+  await expect(
+    page.getByText("No effect: row 2 uses this trigger to start a key sequence.")
+  ).toBeVisible();
+
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});

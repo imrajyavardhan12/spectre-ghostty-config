@@ -27,6 +27,10 @@ import {
   KEYBIND_ACTIONS,
   KEYBIND_EXAMPLES,
 } from "@/lib/utils/keybind-validation";
+import {
+  analyzeKeybindConflicts,
+  describeKeybindConflict,
+} from "@/lib/utils/keybind-conflicts";
 import { cn } from "@/lib/utils";
 
 interface KeybindInputProps {
@@ -60,6 +64,12 @@ export function KeybindInput({ option }: KeybindInputProps) {
     const validation = validateKeybind(`${newKey}=${newAction}`);
     return validation.valid;
   }, [newKey, newAction]);
+
+  // Rows Ghostty would ignore once every row is applied in order.
+  const conflicts = useMemo(
+    () => new Map(analyzeKeybindConflicts(value).map((conflict) => [conflict.row, conflict])),
+    [value]
+  );
 
   // Validate existing keybinds
   const validateExistingKeybind = (keybind: string) => {
@@ -119,17 +129,22 @@ export function KeybindInput({ option }: KeybindInputProps) {
         {/* Existing keybinds */}
         {value.length > 0 && (
           <div className="space-y-2">
+            <p role="status" className="text-xs text-amber-700 dark:text-amber-300 empty:sr-only">
+              {conflicts.size > 0 &&
+                `${conflicts.size} of ${value.length} keybinds ${conflicts.size === 1 ? "has" : "have"} no effect in Ghostty.`}
+            </p>
             {value.map((keybind, index) => {
               const { key, action } = parseKeybind(keybind);
               const validation = validateExistingKeybind(keybind);
+              const conflict = conflicts.get(index);
               const hasErrors = !validation.valid;
-              const hasWarnings = validation.warnings.length > 0;
+              const hasWarnings = validation.warnings.length > 0 || conflict !== undefined;
 
               return (
                 <div
                   key={index}
                   className={cn(
-                    "flex items-center gap-2 rounded-md border p-2",
+                    "rounded-md border p-2",
                     hasErrors
                       ? "border-destructive/50 bg-destructive/5"
                       : hasWarnings
@@ -137,50 +152,65 @@ export function KeybindInput({ option }: KeybindInputProps) {
                         : "border-border bg-muted/50"
                   )}
                 >
-                  <Keyboard className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <Badge variant="secondary" className="font-mono">
-                    {key}
-                  </Badge>
-                  <span className="text-muted-foreground">→</span>
-                  <span className="flex-1 font-mono text-sm truncate">{action}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                      {index + 1}
+                    </span>
+                    <Keyboard className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <Badge variant="secondary" className="font-mono min-w-0 max-w-[55%] shrink" title={key}>
+                      <span className="truncate">{key}</span>
+                    </Badge>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="min-w-0 flex-1 font-mono text-sm truncate">{action}</span>
 
-                  {/* Validation indicator */}
-                  {(hasErrors || hasWarnings) && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertCircle
-                            className={cn(
-                              "h-4 w-4 shrink-0",
-                              hasErrors ? "text-destructive" : "text-amber-500"
-                            )}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-xs">
-                          <div className="space-y-1">
-                            {/* Tooltip surfaces are inverted (light bg in dark theme), so severity
-                                colors use the opposite pairing from normal surfaces. */}
-                            {validation.errors.map((err, i) => (
-                              <p key={i} className="text-xs text-red-300 dark:text-red-700">{err}</p>
-                            ))}
-                            {validation.warnings.map((warn, i) => (
-                              <p key={i} className="text-xs text-amber-300 dark:text-amber-800">{warn}</p>
-                            ))}
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {/* Validation indicator */}
+                    {(hasErrors || hasWarnings) && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertCircle
+                              className={cn(
+                                "h-4 w-4 shrink-0",
+                                hasErrors ? "text-destructive" : "text-amber-500"
+                              )}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs">
+                            <div className="space-y-1">
+                              {/* Tooltip surfaces are inverted (light bg in dark theme), so severity
+                                  colors use the opposite pairing from normal surfaces. */}
+                              {validation.errors.map((err, i) => (
+                                <p key={i} className="text-xs text-red-300 dark:text-red-700">{err}</p>
+                              ))}
+                              {validation.warnings.map((warn, i) => (
+                                <p key={i} className="text-xs text-amber-300 dark:text-amber-800">{warn}</p>
+                              ))}
+                              {conflict && (
+                                <p className="text-xs text-amber-300 dark:text-amber-800">
+                                  {describeKeybindConflict(conflict)}
+                                </p>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => removeKeybind(index)}
+                      aria-label={`Remove keybind ${keybind}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {conflict && (
+                    <p className="mt-1 pl-7 text-xs text-amber-700 dark:text-amber-300">
+                      {describeKeybindConflict(conflict)}
+                    </p>
                   )}
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 shrink-0"
-                    onClick={() => removeKeybind(index)}
-                    aria-label={`Remove keybind ${keybind}`}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
                 </div>
               );
             })}
@@ -189,7 +219,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
 
         {/* Add new keybind */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Input
                 type="text"

@@ -567,6 +567,44 @@ test("a user can target, hide, and still export newer options with warnings", as
   expect(downloadedConfig).toContain("background-image = /tmp/bg.png");
 });
 
+test("a user sees which keybinds have no effect and why", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "spectre-config",
+      JSON.stringify({
+        state: {
+          config: {
+            keybind: [
+              "ctrl+a=copy_to_clipboard",
+              "ctrl+x>n=new_window",
+              "ctrl+A=paste_from_clipboard",
+            ],
+          },
+          appliedTheme: null,
+        },
+        version: 0,
+      })
+    );
+  });
+  await page.goto("/editor");
+  await page.getByRole("button", { name: /Keybinds/ }).click();
+
+  const keybinds = page.locator("#option-keybind");
+  await expect(keybinds.getByRole("status")).toHaveText(
+    "1 of 3 keybinds has no effect in Ghostty."
+  );
+  await expect(
+    keybinds.getByText("No effect: row 3 binds the same trigger to a different action.")
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Remove keybind ctrl+A=paste_from_clipboard" })
+    .click();
+  // The live region stays mounted (empty) so later conflicts are announced.
+  await expect(keybinds.locator('[role="status"]')).toHaveText("");
+  await expect(keybinds.getByText(/^No effect:/)).toHaveCount(0);
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');
