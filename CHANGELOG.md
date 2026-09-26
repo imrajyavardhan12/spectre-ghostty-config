@@ -13,6 +13,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Added
 
+- Share links that set options which run programs (`command`, `initial-command`, `input`, `env`, `config-file`) or relax clipboard protections now show a security notice listing those values before you copy, download, or open the config.
 - Added local undo and redo across editor mutations, with header buttons, keyboard shortcuts, and recovery from destructive actions.
 - Added a Ghostty target-version selector to the editor sidebar, persisted across reloads, so filtering and warnings can follow the release installed where a config will run.
 - Exported configs now name options that need a Ghostty release newer than the selected target instead of failing silently on older installations.
