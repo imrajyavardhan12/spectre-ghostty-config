@@ -56,8 +56,10 @@ export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
   const categoryInfo = categories.find((c) => c.id === category);
   const Icon = iconMap[categoryInfo?.icon || "Settings"] || Settings;
 
+  // Radix wraps viewport content in a display:table div that grows to its
+  // min-content width; block keeps options within narrow screens.
   return (
-    <ScrollArea className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)]">
+    <ScrollArea className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)] [&_[data-slot=scroll-area-viewport]>div]:block!">
       <div className="p-6 max-w-3xl mx-auto" key={category}>
         {/* Category header */}
         <div className="mb-8 animate-fade-down">
