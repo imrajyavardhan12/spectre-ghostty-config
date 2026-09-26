@@ -13,6 +13,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "schema:check": "bun run scripts/check-ghostty-schema-drift.ts",
+    "keybinds:defaults": "bun run scripts/generate-ghostty-default-keybinds.ts",
     "postinstall": "cp node_modules/ghostty-web/ghostty-vt.wasm public/ 2>/dev/null || true",
     "test": "vitest",
     "test:watch": "vitest watch",

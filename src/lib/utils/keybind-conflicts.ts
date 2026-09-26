@@ -6,6 +6,7 @@
 //   src/input/Binding.zig (Parser, Trigger.parse, Set.parseAndPut)
 
 import { findKeybindDelimiter } from "@/lib/utils/keybind-validation";
+import type { GhosttyDefaultKeybind } from "@/lib/utils/ghostty-default-keybinds-extract";
 
 export type KeybindConflictKind =
   /** A later row binds the same trigger to a different action. */
@@ -201,12 +202,15 @@ function normalizeAction(action: string): string {
     : `${action.slice(0, colon).toLowerCase()}:${action.slice(colon + 1)}`;
 }
 
-/**
- * Find `keybind` rows that have no effect once Ghostty applies all rows in
- * order. Invalid rows are ignored (the row validator reports them). Returns
- * at most one conflict per row: the first thing that removed it.
- */
-export function analyzeKeybindConflicts(entries: readonly string[]): KeybindConflict[] {
+interface Replay {
+  /** Row index -> the first thing that removed that row's binding. */
+  conflicts: Map<number, KeybindConflict>;
+  /** Row index -> normalized action, for rows that bound something. */
+  actions: Map<number, string>;
+}
+
+/** Apply rows in order the way Ghostty does, recording what removed each binding. */
+function replay(entries: readonly string[]): Replay {
   // table -> sequence key ("ctrl+u:a>u:n") -> row index of the active binding
   const tables = new Map<string, Map<string, number>>();
   const conflicts = new Map<number, KeybindConflict>();
@@ -283,7 +287,73 @@ export function analyzeKeybindConflicts(entries: readonly string[]): KeybindConf
     actions.set(index, normalizeAction(entry.action));
   });
 
-  return [...conflicts.values()].sort((a, b) => a.row - b.row);
+  return { conflicts, actions };
+}
+
+/**
+ * Find `keybind` rows that have no effect once Ghostty applies all rows in
+ * order. Invalid rows are ignored (the row validator reports them). Returns
+ * at most one conflict per row: the first thing that removed it.
+ */
+export function analyzeKeybindConflicts(entries: readonly string[]): KeybindConflict[] {
+  return [...replay(entries).conflicts.values()].sort((a, b) => a.row - b.row);
+}
+
+export type DefaultKeybindOverrideKind =
+  /** The row binds a default's trigger to a different action. */
+  | "replaces"
+  /** The row's key sequence starts with a default's trigger. */
+  | "sequence-prefix"
+  /** The row unbinds a default. */
+  | "unbound"
+  /** The row is `keybind = clear`, which removes every default. */
+  | "cleared";
+
+export interface DefaultKeybindOverride {
+  /** Zero-based index of the row responsible. */
+  row: number;
+  kind: DefaultKeybindOverrideKind;
+  default: GhosttyDefaultKeybind;
+}
+
+const DEFAULT_OVERRIDE_KIND: Record<KeybindConflictKind, DefaultKeybindOverrideKind> = {
+  overridden: "replaces",
+  duplicate: "replaces",
+  "prefix-rebound": "replaces",
+  "sequence-prefix": "sequence-prefix",
+  unbound: "unbound",
+  cleared: "cleared",
+  "table-cleared": "cleared",
+};
+
+/**
+ * Find which of Ghostty's default keybinds (for one platform) the user's
+ * rows displace. Ghostty applies user rows on top of its defaults, so the
+ * defaults are replayed first. A displaced default is attributed to the row
+ * that finally owns its trigger: if row 2 replaces a default and row 5 later
+ * overrides row 2, row 5 is responsible. Rebinding a default to the same
+ * action is not reported.
+ */
+export function findDefaultKeybindOverrides(
+  entries: readonly string[],
+  defaults: readonly GhosttyDefaultKeybind[]
+): DefaultKeybindOverride[] {
+  const seed = defaults.map((binding) => `${binding.trigger}=${binding.action}`);
+  const { conflicts, actions } = replay([...seed, ...entries]);
+  const overrides: DefaultKeybindOverride[] = [];
+
+  defaults.forEach((binding, index) => {
+    let hop = conflicts.get(index);
+    if (!hop) return;
+    // Follow the chain to the row whose effect is final.
+    while (conflicts.has(hop.byRow)) hop = conflicts.get(hop.byRow)!;
+
+    const kind = DEFAULT_OVERRIDE_KIND[hop.kind];
+    if (kind === "replaces" && actions.get(hop.byRow) === normalizeAction(binding.action)) return;
+    overrides.push({ row: hop.byRow - seed.length, kind, default: binding });
+  });
+
+  return overrides.sort((a, b) => a.row - b.row);
 }
 
 /** One-sentence explanation of a conflict, with 1-based row numbers. */
