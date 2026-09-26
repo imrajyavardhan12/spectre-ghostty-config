@@ -11,6 +11,8 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+## [0.4.0] - 2026-09-26
+
 ### Added
 
 - Share links that set options which run programs (`command`, `initial-command`, `input`, `env`, `config-file`) or relax clipboard protections now show a security notice listing those values before you copy, download, or open the config.
