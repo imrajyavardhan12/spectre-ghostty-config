@@ -50,8 +50,11 @@ const SPECIAL_KEYS = new Set([
   "quote", "comma", "period", "slash", "minus", "equal",
 ]);
 
-// Physical key codes (W3C specification - KeyA, KeyB, etc.)
-const PHYSICAL_KEY_PATTERN = /^(key_?[a-z]|digit_?[0-9]|numpad_?[0-9]|arrow_?(up|down|left|right))$/i;
+// Physical key codes in Ghostty's snake case (key_a) or W3C camel case
+// (KeyA). Ghostty matches key names case-sensitively (Binding.zig
+// Trigger.parse), so `keya` and `KEYA` are rejected.
+const PHYSICAL_KEY_PATTERN = /^(key_[a-z]|digit_[0-9]|numpad_[0-9]|arrow_(up|down|left|right))$/;
+const W3C_PHYSICAL_KEY_PATTERN = /^(Key[A-Z]|Digit[0-9]|Numpad[0-9]|Arrow(Up|Down|Left|Right))$/;
 
 // Action categories for grouping in the UI
 export type ActionCategory =
@@ -633,7 +636,8 @@ export function validateTrigger(trigger: string): TriggerValidation {
 
   // Split by + while preserving internal empty parts: Ghostty uses an empty
   // part to represent the literal + key (for example, ctrl++).
-  const parts = trigger.toLowerCase().split("+").map((part) => part.trim());
+  // Ghostty matches prefixes, modifiers, and key names case-sensitively.
+  const parts = trigger.split("+").map((part) => part.trim());
   if (parts[parts.length - 1] === "") parts.pop();
 
   if (parts.length === 0) {
@@ -649,6 +653,9 @@ export function validateTrigger(trigger: string): TriggerValidation {
       const prefix = prefixParts[i].trim();
       if (!prefix) {
         return { ...result, valid: false, error: "Prefix cannot be empty" };
+      }
+      if (!TRIGGER_PREFIXES.has(prefix) && TRIGGER_PREFIXES.has(prefix.toLowerCase())) {
+        return { ...result, valid: false, error: `Prefixes are case-sensitive: use "${prefix.toLowerCase()}"` };
       }
       if (!TRIGGER_PREFIXES.has(prefix)) {
         return { ...result, valid: false, error: `Invalid prefix: "${prefix}". Valid prefixes: ${Array.from(TRIGGER_PREFIXES).join(", ")}` };
@@ -687,6 +694,8 @@ export function validateTrigger(trigger: string): TriggerValidation {
       }
       seenModifiers.add(normalizedMod);
       result.modifiers.push(normalizedMod);
+    } else if (VALID_MODIFIERS.has(part.toLowerCase())) {
+      return { ...result, valid: false, error: `Modifiers are case-sensitive: use "${part.toLowerCase()}"` };
     } else {
       // It's the key
       if (keyFound) {
@@ -695,7 +704,8 @@ export function validateTrigger(trigger: string): TriggerValidation {
 
       // Validate the key
       if (!isValidKey(part)) {
-        return { ...result, valid: false, error: `Invalid key: "${part}"` };
+        const hint = isValidKey(part.toLowerCase()) ? ` (key names are case-sensitive: use "${part.toLowerCase()}")` : "";
+        return { ...result, valid: false, error: `Invalid key: "${part}"${hint}` };
       }
 
       result.key = part;
@@ -773,30 +783,38 @@ export function validateTriggerSequence(triggerSeq: string): TriggerSequenceVali
   return result;
 }
 
+/** W3C camel-case codes (`PageUp`, `F5`) to Ghostty's snake case names. */
+function w3cToSnake(code: string): string {
+  if (/^F\d+$/.test(code)) return code.toLowerCase();
+  return code
+    .replace(/([a-z])([A-Z0-9])/g, "$1_$2")
+    .replace(/([0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase();
+}
+
 function isValidKey(key: string): boolean {
-  // Check special keys
-  if (SPECIAL_KEYS.has(key.toLowerCase())) {
+  // Key names are lowercase snake case; matching is case-sensitive.
+  if (SPECIAL_KEYS.has(key)) {
     return true;
   }
 
-  // Check physical key codes (KeyA, key_a, etc.)
-  if (PHYSICAL_KEY_PATTERN.test(key)) {
+  if (PHYSICAL_KEY_PATTERN.test(key) || W3C_PHYSICAL_KEY_PATTERN.test(key)) {
     return true;
   }
 
-  // Single character (Unicode codepoint)
-  if (key.length === 1) {
+  // W3C camel-case codes for named keys, such as Enter or PageUp.
+  if (/^([A-Z][a-z0-9]+)+$/.test(key) && SPECIAL_KEYS.has(w3cToSnake(key))) {
     return true;
   }
 
-  // Common single character representations
-  if (/^[a-z0-9]$/.test(key)) {
+  // Any single Unicode codepoint (matched case-insensitively by Ghostty).
+  if (Array.from(key).length === 1) {
     return true;
   }
 
   // Allow some common key names that might not be in our list
   const commonKeys = ["plus", "minus", "equal", "equals", "apostrophe", "grave"];
-  if (commonKeys.includes(key.toLowerCase())) {
+  if (commonKeys.includes(key)) {
     return true;
   }
 
@@ -818,10 +836,19 @@ export function validateAction(actionStr: string): ActionValidation {
 
   if (colonIndex === -1) {
     // No parameter
-    result.action = actionStr.trim().toLowerCase();
+    result.action = actionStr.trim();
   } else {
-    result.action = actionStr.slice(0, colonIndex).trim().toLowerCase();
+    result.action = actionStr.slice(0, colonIndex).trim();
     result.param = actionStr.slice(colonIndex + 1);
+  }
+
+  // Ghostty matches action names exactly (Binding.zig Action.parse).
+  if (!ACTION_NAMES.has(result.action) && ACTION_NAMES.has(result.action.toLowerCase())) {
+    return {
+      ...result,
+      valid: false,
+      error: `Action names are case-sensitive: use "${result.action.toLowerCase()}"`,
+    };
   }
 
   // Check if action exists
