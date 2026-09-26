@@ -513,6 +513,35 @@ test("a user opening a share link sees newer-than-target flags", async ({
   await expect(page.locator("pre")).toContainText("font-size = 16");
 });
 
+test("a user opening a share link is warned about settings that run programs", async ({
+  page,
+}) => {
+  const encoded = encodeConfig({
+    "font-size": 16,
+    "initial-command": "/usr/bin/htop",
+    "clipboard-read": "allow",
+  });
+  await page.goto(`/share/custom-config?c=${encoded}`);
+
+  const warning = page.getByRole("region", {
+    name: "This config runs programs or changes security settings",
+  });
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText("initial-command = /usr/bin/htop");
+  await expect(warning).toContainText("clipboard-read = allow");
+  await expect(warning).not.toContainText("font-size");
+});
+
+test("a share link with only appearance settings shows no security warning", async ({
+  page,
+}) => {
+  const encoded = encodeConfig({ "font-size": 16, background: "#000000" });
+  await page.goto(`/share/custom-config?c=${encoded}`);
+
+  await expect(page.locator("pre")).toContainText("font-size = 16");
+  await expect(page.getByText("Review these values before using")).toHaveCount(0);
+});
+
 test("a user can target, hide, and still export newer options with warnings", async ({
   page,
 }) => {

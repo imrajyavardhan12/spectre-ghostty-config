@@ -3,13 +3,22 @@
 import { useMemo, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Ghost, ArrowRight, Copy, Check, Download, Loader2, AlertCircle } from "lucide-react";
+import { Ghost, ArrowRight, Copy, Check, Download, Loader2, AlertCircle, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getConfigFromUrl } from "@/lib/utils/url-share";
 import { exportGhosttyConfig } from "@/lib/utils/config-export";
 import { useConfigStore } from "@/lib/store/config-store";
 import { getConfigOption } from "@/lib/utils/config-options";
 import { isKnownGhosttyRelease, isOptionSupportedIn } from "@/lib/ghostty-versions";
+import { findSensitiveSettings } from "@/lib/security/sensitive-options";
+
+const SENSITIVE_VALUE_PREVIEW_LENGTH = 160;
+
+function previewValue(value: string): string {
+  return value.length > SENSITIVE_VALUE_PREVIEW_LENGTH
+    ? `${value.slice(0, SENSITIVE_VALUE_PREVIEW_LENGTH)}…`
+    : value;
+}
 
 function SharePageContent() {
   const searchParams = useSearchParams();
@@ -42,6 +51,14 @@ function SharePageContent() {
       .filter((key) => getConfigOption(key) && !isOptionSupportedIn(key, targetVersion))
       .sort();
   }, [sharedConfig, targetVersion]);
+
+  // Settings that run programs or weaken protections are surfaced up front,
+  // since a shared config comes from someone else.
+  const sensitiveSettings = useMemo(
+    () => (sharedConfig ? findSensitiveSettings(sharedConfig.config) : []),
+    [sharedConfig]
+  );
+  const runsPrograms = sensitiveSettings.some((setting) => setting.reason === "runs-program");
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(configString);
@@ -133,6 +150,35 @@ function SharePageContent() {
           <p className="text-muted-foreground">
             {modifiedCount} setting{modifiedCount !== 1 ? "s" : ""} configured
           </p>
+          {sensitiveSettings.length > 0 && (
+            <section
+              aria-labelledby="sensitive-settings-heading"
+              className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3"
+            >
+              <h2
+                id="sensitive-settings-heading"
+                className="flex items-center gap-2 text-sm font-medium text-destructive"
+              >
+                <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {runsPrograms
+                  ? "This config runs programs or changes security settings"
+                  : "This config changes security settings"}
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Review these values before using a config from someone else.
+              </p>
+              <ul className="mt-2 space-y-1 font-mono text-xs break-all">
+                {sensitiveSettings.flatMap((setting) =>
+                  setting.values.map((value, index) => (
+                    <li key={`${setting.key}-${index}`}>
+                      <span className="text-muted-foreground">{setting.key} = </span>
+                      <span className="text-foreground">{previewValue(value)}</span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </section>
+          )}
           {newerSharedOptions.length > 0 && (
             <div
               role="status"

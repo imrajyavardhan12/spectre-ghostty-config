@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { encodeConfig } from "../src/lib/utils/url-share";
 
 const WCAG_AA_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 const THEME_LIST_URL =
@@ -334,5 +335,17 @@ test("the mobile theme browser supports keyboard navigation without horizontal o
     () => document.documentElement.scrollWidth > window.innerWidth
   );
   expect(hasHorizontalPageOverflow).toBe(false);
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
+test("a share page with a security warning has no automatically detectable WCAG A or AA violations", async ({
+  page,
+}) => {
+  const encoded = encodeConfig({ command: "/bin/zsh -l", "clipboard-paste-protection": false });
+  await page.goto(`/share/custom-config?c=${encoded}`);
+  await expect(
+    page.getByRole("heading", { name: "This config runs programs or changes security settings" })
+  ).toBeVisible();
+
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
