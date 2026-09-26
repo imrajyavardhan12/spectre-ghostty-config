@@ -183,11 +183,11 @@ describe('keybind-validation', () => {
       expect(result.error).toContain('cannot be empty');
     });
 
-    it('should handle case differences for action names', () => {
-      // The validation converts action to lowercase before checking
+    it('should reject miscased action names like Ghostty does', () => {
+      // Ghostty v1.3.1 Binding.zig Action.parse matches names exactly.
       const result = validateAction('COPY_TO_CLIPBOARD:mixed');
-      expect(result.valid).toBe(true);
-      expect(result.action).toBe('copy_to_clipboard');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Action names are case-sensitive: use "copy_to_clipboard"');
     });
 
     it('should allow paste_from_clipboard without param', () => {
@@ -429,5 +429,36 @@ describe('keybind-validation', () => {
         expect(actionResult.valid).toBe(true);
       }
     });
+  });
+});
+
+describe('keybind case sensitivity (Ghostty Trigger.parse)', () => {
+  it.each([
+    ['Ctrl+a=new_tab', 'Modifiers are case-sensitive: use "ctrl"'],
+    ['CTRL+SHIFT+t=new_tab', 'Modifiers are case-sensitive: use "ctrl"'],
+    ['Global:ctrl+a=new_tab', 'Prefixes are case-sensitive: use "global"'],
+    ['ctrl+keya=new_tab', 'Invalid key: "keya"'],
+    ['ctrl+ENTER=new_tab', 'Invalid key: "ENTER" (key names are case-sensitive: use "enter")'],
+    ['ctrl+a=New_Tab', 'Action names are case-sensitive: use "new_tab"'],
+  ])('rejects %s', (keybind, error) => {
+    const result = validateKeybind(keybind);
+    expect(result.valid).toBe(false);
+    expect(result.errors.join(' ')).toContain(error);
+  });
+
+  it.each([
+    'ctrl+A=new_tab',
+    'ctrl+key_a=new_tab',
+    'ctrl+KeyA=new_tab',
+    'ctrl+Digit1=new_tab',
+    'ctrl+ArrowUp=new_tab',
+    'ctrl+Enter=new_tab',
+    'ctrl+PageUp=new_tab',
+    'ctrl+F5=new_tab',
+    'ctrl+enter=new_tab',
+    'ctrl+ö=new_tab',
+    'super+shift+t=new_tab',
+  ])('accepts %s', (keybind) => {
+    expect(validateKeybind(keybind)).toEqual({ valid: true, errors: [], warnings: [] });
   });
 });
