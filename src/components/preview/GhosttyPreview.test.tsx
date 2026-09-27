@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   terminalInstances: [] as MockTerminalInstance[],
   fitAddonInstances: [] as MockFitAddonInstance[],
   failNextOpen: false,
+  focusCalls: 0,
 }));
 
 vi.mock('@/lib/ghostty/init', () => ({
@@ -33,12 +34,17 @@ vi.mock('ghostty-web', () => {
   class MockTerminal {
     options: Record<string, unknown>;
     loadAddon = vi.fn();
-    open = vi.fn(() => {
+    open = vi.fn(function (this: MockTerminal) {
       if (mocks.failNextOpen) {
         mocks.failNextOpen = false;
         throw new Error('open failed');
       }
+      // Like ghostty-web, open() ends by focusing the terminal.
+      this.focus();
     });
+    focus() {
+      mocks.focusCalls += 1;
+    }
     write = vi.fn();
     dispose = vi.fn();
 
@@ -71,6 +77,7 @@ describe('GhosttyPreview lifecycle', () => {
     mocks.terminalInstances.length = 0;
     mocks.fitAddonInstances.length = 0;
     mocks.failNextOpen = false;
+    mocks.focusCalls = 0;
     act(() => {
       useConfigStore.getState().resetAll();
     });
@@ -206,5 +213,36 @@ describe('GhosttyPreview lifecycle', () => {
     expect(mocks.terminalInstances[0].dispose).toHaveBeenCalledTimes(1);
     expect(mocks.fitAddonInstances[0].dispose).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalled();
+  });
+});
+
+describe('GhosttyPreview focus', () => {
+  beforeEach(() => {
+    mocks.initGhosttyMock.mockReset();
+    mocks.initGhosttyMock.mockResolvedValue(undefined);
+    mocks.terminalInstances.length = 0;
+    mocks.focusCalls = 0;
+  });
+
+  afterEach(() => cleanup());
+
+  it('does not take keyboard focus from the field being edited when it creates a terminal', async () => {
+    render(
+      <>
+        <input aria-label="font style" />
+        <GhosttyPreview isOpen docked onToggle={vi.fn()} />
+      </>
+    );
+    const field = screen.getByLabelText('font style');
+    field.focus();
+
+    await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
+    const [terminal] = mocks.terminalInstances;
+    await waitFor(() => expect(terminal.open).toHaveBeenCalledTimes(1));
+
+    expect(mocks.focusCalls).toBe(0);
+    expect(document.activeElement).toBe(field);
+    // The terminal's own focus() is restored for explicit use afterwards.
+    expect(Object.prototype.hasOwnProperty.call(terminal, 'focus')).toBe(false);
   });
 });

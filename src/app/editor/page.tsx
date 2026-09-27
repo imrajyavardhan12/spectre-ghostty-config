@@ -1,17 +1,59 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useSyncExternalStore } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar, MobileCategoryBar } from "@/components/layout/Sidebar";
 import { ConfigPanel } from "@/components/editor/ConfigPanel";
 import { ConfigOutput } from "@/components/editor/ConfigOutput";
 import { CommandSearch } from "@/components/editor/CommandSearch";
 import { GhosttyPreview, PreviewToggleButton } from "@/components/preview";
+import { PreviewPane, type PreviewPaneTab } from "@/components/editor/PreviewPane";
 import { Category, ConfigOption } from "@/lib/schema/types";
+
+// The docked preview pane needs room for a readable settings column beside it.
+const WIDE_QUERY = "(min-width: 1280px)";
+const PANE_STORAGE_KEY = "spectre-preview-pane";
+
+function subscribeToWide(onChange: () => void) {
+  const query = window.matchMedia(WIDE_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function useIsWide(): boolean {
+  return useSyncExternalStore(subscribeToWide, () => window.matchMedia(WIDE_QUERY).matches, () => false);
+}
+
+/** Pane open/collapsed is a per-browser convenience; storage may be unavailable. */
+function readPaneOpen(): boolean {
+  try {
+    return window.localStorage.getItem(PANE_STORAGE_KEY) !== "closed";
+  } catch {
+    return true;
+  }
+}
 
 export default function EditorPage() {
   const [activeCategory, setActiveCategory] = useState<Category>("fonts");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const isWide = useIsWide();
+  const [paneOpen, setPaneOpenState] = useState(() => (typeof window === "undefined" ? true : readPaneOpen()));
+  const [paneTab, setPaneTab] = useState<PreviewPaneTab>("preview");
+  const docked = isWide && paneOpen;
+
+  const setPaneOpen = useCallback((open: boolean) => {
+    setPaneOpenState(open);
+    try {
+      window.localStorage.setItem(PANE_STORAGE_KEY, open ? "open" : "closed");
+    } catch {
+      // Remembering the choice is optional.
+    }
+  }, []);
+
+  const openPane = useCallback((tab: PreviewPaneTab) => {
+    setPaneTab(tab);
+    setPaneOpen(true);
+  }, [setPaneOpen]);
   const [highlightedOption, setHighlightedOption] = useState<string | null>(null);
 
   const handleSelectOption = useCallback((option: ConfigOption) => {
@@ -62,22 +104,30 @@ export default function EditorPage() {
               highlightedOption={highlightedOption}
             />
 
-            {/* Ghostty Terminal Preview */}
-            <GhosttyPreview
-              isOpen={previewOpen}
-              onToggle={() => setPreviewOpen(false)}
-            />
-
-            {/* Floating buttons */}
-            <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2">
-              <PreviewToggleButton
+            {/* Narrow screens: floating preview window and config sheet. */}
+            {!isWide && (
+              <GhosttyPreview
                 isOpen={previewOpen}
-                onToggle={() => setPreviewOpen(!previewOpen)}
+                onToggle={() => setPreviewOpen(false)}
               />
-              <ConfigOutput />
-            </div>
+            )}
+
+            {/* Floating buttons; on wide screens they reopen the docked pane. */}
+            {!docked && (
+              <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2">
+                <PreviewToggleButton
+                  isOpen={!isWide && previewOpen}
+                  onToggle={() => (isWide ? openPane("preview") : setPreviewOpen(!previewOpen))}
+                />
+                <ConfigOutput onOpen={isWide ? () => openPane("config") : undefined} />
+              </div>
+            )}
           </div>
         </main>
+
+        {docked && (
+          <PreviewPane tab={paneTab} onTabChange={setPaneTab} onCollapse={() => setPaneOpen(false)} />
+        )}
       </div>
     </div>
   );

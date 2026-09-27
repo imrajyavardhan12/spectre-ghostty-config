@@ -18,6 +18,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Added
 
+- On screens 1280 px and wider, the editor docks the live Ghostty preview and the generated config in a pane beside the settings. One click collapses it to the previous floating layout, and the choice is remembered.
 - A CI quality gate for presets (valid values, no default-equal values, conflict-free keybinds, themes bundled with the target Ghostty release, declared fonts and platforms), and a generated list of Ghostty 1.3.1's built-in theme names, checked weekly for drift.
 
 - Keybind rows now note which of Ghostty's default keybinds they replace, take over with a sequence, unbind, or clear, per platform (macOS and Linux). The defaults are generated from Ghostty 1.3.1's `Keybinds.init` source and checked weekly for drift.
@@ -25,6 +26,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
+- The terminal preview no longer takes keyboard focus when it refreshes. Previously, pausing while typing a setting with the preview open sent the rest of your typing into the preview.
 - UI polish: the landing badge and release-notes link now follow the targeted Ghostty release (it still said 1.3.0), the hero sample uses a real built-in theme name, theme counts no longer claim "200+", the landing page no longer scrolls sideways on phones, the theme browser is centered on wide screens, the editor header spans the full width, and the floating Preview/View Config buttons no longer cover the last items on the page.
 - Applying a preset is now a single undo step; previously one Undo left an empty config instead of the settings you had before.
 - Keybind validation now matches Ghostty's case-sensitive parsing, so miscased modifiers, prefixes, key names, and actions (`Ctrl+a`, `ctrl+ENTER`, `ctrl+a=New_Tab`) are flagged with the correct spelling instead of being exported and rejected by Ghostty.

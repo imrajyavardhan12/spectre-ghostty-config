@@ -21,27 +21,20 @@ import { useConfigStore } from "@/lib/store/config-store";
 import { generateShareUrl } from "@/lib/utils/url-share";
 import { cn } from "@/lib/utils";
 
-export function ConfigOutput() {
+/** Copy / Download / Share actions and the generated file, shared by the sheet and the editor's preview pane. */
+export function ConfigFileContent() {
   // Use selectors to properly subscribe to config changes
   const config = useConfigStore((state) => state.config);
   const appliedTheme = useConfigStore((state) => state.appliedTheme);
   const exportConfig = useConfigStore((state) => state.exportConfig);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  
+
   // Controlled tooltip states to fix Firefox tooltip stuck issue
   const [copyTooltipOpen, setCopyTooltipOpen] = useState(false);
   const [downloadTooltipOpen, setDownloadTooltipOpen] = useState(false);
   const [shareTooltipOpen, setShareTooltipOpen] = useState(false);
 
-  const handleSheetOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    // Reset all tooltip states when sheet opens/closes to prevent stuck tooltips
-    setCopyTooltipOpen(false);
-    setDownloadTooltipOpen(false);
-    setShareTooltipOpen(false);
-  };
 
   const configString = exportConfig();
   const modifiedCount = Object.keys(config).length;
@@ -75,25 +68,175 @@ export function ConfigOutput() {
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={handleSheetOpenChange}>
-      <SheetTrigger asChild>
-        <Button 
-          aria-label="View Config"
-          className={cn(
-            "gap-2 shadow-lg transition-all duration-300",
-            modifiedCount > 0 && "shadow-primary/20"
-          )}
-        >
-          <Code className="h-4 w-4" />
-          <span className="hidden sm:inline">View Config</span>
-          {modifiedCount > 0 && (
-            <span className="ml-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-primary-foreground/20 text-xs font-medium">
-              {modifiedCount}
-            </span>
-          )}
-        </Button>
-      </SheetTrigger>
-      
+    <>
+    {/* Action buttons */}
+    <div className="flex items-center gap-2 px-6 py-3 bg-muted/30 border-b border-border">
+      <Tooltip open={copyTooltipOpen} onOpenChange={setCopyTooltipOpen}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="gap-2 flex-1 sm:flex-none"
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4 text-green-500" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                Copy
+              </>
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Copy config to clipboard</TooltipContent>
+      </Tooltip>
+
+      <Tooltip open={downloadTooltipOpen} onOpenChange={setDownloadTooltipOpen}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            className="gap-2 flex-1 sm:flex-none"
+          >
+            <Download className="h-4 w-4" />
+            Download
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Download as config file</TooltipContent>
+      </Tooltip>
+
+      <Tooltip open={shareTooltipOpen} onOpenChange={setShareTooltipOpen}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShare}
+            disabled={modifiedCount === 0}
+            className="gap-2 flex-1 sm:flex-none"
+          >
+            {linkCopied ? (
+              <>
+                <Check className="h-4 w-4 text-green-500" />
+                Link Copied!
+              </>
+            ) : (
+              <>
+                <Share2 className="h-4 w-4" />
+                Share
+              </>
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {modifiedCount === 0
+            ? "Add some settings to share"
+            : "Copy shareable link"}
+        </TooltipContent>
+      </Tooltip>
+    </div>
+
+    {/* Config content */}
+    <ScrollArea className="flex-1 min-h-0">
+      <div className="px-6 py-4">
+        {modifiedCount > 0 ? (
+          <pre className="text-sm font-mono leading-relaxed">
+            {configString.split('\n').map((line, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "py-0.5 transition-colors",
+                  line.startsWith('#')
+                    ? "text-muted-foreground"
+                    : line.includes('=')
+                      ? "text-foreground"
+                      : ""
+                )}
+              >
+                {line.includes('=') ? (
+                  <>
+                    <span className="text-muted-foreground">
+                      {line.split('=')[0]}
+                    </span>
+                    <span className="text-muted-foreground">=</span>
+                    <span className="text-primary">
+                      {line.split('=').slice(1).join('=')}
+                    </span>
+                  </>
+                ) : (
+                  line || '\u00A0'
+                )}
+              </div>
+            ))}
+          </pre>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Code className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground text-sm">
+              No modifications yet
+            </p>
+            <p className="text-muted-foreground text-xs mt-1">
+              Change some settings to see your config
+            </p>
+          </div>
+        )}
+      </div>
+    </ScrollArea>
+
+    {/* Footer */}
+    <div className="px-6 py-4 border-t border-border bg-muted/30">
+      <p className="text-xs text-muted-foreground">
+        Save this file to{" "}
+        <code className="px-1.5 py-0.5 rounded bg-muted text-foreground font-mono">
+          ~/.config/ghostty/config
+        </code>
+      </p>
+    </div>
+    </>
+  );
+}
+
+interface ConfigOutputProps {
+  /** Open the config somewhere else (the docked pane) instead of this sheet. */
+  onOpen?: () => void;
+}
+
+export function ConfigOutput({ onOpen }: ConfigOutputProps = {}) {
+  const config = useConfigStore((state) => state.config);
+  const [isOpen, setIsOpen] = useState(false);
+  const modifiedCount = Object.keys(config).length;
+
+  const trigger = (
+    <Button
+      aria-label="View Config"
+      onClick={onOpen}
+      className={cn(
+        "gap-2 shadow-lg transition-all duration-300",
+        modifiedCount > 0 && "shadow-primary/20"
+      )}
+    >
+      <Code className="h-4 w-4" />
+      <span className="hidden sm:inline">View Config</span>
+      {modifiedCount > 0 && (
+        <span className="ml-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-primary-foreground/20 text-xs font-medium">
+          {modifiedCount}
+        </span>
+      )}
+    </Button>
+  );
+
+  if (onOpen) return trigger;
+
+  return (
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>{trigger}</SheetTrigger>
+
       <SheetContent className="w-full sm:max-w-lg flex flex-col p-0 h-full max-h-screen">
         {/* Header */}
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
@@ -106,135 +249,7 @@ export function ConfigOutput() {
           </SheetDescription>
         </SheetHeader>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 px-6 py-3 bg-muted/30 border-b border-border">
-          <Tooltip open={copyTooltipOpen} onOpenChange={setCopyTooltipOpen}>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCopy}
-                className="gap-2 flex-1 sm:flex-none"
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-4 w-4 text-green-500" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" />
-                    Copy
-                  </>
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Copy config to clipboard</TooltipContent>
-          </Tooltip>
-
-          <Tooltip open={downloadTooltipOpen} onOpenChange={setDownloadTooltipOpen}>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleDownload}
-                className="gap-2 flex-1 sm:flex-none"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Download as config file</TooltipContent>
-          </Tooltip>
-
-          <Tooltip open={shareTooltipOpen} onOpenChange={setShareTooltipOpen}>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleShare}
-                disabled={modifiedCount === 0}
-                className="gap-2 flex-1 sm:flex-none"
-              >
-                {linkCopied ? (
-                  <>
-                    <Check className="h-4 w-4 text-green-500" />
-                    Link Copied!
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="h-4 w-4" />
-                    Share
-                  </>
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {modifiedCount === 0 
-                ? "Add some settings to share" 
-                : "Copy shareable link"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Config content */}
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="px-6 py-4">
-            {modifiedCount > 0 ? (
-              <pre className="text-sm font-mono leading-relaxed">
-                {configString.split('\n').map((line, i) => (
-                  <div 
-                    key={i} 
-                    className={cn(
-                      "py-0.5 transition-colors",
-                      line.startsWith('#') 
-                        ? "text-muted-foreground" 
-                        : line.includes('=') 
-                          ? "text-foreground" 
-                          : ""
-                    )}
-                  >
-                    {line.includes('=') ? (
-                      <>
-                        <span className="text-muted-foreground">
-                          {line.split('=')[0]}
-                        </span>
-                        <span className="text-muted-foreground">=</span>
-                        <span className="text-primary">
-                          {line.split('=').slice(1).join('=')}
-                        </span>
-                      </>
-                    ) : (
-                      line || '\u00A0'
-                    )}
-                  </div>
-                ))}
-              </pre>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Code className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  No modifications yet
-                </p>
-                <p className="text-muted-foreground text-xs mt-1">
-                  Change some settings to see your config
-                </p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-border bg-muted/30">
-          <p className="text-xs text-muted-foreground">
-            Save this file to{" "}
-            <code className="px-1.5 py-0.5 rounded bg-muted text-foreground font-mono">
-              ~/.config/ghostty/config
-            </code>
-          </p>
-        </div>
+        <ConfigFileContent />
       </SheetContent>
     </Sheet>
   );
