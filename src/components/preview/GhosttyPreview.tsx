@@ -126,7 +126,7 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
     };
 
     try {
-      await initGhostty();
+      const ghostty = await initGhostty();
       if (!isCurrentRequest()) return;
 
       const { Terminal, FitAddon } = await import("ghostty-web");
@@ -144,7 +144,7 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
 
       options.theme = { ...defaultTheme, ...userTheme };
 
-      createdTerm = new Terminal(options);
+      createdTerm = new Terminal({ ...options, ghostty });
       createdFitAddon = new FitAddon();
 
       createdTerm.loadAddon(createdFitAddon);
