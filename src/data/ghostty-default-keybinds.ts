@@ -2,6 +2,7 @@
 // Source: Ghostty v1.3.1 (332b2aefc6e72d363aa93ab6ecfc86eeeeb5ed28)
 // src/config/Config.zig Keybinds.init, evaluated per platform. Later
 // bindings for the same trigger replace earlier ones, as in Ghostty.
+// Action default parameters come from src/input/Binding.zig.
 
 import type {
   GhosttyDefaultKeybind,
@@ -178,4 +179,11 @@ export const GHOSTTY_DEFAULT_KEYBINDS: Record<GhosttyPlatform, readonly GhosttyD
     { trigger: "ctrl+shift+enter", action: "toggle_split_zoom" },
     { trigger: "ctrl+shift+p", action: "toggle_command_palette" },
   ],
+};
+
+/** Actions whose omitted parameter means this value, e.g. `copy_to_clipboard` = `copy_to_clipboard:mixed`. */
+export const GHOSTTY_ACTION_DEFAULT_PARAMS: Readonly<Record<string, string>> = {
+  "copy_to_clipboard": "mixed",
+  "new_split": "auto",
+  "close_tab": "this"
 };

@@ -7,6 +7,7 @@
 
 import { findKeybindDelimiter } from "@/lib/utils/keybind-validation";
 import type { GhosttyDefaultKeybind } from "@/lib/utils/ghostty-default-keybinds-extract";
+import { GHOSTTY_ACTION_DEFAULT_PARAMS } from "@/data/ghostty-default-keybinds";
 
 export type KeybindConflictKind =
   /** A later row binds the same trigger to a different action. */
@@ -197,9 +198,13 @@ function parseEntry(raw: string): ParsedEntry {
 
 function normalizeAction(action: string): string {
   const colon = action.indexOf(":");
-  return colon === -1
-    ? action.toLowerCase()
-    : `${action.slice(0, colon).toLowerCase()}:${action.slice(colon + 1)}`;
+  if (colon === -1) {
+    // An omitted parameter means the action's default (copy_to_clipboard = :mixed).
+    const name = action.toLowerCase();
+    const defaultParam = GHOSTTY_ACTION_DEFAULT_PARAMS[name];
+    return defaultParam === undefined ? name : `${name}:${defaultParam}`;
+  }
+  return `${action.slice(0, colon).toLowerCase()}:${action.slice(colon + 1)}`;
 }
 
 interface Replay {

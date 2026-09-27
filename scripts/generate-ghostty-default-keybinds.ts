@@ -7,23 +7,32 @@ import { readFile, writeFile } from "node:fs/promises";
 import compatibility from "../compatibility.json";
 import {
   evaluateGhosttyDefaultKeybinds,
+  extractActionDefaultParams,
   extractKeybindsInitBody,
   type GhosttyPlatform,
 } from "../src/lib/utils/ghostty-default-keybinds-extract";
 
 const OUTPUT = new URL("../src/data/ghostty-default-keybinds.ts", import.meta.url);
-const SOURCE_URL = `https://raw.githubusercontent.com/ghostty-org/ghostty/${compatibility.ghostty.configCommit}/src/config/Config.zig`;
+const SOURCE_BASE = `https://raw.githubusercontent.com/ghostty-org/ghostty/${compatibility.ghostty.configCommit}/src`;
 const PLATFORMS: GhosttyPlatform[] = ["macos", "linux"];
 
 async function main() {
-  const response = await fetch(SOURCE_URL, {
-    headers: { "User-Agent": "spectre-ghostty-config-default-keybinds" },
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch Config.zig: ${response.status} ${response.statusText}`);
-  }
-  const body = extractKeybindsInitBody(await response.text());
+  const fetchSource = async (path: string) => {
+    const response = await fetch(`${SOURCE_BASE}/${path}`, {
+      headers: { "User-Agent": "spectre-ghostty-config-default-keybinds" },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${path}: ${response.status} ${response.statusText}`);
+    }
+    return response.text();
+  };
+  const [configSource, bindingSource] = await Promise.all([
+    fetchSource("config/Config.zig"),
+    fetchSource("input/Binding.zig"),
+  ]);
+  const body = extractKeybindsInitBody(configSource);
+  const defaultParams = extractActionDefaultParams(bindingSource);
 
   const tables = PLATFORMS.map((platform) => {
     const rows = evaluateGhosttyDefaultKeybinds(body, platform)
@@ -36,6 +45,7 @@ async function main() {
 // Source: Ghostty ${compatibility.ghostty.tag} (${compatibility.ghostty.configCommit})
 // src/config/Config.zig Keybinds.init, evaluated per platform. Later
 // bindings for the same trigger replace earlier ones, as in Ghostty.
+// Action default parameters come from src/input/Binding.zig.
 
 import type {
   GhosttyDefaultKeybind,
@@ -45,6 +55,9 @@ import type {
 export const GHOSTTY_DEFAULT_KEYBINDS: Record<GhosttyPlatform, readonly GhosttyDefaultKeybind[]> = {
 ${tables.join("\n")}
 };
+
+/** Actions whose omitted parameter means this value, e.g. \`copy_to_clipboard\` = \`copy_to_clipboard:mixed\`. */
+export const GHOSTTY_ACTION_DEFAULT_PARAMS: Readonly<Record<string, string>> = ${JSON.stringify(defaultParams, null, 2).replace(/\n/g, "\n")};
 `;
 
   if (process.argv.includes("--check")) {
