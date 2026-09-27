@@ -13,6 +13,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Changed
 
+- Calmer settings column: empty repeatable options show just their input (no "No values configured" box), the repeatable hint appears only once values exist, the font-preview notice is a single quiet line instead of a banner, and Font Size now follows Font Family instead of the three style-specific font families.
 - Preset cards now show exactly which Ghostty lines a preset writes, required fonts, and platforms, with an explicit Apply button instead of applying on any click.
 - Rewrote the built-in presets so each one sets only values that differ from Ghostty's defaults, uses built-in Ghostty themes (including automatic light/dark pairs) instead of partial hand-copied colors, declares required fonts, and keeps Ghostty's default keybinds. New presets include tmux-style Leader Keys, Rosé Pine, and Catppuccin; per-terminal scrollback is now sized conservatively.
 
