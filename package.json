@@ -21,7 +21,8 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "prototype:editor": "echo \"PROTOTYPE: open http://localhost:3000/editor?variant=B (\u2190/\u2192 to switch)\" && next dev"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

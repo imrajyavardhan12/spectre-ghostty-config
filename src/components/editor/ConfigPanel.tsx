@@ -44,9 +44,11 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 interface ConfigPanelProps {
   category: Category;
   highlightedOption?: string | null;
+  /** PROTOTYPE: override the scroll area's height. */
+  scrollClassName?: string;
 }
 
-export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
+export function ConfigPanel({ category, highlightedOption, scrollClassName }: ConfigPanelProps) {
   const targetVersion = useConfigStore((state) => state.targetVersion);
   const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
   const allCategoryOptions = getOptionsByCategory(category);
@@ -59,7 +61,7 @@ export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
   // Radix wraps viewport content in a display:table div that grows to its
   // min-content width; block keeps options within narrow screens.
   return (
-    <ScrollArea className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)] [&_[data-slot=scroll-area-viewport]>div]:block!">
+    <ScrollArea className={cn(scrollClassName ?? "h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)]", "[&_[data-slot=scroll-area-viewport]>div]:block!")}>
       <div className="px-6 pt-6 pb-24 max-w-3xl mx-auto" key={category}>
         {/* Category header */}
         <div className="mb-8 animate-fade-down">

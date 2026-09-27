@@ -18,6 +18,8 @@ import type { ITerminalAddon, Terminal as GhosttyTerminal } from "ghostty-web";
 interface GhosttyPreviewProps {
   isOpen: boolean;
   onToggle: () => void;
+  /** PROTOTYPE: render in normal flow at this height instead of as a floating window. */
+  dockedHeight?: number | string;
 }
 
 type LoadingState = "idle" | "loading" | "ready" | "error";
@@ -25,7 +27,7 @@ type FitAddonLike = ITerminalAddon & { fit: () => void };
 
 const DEBOUNCE_MS = 300;
 
-export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
+export function GhosttyPreview({ isOpen, onToggle, dockedHeight }: GhosttyPreviewProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -287,10 +289,13 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
   return (
     <div
       className={cn(
-        "fixed z-50 transition-all duration-300 ease-out",
-        isMinimized
-          ? "bottom-6 right-6 w-auto"
-          : "bottom-6 right-6 w-[800px] max-w-[calc(100vw-3rem)]"
+        dockedHeight !== undefined
+          ? "relative w-full"
+          : "fixed z-50 transition-all duration-300 ease-out",
+        dockedHeight === undefined &&
+          (isMinimized
+            ? "bottom-6 right-6 w-auto"
+            : "bottom-6 right-6 w-[800px] max-w-[calc(100vw-3rem)]")
       )}
     >
       <div
@@ -405,7 +410,7 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
         <div
           className={cn("relative", isMinimized && "hidden")}
           style={{
-            height: "550px",
+            height: dockedHeight ?? "550px",
             backgroundColor: background,
           }}
         >

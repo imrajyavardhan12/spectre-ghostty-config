@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { VariantB, VariantC, VariantD } from "./editor-layout.prototype";
+import { PrototypeSwitcher } from "@/components/prototype/PrototypeSwitcher";
 import { Header } from "@/components/layout/Header";
 import { Sidebar, MobileCategoryBar } from "@/components/layout/Sidebar";
 import { ConfigPanel } from "@/components/editor/ConfigPanel";
@@ -44,7 +47,17 @@ export default function EditorPage() {
         onSelectCategory={handleSelectCategory}
       />
 
-      <div className="flex">
+      {/* PROTOTYPE: ?variant=B|C|D swaps the layout below; A is today's layout. */}
+      <Suspense fallback={null}>
+        <PrototypeLayouts
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+          highlightedOption={highlightedOption}
+          onSelectOption={handleSelectOption}
+        />
+      </Suspense>
+
+      <div className="flex" data-prototype-current>
         <Sidebar
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
@@ -80,5 +93,29 @@ export default function EditorPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+// PROTOTYPE — throwaway switch for the editor layout variants.
+function PrototypeLayouts(props: import("./editor-layout.prototype").VariantProps) {
+  const variant = useSearchParams().get("variant") ?? "A";
+  const Variant = { B: VariantB, C: VariantC, D: VariantD }[variant];
+  return (
+    <>
+      {Variant && (
+        <>
+          <style>{"[data-prototype-current]{display:none}"}</style>
+          <Variant {...props} />
+        </>
+      )}
+      <PrototypeSwitcher
+        variants={[
+          { key: "A", name: "Current (floating toggles)" },
+          { key: "B", name: "Workbench (Preview | Config pane)" },
+          { key: "C", name: "Changes rail" },
+          { key: "D", name: "Preview on top" },
+        ]}
+      />
+    </>
   );
 }
