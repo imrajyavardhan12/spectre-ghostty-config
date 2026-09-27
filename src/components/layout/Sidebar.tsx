@@ -18,12 +18,14 @@ import {
   Monitor,
   Wrench,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { Category } from "@/lib/schema/types";
 import { useConfigStore } from "@/lib/store/config-store";
 import { getOptionsByCategory } from "@/data/ghostty-options";
 import { splitOptionsBySupport } from "@/lib/ghostty-versions";
 import { VersionFilterControls } from "@/components/editor/VersionFilterControls";
+import { PresetsDialog } from "@/components/editor/PresetsDialog";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Type,
@@ -172,6 +174,17 @@ export function MobileCategoryBar({
       </div>
       <div className="overflow-x-auto scrollbar-none">
         <div className="flex p-2 gap-1.5">
+          {/* The header's presets button is hidden below sm; offer it here instead. */}
+          <span className="sm:hidden flex shrink-0 border-r border-border pr-1.5">
+            <PresetsDialog
+              trigger={
+                <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap text-muted-foreground hover:text-foreground hover:bg-secondary">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Presets</span>
+                </button>
+              }
+            />
+          </span>
           {categories.map((category) => {
             const Icon = iconMap[category.icon || "Settings"] || Settings;
             const isActive = activeCategory === category.id;

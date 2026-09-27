@@ -731,6 +731,22 @@ test("the preview renders built-in themes, following the system appearance for l
   await expect(pane.locator("pre")).not.toContainText("background =");
 });
 
+test("a phone user can open presets from the category bar", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/editor");
+
+  await expect(page.getByRole("button", { name: "Configuration Presets" })).toBeHidden();
+  await page.getByRole("button", { name: "Presets", exact: true }).click();
+  await page.getByRole("button", { name: "Apply Comfortable preset" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#option-font-size").getByRole("spinbutton")).toHaveValue("15");
+
+  const hasHorizontalPageOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth
+  );
+  expect(hasHorizontalPageOverflow).toBe(false);
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');
