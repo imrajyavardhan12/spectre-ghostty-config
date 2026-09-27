@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Minimize2, Maximize2, Loader2, AlertCircle, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfigStore } from "@/lib/store/config-store";
@@ -11,6 +11,8 @@ import {
   getDefaultTheme,
 } from "@/lib/ghostty/config-mapper";
 import { generateDemoContent } from "@/lib/ghostty/demo-content";
+import { mergePreviewTheme } from "@/lib/ghostty/preview-theme";
+import { usePreviewTheme } from "./use-preview-theme";
 import { cn } from "@/lib/utils";
 import { detectClientOS, type ClientOS } from "@/lib/platform";
 import type { ITerminalAddon, Terminal as GhosttyTerminal } from "ghostty-web";
@@ -43,8 +45,16 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
   const configVersionRef = useRef(0);
   
   // Use selectors to properly subscribe to config changes
-  const config = useConfigStore((state) => state.config);
-  const appliedTheme = useConfigStore((state) => state.appliedTheme);
+  const storeConfig = useConfigStore((state) => state.config);
+  const appliedThemeName = useConfigStore((state) => state.appliedTheme);
+  // Ghostty's `theme` option, resolved for the preview only.
+  const previewTheme = usePreviewTheme(storeConfig.theme);
+  const config = useMemo(
+    () => mergePreviewTheme(storeConfig, previewTheme.themeConfig),
+    [storeConfig, previewTheme.themeConfig]
+  );
+  // Label shown in the demo: a theme applied from the browser, else `theme`.
+  const appliedTheme = appliedThemeName ?? previewTheme.themeName;
   const configRef = useRef(config);
   const appliedThemeRef = useRef(appliedTheme);
   const lastCreatedConfigRef = useRef<typeof config | null>(null);
@@ -435,6 +445,17 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
             backgroundColor: background,
           }}
         >
+          {loadingState === "ready" && previewTheme.status === "unavailable" && (
+            <p
+              role="status"
+              className="absolute inset-x-3 bottom-2 z-10 text-[11px] opacity-70"
+              style={{ color: foreground }}
+            >
+              {previewTheme.themeName
+                ? `Theme "${previewTheme.themeName}" couldn't be loaded for the preview; showing your other colors.`
+                : "Theme files on disk can't be previewed in the browser; showing your other colors."}
+            </p>
+          )}
           {loadingState === "loading" && (
             <div
               role="status"

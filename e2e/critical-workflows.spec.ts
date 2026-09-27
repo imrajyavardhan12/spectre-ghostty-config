@@ -691,6 +691,46 @@ test("the preview never takes keyboard focus while a user edits settings", async
   await expect(fontStyle).toBeFocused();
 });
 
+test("the preview renders built-in themes, following the system appearance for light/dark pairs", async ({
+  page,
+}) => {
+  const themes: Record<string, string> = {
+    TokyoNight: "background = #1a1b26\nforeground = #c0caf5\npalette = 1=#f7768e",
+    "Rose Pine Dawn": "background = #faf4ed\nforeground = #575279",
+    "Rose Pine": "background = #191724\nforeground = #e0def4",
+  };
+  await page.route("https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/**", (route) => {
+    const name = decodeURIComponent(route.request().url().split("/").pop()!);
+    return themes[name]
+      ? route.fulfill({ status: 200, contentType: "text/plain", body: themes[name] })
+      : route.fulfill({ status: 404, body: "" });
+  });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/editor");
+
+  const pane = page.getByRole("complementary", { name: "Preview and generated config" });
+  const terminalArea = pane.locator("canvas").locator("xpath=ancestor::div[contains(@style,'background-color')][1]");
+  await expect(pane.locator("canvas")).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Configuration Presets" }).click();
+  await page.getByRole("tab", { name: "Aesthetic" }).click();
+  await page.getByRole("button", { name: "Apply Tokyo Night preset" }).click();
+  await page.keyboard.press("Escape");
+  await expect(terminalArea).toHaveCSS("background-color", "rgb(26, 27, 38)");
+
+  // light:Rose Pine Dawn,dark:Rose Pine resolves to the light side here.
+  await page.getByRole("button", { name: "Configuration Presets" }).click();
+  await page.getByRole("tab", { name: "Aesthetic" }).click();
+  await page.getByRole("button", { name: "Apply Rosé Pine preset" }).click();
+  await page.keyboard.press("Escape");
+  await expect(terminalArea).toHaveCSS("background-color", "rgb(250, 244, 237)");
+
+  // The export still contains the theme option, not copied colors.
+  await pane.getByRole("tab", { name: /^Config/ }).click();
+  await expect(pane.locator("pre")).toContainText('theme = "light:Rose Pine Dawn,dark:Rose Pine"');
+  await expect(pane.locator("pre")).not.toContainText("background =");
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');
