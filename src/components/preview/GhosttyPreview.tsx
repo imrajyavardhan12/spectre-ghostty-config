@@ -18,6 +18,8 @@ import type { ITerminalAddon, Terminal as GhosttyTerminal } from "ghostty-web";
 interface GhosttyPreviewProps {
   isOpen: boolean;
   onToggle: () => void;
+  /** Fill the parent (the editor's preview pane) instead of floating over the page. */
+  docked?: boolean;
 }
 
 type LoadingState = "idle" | "loading" | "ready" | "error";
@@ -25,7 +27,7 @@ type FitAddonLike = ITerminalAddon & { fit: () => void };
 
 const DEBOUNCE_MS = 300;
 
-export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
+export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPreviewProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -141,7 +143,17 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
         disposeCreatedResources();
         return;
       }
-      createdTerm.open(container);
+      // ghostty-web's open() ends with this.focus(). The preview is created and
+      // re-created while the user edits settings, so that would move keyboard
+      // focus out of the field they're typing in. Suppress it for open() only;
+      // clicking the terminal still focuses it directly.
+      const term = createdTerm;
+      Object.defineProperty(term, "focus", { value: () => {}, configurable: true });
+      try {
+        term.open(container);
+      } finally {
+        delete (term as { focus?: unknown }).focus;
+      }
 
       if (!isCurrentRequest()) {
         disposeCreatedResources();
@@ -256,18 +268,15 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
     }
   }, [isOpen, disposeTerminal]);
 
-  // Handle window resize
+  // Refit whenever the terminal's box changes size: window resizes, and the
+  // docked pane opening, collapsing, or changing width.
   useEffect(() => {
-    if (!isOpen || isMinimized || loadingState !== "ready") return;
+    const container = containerRef.current;
+    if (!isOpen || isMinimized || loadingState !== "ready" || !container) return;
 
-    const handleResize = () => {
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const observer = new ResizeObserver(() => fitAddonRef.current?.fit());
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [isOpen, isMinimized, loadingState]);
 
   // Re-fit terminal when unminimizing
@@ -287,15 +296,19 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
   return (
     <div
       className={cn(
-        "fixed z-50 transition-all duration-300 ease-out",
-        isMinimized
-          ? "bottom-6 right-6 w-auto"
-          : "bottom-6 right-6 w-[800px] max-w-[calc(100vw-3rem)]"
+        docked
+          ? "h-full w-full"
+          : "fixed z-50 transition-all duration-300 ease-out",
+        !docked &&
+          (isMinimized
+            ? "bottom-6 right-6 w-auto"
+            : "bottom-6 right-6 w-[800px] max-w-[calc(100vw-3rem)]")
       )}
     >
       <div
         className={cn(
-          "rounded-xl border border-border shadow-2xl overflow-hidden transition-all duration-300",
+          "rounded-xl border border-border overflow-hidden transition-all duration-300",
+          docked ? "flex h-full flex-col" : "shadow-2xl",
           isMinimized && "w-auto"
         )}
         style={{
@@ -308,7 +321,20 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
           className="flex items-center justify-between px-3 py-2.5 border-b border-white/10"
           style={{ backgroundColor: `${background}dd` }}
         >
-          {isGtkDecoration ? (
+          {docked ? (
+            <div className="flex items-center gap-2">
+              {!isGtkDecoration && (
+                <div className="flex gap-2" aria-hidden="true">
+                  <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+                  <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+                  <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+                </div>
+              )}
+              <span className={cn("text-xs", !isGtkDecoration && "ml-2 opacity-60")} style={{ color: foreground }}>
+                Ghostty Preview
+              </span>
+            </div>
+          ) : isGtkDecoration ? (
             <>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium" style={{ color: foreground }}>
@@ -403,9 +429,9 @@ export function GhosttyPreview({ isOpen, onToggle }: GhosttyPreviewProps) {
 
         {/* Terminal content */}
         <div
-          className={cn("relative", isMinimized && "hidden")}
+          className={cn("relative", docked && "min-h-0 flex-1", isMinimized && "hidden")}
           style={{
-            height: "550px",
+            height: docked ? undefined : "550px",
             backgroundColor: background,
           }}
         >

@@ -26,8 +26,7 @@ test("a user can edit, inspect, share, and reopen a configuration", async ({
   await fontSize.fill("16");
 
   await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /view config/i }).click();
-  await expect(page.getByRole("heading", { name: "Generated Config" })).toBeVisible();
+  await page.getByRole("tab", { name: /^Config/ }).click();
   await expect(page.locator("pre")).toContainText(
     `Spectre schema target: Ghostty ${compatibility.ghostty.stableVersion}`
   );
@@ -179,7 +178,7 @@ test("a user can explicitly import valid settings from a partially invalid file"
       exact: true,
     })
   ).toBeAttached();
-  await page.getByRole("button", { name: "View Config" }).click();
+  await page.getByRole("tab", { name: /^Config/ }).click();
   await expect(page.locator("pre")).toContainText("font-size = 16");
   await expect(page.locator("pre")).toContainText("cursor-style = bar");
   await expect(page.locator("pre")).not.toContainText("mouse-hide-while-typing");
@@ -226,7 +225,7 @@ test("a user can retain unverified options while unsafe names are rejected", asy
     .click();
   await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "View Config" }).click();
+  await page.getByRole("tab", { name: /^Config/ }).click();
   const output = page.locator("pre");
   await expect(output).toContainText(
     "Warning: contains 2 options outside this schema target"
@@ -290,7 +289,7 @@ test("a user can review and apply duplicate, reset, repeatable, and path semanti
     .click();
   await expect(page.getByText("4 modified", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "View Config" }).click();
+  await page.getByRole("tab", { name: /^Config/ }).click();
   const output = page.locator("pre");
   await expect(output).toContainText("font-size = 16");
   await expect(output).toContainText("font-family = Primary");
@@ -356,7 +355,7 @@ test("a user can review structured palette, keybind, and config-file instruction
     .click();
   await expect(page.getByText("3 modified", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "View Config" }).click();
+  await page.getByRole("tab", { name: /^Config/ }).click();
   const output = page.locator("pre");
   await expect(output).toContainText("palette = 0=#ffffff");
   await expect(output).toContainText("keybind = clear");
@@ -655,6 +654,43 @@ test("a user can inspect a preset, apply it, and undo it in one step", async ({ 
   await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
 });
 
+test("a wide-screen user edits beside a docked preview and can collapse it", async ({ page }) => {
+  await page.goto("/editor");
+  const pane = page.getByRole("complementary", { name: "Preview and generated config" });
+  await expect(pane).toBeVisible();
+  await expect(pane.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
+
+  await page.locator("#option-font-size").getByRole("spinbutton").fill("16");
+  await pane.getByRole("tab", { name: /^Config/ }).click();
+  await expect(pane.locator("pre")).toContainText("font-size = 16");
+  await expect(pane.getByRole("button", { name: /Copy/ })).toBeVisible();
+
+  await pane.getByRole("button", { name: "Collapse preview pane" }).click();
+  await expect(pane).not.toBeVisible();
+
+  // The choice is remembered, and the floating buttons reopen the pane.
+  await page.reload();
+  await expect(page.getByRole("button", { name: "View Config" })).toBeVisible();
+  await expect(pane).not.toBeVisible();
+  await page.getByRole("button", { name: "View Config" }).click();
+  await expect(pane.getByRole("tab", { name: /^Config/ })).toHaveAttribute("aria-selected", "true");
+});
+
+test("the preview never takes keyboard focus while a user edits settings", async ({ page }) => {
+  await page.goto("/editor");
+  await expect(page.locator("aside canvas")).toBeVisible({ timeout: 15_000 });
+
+  const fontStyle = page.locator("#option-font-style input");
+  await fontStyle.click();
+  await fontStyle.pressSequentially("Heavy", { delay: 40 });
+  // Pausing lets the preview rebuild with the new config.
+  await page.waitForTimeout(1_000);
+  await page.keyboard.type(" Condensed", { delay: 40 });
+
+  await expect(fontStyle).toHaveValue("Heavy Condensed");
+  await expect(fontStyle).toBeFocused();
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');
@@ -796,7 +832,7 @@ test("a user can retry the terminal preview after WASM loading fails", async ({
   await page.route(wasmUrl, failWasmRequest);
   await page.goto("/editor");
 
-  await page.getByRole("button", { name: "Open Preview" }).click();
+  // Wide screens start with the preview docked open.
   await expect(page.getByText("Failed to load preview")).toBeVisible();
 
   await page.unroute(wasmUrl, failWasmRequest);

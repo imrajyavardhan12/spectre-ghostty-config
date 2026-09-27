@@ -56,14 +56,17 @@ export function generateDemoContent(themeName?: string | null, os?: string): str
   lines.push("");
 
   lines.push(`  ${BOLD}${FG_WHITE}Text Styles${RESET}`);
-  lines.push(`  ${RESET}Normal${RESET}  ${BOLD}Bold${RESET}  ${DIM}Dim${RESET}  ${ITALIC}Italic${RESET}  ${UNDERLINE}Underline${RESET}  ${STRIKETHROUGH}Strike${RESET}  ${INVERSE}Inverse${RESET}`);
+  // Lines stay under ~44 columns so the demo fits a docked pane without wrapping.
+  lines.push(`  ${RESET}Normal${RESET}  ${BOLD}Bold${RESET}  ${DIM}Dim${RESET}  ${ITALIC}Italic${RESET}`);
+  lines.push(`  ${UNDERLINE}Underline${RESET}  ${STRIKETHROUGH}Strike${RESET}  ${INVERSE}Inverse${RESET}`);
   lines.push("");
 
   lines.push(`  ${BOLD}${FG_WHITE}Sample Terminal Session${RESET}`);
   lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ ${FG_YELLOW}echo${RESET} ${FG_GREEN}"Hello, Ghostty!"${RESET}`);
   lines.push(`  Hello, Ghostty!`);
   lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ ${FG_YELLOW}ls${RESET} ${FG_CYAN}--color=auto${RESET}`);
-  lines.push(`  ${FG_BLUE}Documents${RESET}  ${FG_BLUE}Downloads${RESET}  ${FG_GREEN}script.sh${RESET}  ${FG_WHITE}config${RESET}  ${FG_MAGENTA}image.png${RESET}`);
+  lines.push(`  ${FG_BLUE}Documents${RESET}  ${FG_BLUE}Downloads${RESET}  ${FG_GREEN}script.sh${RESET}`);
+  lines.push(`  ${FG_WHITE}config${RESET}     ${FG_MAGENTA}image.png${RESET}`);
   lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ ${FG_YELLOW}git${RESET} status`);
   lines.push(`  ${FG_GREEN}On branch main${RESET}`);
   lines.push(`  ${FG_RED}Changes not staged for commit:${RESET}`);
