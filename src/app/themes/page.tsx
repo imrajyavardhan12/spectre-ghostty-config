@@ -15,7 +15,7 @@ export default function ThemesPage() {
     <div className="min-h-screen bg-background">
       {/* Header - consistent with editor */}
       <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center justify-between px-4 sm:px-6">
+        <div className="container mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/"
@@ -59,7 +59,7 @@ export default function ThemesPage() {
       </header>
 
       {/* Main content - consistent padding */}
-      <main className="container px-4 sm:px-6 py-8">
+      <main className="container mx-auto px-4 sm:px-6 pt-8 pb-24">
         {/* Page header */}
         <div className="mb-8 animate-fade-up">
           <div className="flex items-center gap-3 mb-4">
@@ -69,15 +69,14 @@ export default function ThemesPage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Theme Browser</h1>
               <p className="text-muted-foreground">
-                Browse 200+ color themes from iTerm2 Color Schemes
+                Hundreds of color themes from iTerm2 Color Schemes
               </p>
             </div>
           </div>
           
           <p className="text-sm text-muted-foreground max-w-2xl">
-            Click on any theme to apply it to your configuration. The colors will be 
-            automatically added to your config, and you can continue customizing in 
-            the editor.
+            Apply a theme to add its colors to your configuration, then keep
+            customizing in the editor.
           </p>
         </div>
 

@@ -25,6 +25,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
+- UI polish: the landing badge and release-notes link now follow the targeted Ghostty release (it still said 1.3.0), the hero sample uses a real built-in theme name, theme counts no longer claim "200+", the landing page no longer scrolls sideways on phones, the theme browser is centered on wide screens, the editor header spans the full width, and the floating Preview/View Config buttons no longer cover the last items on the page.
 - Applying a preset is now a single undo step; previously one Undo left an empty config instead of the settings you had before.
 - Keybind validation now matches Ghostty's case-sensitive parsing, so miscased modifiers, prefixes, key names, and actions (`Ctrl+a`, `ctrl+ENTER`, `ctrl+a=New_Tab`) are flagged with the correct spelling instead of being exported and rejected by Ghostty.
 - Kept editor option cards within the viewport on narrow screens, where wide content such as the keybind editor was clipped.

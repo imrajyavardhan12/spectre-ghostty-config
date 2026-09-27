@@ -60,7 +60,7 @@ export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
   // min-content width; block keeps options within narrow screens.
   return (
     <ScrollArea className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)] [&_[data-slot=scroll-area-viewport]>div]:block!">
-      <div className="p-6 max-w-3xl mx-auto" key={category}>
+      <div className="px-6 pt-6 pb-24 max-w-3xl mx-auto" key={category}>
         {/* Category header */}
         <div className="mb-8 animate-fade-down">
           <div className="flex items-center gap-3 mb-2">

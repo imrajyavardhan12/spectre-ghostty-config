@@ -197,7 +197,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full glass border-b border-border/50">
-      <div className="container flex h-14 items-center justify-between px-4">
+      <div className="flex w-full h-14 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
           <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
