@@ -18,6 +18,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Added
 
+- The terminal preview now renders Ghostty's `theme` option, including `light:…,dark:…` pairs that follow your system appearance, with your explicit colors layered on top as in Ghostty. The exported config keeps the `theme` line instead of copied colors.
 - On screens 1280 px and wider, the editor docks the live Ghostty preview and the generated config in a pane beside the settings. One click collapses it to the previous floating layout, and the choice is remembered.
 - A CI quality gate for presets (valid values, no default-equal values, conflict-free keybinds, themes bundled with the target Ghostty release, declared fonts and platforms), and a generated list of Ghostty 1.3.1's built-in theme names, checked weekly for drift.
 
