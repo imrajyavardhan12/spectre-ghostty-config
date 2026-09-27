@@ -28,6 +28,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
+- Keybind notes no longer claim a row replaces a Ghostty default when it only omits the action's default parameter (`copy_to_clipboard` means `copy_to_clipboard:mixed`). The defaults (`copy_to_clipboard`, `new_split`, `close_tab`) are generated from Ghostty 1.3.1's `Binding.zig`.
 - Presets are reachable on phones from a Presets chip at the start of the category bar (the header button is hidden on narrow screens).
 - The terminal preview no longer takes keyboard focus when it refreshes. Previously, pausing while typing a setting with the preview open sent the rest of your typing into the preview.
 - UI polish: the landing badge and release-notes link now follow the targeted Ghostty release (it still said 1.3.0), the hero sample uses a real built-in theme name, theme counts no longer claim "200+", the landing page no longer scrolls sideways on phones, the theme browser is centered on wide screens, the editor header spans the full width, and the floating Preview/View Config buttons no longer cover the last items on the page.

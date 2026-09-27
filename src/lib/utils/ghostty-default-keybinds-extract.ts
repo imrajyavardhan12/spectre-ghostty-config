@@ -335,3 +335,32 @@ export function evaluateGhosttyDefaultKeybinds(
   }
   return [...effective.values()];
 }
+
+/**
+ * Actions whose parameter is optional because its type declares a default
+ * (Binding.zig `Action.parse`, the `@hasDecl(field.type, "default")` branch),
+ * mapped to that default, e.g. `copy_to_clipboard` -> `mixed`.
+ */
+export function extractActionDefaultParams(bindingSource: string): Record<string, string> {
+  const start = bindingSource.indexOf("pub const Action = union(enum) {");
+  if (start === -1) throw new Error("Action union not found in Binding.zig");
+  const text = stripComments(bindingSource.slice(start));
+  const open = text.indexOf("{");
+  const body = text.slice(open + 1, matchingIndex(text, open));
+
+  // Types declared inside the union that carry `pub const default: T = .x;`.
+  const defaults = new Map<string, string>();
+  for (const match of body.matchAll(/pub const (\w+) = (?:enum|union\(enum\))[^{]*\{/g)) {
+    const typeOpen = match.index! + match[0].length - 1;
+    const typeBody = body.slice(typeOpen, matchingIndex(body, typeOpen));
+    const value = new RegExp(`pub const default: ${match[1]} = \\.(\\w+);`).exec(typeBody);
+    if (value) defaults.set(match[1], value[1]);
+  }
+
+  const params: Record<string, string> = {};
+  for (const [, action, type] of body.matchAll(/^\s{4}(\w+): (\w+),$/gm)) {
+    const value = defaults.get(type);
+    if (value) params[action] = value;
+  }
+  return params;
+}

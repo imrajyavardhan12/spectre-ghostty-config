@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   evaluateGhosttyDefaultKeybinds,
+  extractActionDefaultParams,
   extractKeybindsInitBody,
 } from "@/lib/utils/ghostty-default-keybinds-extract";
 import { GHOSTTY_DEFAULT_KEYBINDS } from "@/data/ghostty-default-keybinds";
@@ -119,5 +120,42 @@ describe("GHOSTTY_DEFAULT_KEYBINDS (generated from Ghostty v1.3.1)", () => {
     }
     expect(GHOSTTY_DEFAULT_KEYBINDS.macos).toHaveLength(93);
     expect(GHOSTTY_DEFAULT_KEYBINDS.linux).toHaveLength(72);
+  });
+});
+
+describe("extractActionDefaultParams", () => {
+  it("maps actions to the default declared on their parameter type", () => {
+    const source = `
+pub const Action = union(enum) {
+    // copy with a format
+    copy_to_clipboard: CopyToClipboard,
+    close_tab: CloseTabMode,
+    goto_tab: usize,
+    new_split: SplitDirection,
+
+    pub const CopyToClipboard = enum {
+        plain,
+        mixed,
+        // it's the default
+        pub const default: CopyToClipboard = .mixed;
+    };
+    pub const CloseTabMode = enum {
+        this,
+        other,
+        pub const default: CloseTabMode = .this;
+    };
+    pub const SplitDirection = enum { right, down };
+};
+`;
+    expect(extractActionDefaultParams(source)).toEqual({ copy_to_clipboard: "mixed", close_tab: "this" });
+  });
+
+  it("matches the generated table for Ghostty 1.3.1", async () => {
+    const { GHOSTTY_ACTION_DEFAULT_PARAMS } = await import("@/data/ghostty-default-keybinds");
+    expect(GHOSTTY_ACTION_DEFAULT_PARAMS).toEqual({
+      copy_to_clipboard: "mixed",
+      new_split: "auto",
+      close_tab: "this",
+    });
   });
 });

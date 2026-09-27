@@ -280,3 +280,32 @@ describe("findDefaultKeybindOverrides", () => {
     expect(findDefaultKeybindOverrides(["vim/super+c=new_tab"], defaults)).toEqual([]);
   });
 });
+
+describe("action default parameters (#149)", () => {
+  it("treats an omitted parameter as the action's default when comparing", () => {
+    // Ghostty 1.3.1: copy_to_clipboard defaults to mixed, close_tab to this.
+    expect(analyzeKeybindConflicts(["ctrl+a=copy_to_clipboard", "ctrl+a=copy_to_clipboard:mixed"])).toEqual([
+      { row: 0, kind: "duplicate", byRow: 1 },
+    ]);
+    expect(
+      findDefaultKeybindOverrides(
+        ["ctrl+shift+c=copy_to_clipboard", "ctrl+shift+w=close_tab"],
+        [
+          { trigger: "ctrl+shift+c", action: "copy_to_clipboard:mixed" },
+          { trigger: "ctrl+shift+w", action: "close_tab:this" },
+        ]
+      )
+    ).toEqual([]);
+  });
+
+  it("still reports a different explicit parameter", () => {
+    expect(
+      findDefaultKeybindOverrides(
+        ["ctrl+shift+c=copy_to_clipboard:plain"],
+        [{ trigger: "ctrl+shift+c", action: "copy_to_clipboard:mixed" }]
+      )
+    ).toEqual([
+      { row: 0, kind: "replaces", default: { trigger: "ctrl+shift+c", action: "copy_to_clipboard:mixed" } },
+    ]);
+  });
+});
