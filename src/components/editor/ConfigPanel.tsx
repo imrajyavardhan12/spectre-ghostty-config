@@ -80,21 +80,12 @@ export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
           </div>
         </div>
 
-        {/* Font preview info note - only shown for fonts category */}
+        {/* The preview renders with browser fonts, so say so once, quietly. */}
         {category === "fonts" && (
-          <div className="mb-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 animate-fade-up">
-            <div className="flex gap-3">
-              <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="text-blue-200 font-medium mb-1">Preview Font Limitation</p>
-                <p className="text-muted-foreground">
-                  The terminal preview can only display fonts available in your browser.
-                  For custom fonts, they must be installed on your system.
-                  Ghostty&apos;s built-in default is <span className="text-foreground font-medium">JetBrains Mono</span>.
-                </p>
-              </div>
-            </div>
-          </div>
+          <p className="-mt-4 mb-6 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Info className="h-3.5 w-3.5 shrink-0" />
+            The preview can only show fonts installed on this device. Ghostty&apos;s default is JetBrains Mono.
+          </p>
         )}
 
         {hiddenCount > 0 && (

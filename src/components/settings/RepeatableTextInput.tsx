@@ -78,7 +78,7 @@ export function RepeatableTextInput({ option }: RepeatableTextInputProps) {
       platform={option.platform}
     >
       <div className="space-y-3">
-        {values.length > 0 ? (
+        {values.length > 0 && (
           <div className="space-y-2">
             {values.map((value, index) => (
               <div
@@ -100,10 +100,6 @@ export function RepeatableTextInput({ option }: RepeatableTextInputProps) {
                 </Button>
               </div>
             ))}
-          </div>
-        ) : (
-          <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-            No values configured. Ghostty will use its default behavior.
           </div>
         )}
 
@@ -130,9 +126,11 @@ export function RepeatableTextInput({ option }: RepeatableTextInputProps) {
           </Button>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Repeatable option: Spectre exports one <code>{option.id}</code> line per value.
-        </p>
+        {values.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Each value becomes its own <code>{option.id}</code> line; add more to set fallbacks.
+          </p>
+        )}
       </div>
     </SettingWrapper>
   );
