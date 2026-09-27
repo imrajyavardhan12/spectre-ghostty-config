@@ -1,31 +1,39 @@
-let initialized = false;
-let initPromise: Promise<void> | null = null;
+import type { Ghostty } from "ghostty-web";
 
-export async function initGhostty(): Promise<void> {
-  if (initialized) {
-    return;
+// postinstall copies ghostty-web's WASM here (see package.json). Loading it
+// by path skips ghostty-web's default first attempt, a data: URL that our
+// Content Security Policy blocks.
+const GHOSTTY_WASM_PATH = "/ghostty-vt.wasm";
+
+let instance: Ghostty | null = null;
+let loadPromise: Promise<Ghostty> | null = null;
+
+/** Load the Ghostty WASM once and share it; pass it to each `Terminal`. */
+export async function initGhostty(): Promise<Ghostty> {
+  if (instance) {
+    return instance;
   }
 
-  if (initPromise) {
-    return initPromise;
+  if (loadPromise) {
+    return loadPromise;
   }
 
-  initPromise = (async () => {
+  loadPromise = (async () => {
     try {
       // Dynamic import keeps ghostty-web (and its WASM loader) out of the
       // page bundle until the preview is opened.
-      const { init } = await import("ghostty-web");
-      await init();
-      initialized = true;
+      const { Ghostty } = await import("ghostty-web");
+      instance = await Ghostty.load(GHOSTTY_WASM_PATH);
+      return instance;
     } catch (error) {
-      initPromise = null;
+      loadPromise = null;
       throw error;
     }
   })();
 
-  return initPromise;
+  return loadPromise;
 }
 
 export function isGhosttyInitialized(): boolean {
-  return initialized;
+  return instance !== null;
 }
