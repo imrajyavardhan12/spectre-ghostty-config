@@ -19,10 +19,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SPECTRE_VERSION } from "@/lib/version";
+import { GHOSTTY_COMPATIBILITY_VERSION } from "@/lib/compatibility";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-background">
+    // overflow-x-clip keeps the hero's decorative glow from widening the page on phones.
+    <div className="min-h-screen bg-background overflow-x-clip">
       {/* Minimal Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -70,13 +72,13 @@ export default function HomePage() {
                   <span>Configuration made visual</span>
                 </div>
                 <a
-                  href="https://ghostty.org/docs/install/release-notes/1-3-0"
+                  href={`https://ghostty.org/docs/install/release-notes/${GHOSTTY_COMPATIBILITY_VERSION.replace(/\./g, "-")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
                 >
                   <Zap className="h-3 w-3" />
-                  Ghostty 1.3.0 ready
+                  Ghostty {GHOSTTY_COMPATIBILITY_VERSION} ready
                 </a>
               </div>
               
@@ -368,8 +370,9 @@ function LargeFeatureCard() {
           <div className="mt-8">
             <h3 className="text-xl font-medium mb-2">Color Themes</h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Browse 200+ curated themes from iTerm2 Color Schemes or build 
-              your own with our visual palette editor. See changes in real-time.
+              Browse hundreds of themes from iTerm2 Color Schemes, the collection
+              Ghostty&apos;s built-in themes come from, or build your own with the
+              palette editor.
             </p>
           </div>
           {/* Preview */}
@@ -483,7 +486,7 @@ function TerminalMockup() {
         <div className="p-6 font-mono text-sm space-y-1.5 bg-gradient-to-b from-card to-muted/20">
           <CodeLine label="font-family" value='"JetBrains Mono"' delay={0} />
           <CodeLine label="font-size" value="14" type="number" delay={1} />
-          <CodeLine label="theme" value='"rose-pine"' delay={2} />
+          <CodeLine label="theme" value='"Rose Pine"' delay={2} />
           <CodeLine label="cursor-style" value="block" type="keyword" delay={3} />
           <CodeLine label="background-opacity" value="0.95" type="number" delay={4} />
           <CodeLine label="window-padding-x" value="16" type="number" delay={5} />
