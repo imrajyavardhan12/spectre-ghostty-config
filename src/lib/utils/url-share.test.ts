@@ -174,6 +174,24 @@ describe('url-share', () => {
 
       expect(result).toBeTruthy();
       expect(result?.config['font-size']).toBe(20);
+      expect(result?.dropped).toEqual([]);
+    });
+
+    it('returns dropped records while preserving valid settings', () => {
+      const encoded = encodeConfig({
+        'font-size': 16,
+        'unknown-option': 'x',
+        'cursor-style': 'rainbow',
+        'font-family': 'unsafe\nvalue',
+      });
+      const result = getConfigFromUrl(new URLSearchParams({ c: encoded }));
+
+      expect(result?.config).toEqual({ 'font-size': 16 });
+      expect(result?.dropped).toEqual([
+        { key: 'unknown-option', reason: 'unknown option' },
+        { key: 'cursor-style', reason: 'invalid value shape' },
+        { key: 'font-family', reason: 'control characters' },
+      ]);
     });
 
     it('should return null when no c param', () => {

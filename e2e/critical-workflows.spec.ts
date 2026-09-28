@@ -512,6 +512,38 @@ test("a user opening a share link sees newer-than-target flags", async ({
   await expect(page.locator("pre")).toContainText("font-size = 16");
 });
 
+test("a share link identifies invalid settings that were skipped", async ({ page }) => {
+  const encoded = encodeConfig({
+    "font-size": 16,
+    "unknown-option": "x",
+    "cursor-style": "rainbow",
+    "font-family": "unsafe\nvalue",
+  });
+  await page.goto(`/share/custom-config?c=${encoded}`);
+
+  const notice = page.getByRole("status").filter({
+    hasText: "3 settings in this link were invalid and skipped",
+  });
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText("unknown-option, cursor-style, font-family");
+  await expect(notice).not.toContainText("rainbow");
+  await expect(notice).not.toContainText("unsafe");
+  await expect(page.locator("pre")).toContainText("font-size = 16");
+  await expect(page.locator("pre")).not.toContainText("unknown-option");
+  await expect(page.locator("pre")).not.toContainText("cursor-style");
+  await expect(page.locator("pre")).not.toContainText("font-family");
+});
+
+test("a share link uses singular wording for one skipped setting", async ({ page }) => {
+  const encoded = encodeConfig({ "font-size": 16, "cursor-style": "rainbow" });
+  await page.goto(`/share/custom-config?c=${encoded}`);
+  const notice = page.getByRole("status").filter({
+    hasText: "1 setting in this link was invalid and skipped",
+  });
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText("cursor-style");
+});
+
 test("a user opening a share link is warned about settings that run programs", async ({
   page,
 }) => {
@@ -539,6 +571,7 @@ test("a share link with only appearance settings shows no security warning", asy
 
   await expect(page.locator("pre")).toContainText("font-size = 16");
   await expect(page.getByText("Review these values before using")).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "invalid and skipped" })).toHaveCount(0);
 });
 
 test("a user can target, hide, and still export newer options with warnings", async ({

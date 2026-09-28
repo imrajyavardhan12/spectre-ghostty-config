@@ -28,6 +28,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
+- Share links now show an amber notice with the count and names of settings skipped by validation instead of silently omitting them.
 - Opening the terminal preview no longer logs Content Security Policy errors: the preview loads Ghostty's WASM directly from the bundled file instead of first trying a blocked `data:` URL.
 - Keybind notes no longer claim a row replaces a Ghostty default when it only omits the action's default parameter (`copy_to_clipboard` means `copy_to_clipboard:mixed`). The defaults (`copy_to_clipboard`, `new_split`, `close_tab`) are generated from Ghostty 1.3.1's `Binding.zig`.
 - Presets are reachable on phones from a Presets chip at the start of the category bar (the header button is hidden on narrow screens).

@@ -42,6 +42,7 @@ function SharePageContent() {
     ? exportGhosttyConfig(sharedConfig.config, sharedConfig.theme, targetVersion)
     : "";
   const modifiedCount = sharedConfig ? Object.keys(sharedConfig.config).length : 0;
+  const droppedSettings = sharedConfig?.dropped ?? [];
 
   // Flags payload options newer than the viewer's target without dropping
   // them: the validated payload stays authoritative (trust boundary).
@@ -178,6 +179,19 @@ function SharePageContent() {
                 )}
               </ul>
             </section>
+          )}
+          {droppedSettings.length > 0 && (
+            <div
+              role="status"
+              className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3"
+            >
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                {droppedSettings.length} {droppedSettings.length === 1 ? "setting" : "settings"} in this link {droppedSettings.length === 1 ? "was" : "were"} invalid and skipped
+              </p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground break-words">
+                {droppedSettings.map(({ key }) => key).join(", ")}
+              </p>
+            </div>
           )}
           {newerSharedOptions.length > 0 && (
             <div
