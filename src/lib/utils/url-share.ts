@@ -9,6 +9,7 @@ export interface ShareableConfig {
   config: ConfigValues;
   theme?: string | null;
   version?: number;
+  dropped?: Array<{ key: string; reason: string }>;
 }
 
 const CURRENT_VERSION = 1;
@@ -65,7 +66,7 @@ export function decodeConfig(encoded: string): ShareableConfig | null {
     }
 
     const raw = parsed as { config?: unknown; theme?: unknown };
-    const { config } = validateSharedConfig(raw.config);
+    const { config, dropped } = validateSharedConfig(raw.config);
     const theme = validateSharedThemeName(raw.theme) ?? null;
 
     // If validation stripped every key and there's no usable theme, the
@@ -76,7 +77,7 @@ export function decodeConfig(encoded: string): ShareableConfig | null {
       return null;
     }
 
-    return { config, theme };
+    return { config, theme, dropped };
   } catch {
     return null;
   }
