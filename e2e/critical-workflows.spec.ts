@@ -525,13 +525,32 @@ test("a share link identifies invalid settings that were skipped", async ({ page
     hasText: "3 settings in this link were invalid and skipped",
   });
   await expect(notice).toBeVisible();
-  await expect(notice).toContainText("unknown-option, cursor-style, font-family");
+  // Real Ghostty options are named; keys that aren't options are only counted.
+  await expect(notice).toContainText("cursor-style, font-family; 1 unrecognized setting");
+  await expect(notice).not.toContainText("unknown-option");
   await expect(notice).not.toContainText("rainbow");
   await expect(notice).not.toContainText("unsafe");
   await expect(page.locator("pre")).toContainText("font-size = 16");
   await expect(page.locator("pre")).not.toContainText("unknown-option");
   await expect(page.locator("pre")).not.toContainText("cursor-style");
   await expect(page.locator("pre")).not.toContainText("font-family");
+});
+
+test("a share link cannot put arbitrary text in the skipped-settings notice", async ({ page }) => {
+  const encoded = encodeConfig({
+    "font-size": 16,
+    "✅ Verified safe by Spectre": "x",
+    "cursor-style": "rainbow",
+    "cursor-opacity": "loud",
+    "background-opacity": "clear",
+    "window-padding-x": ["x"],
+  });
+  await page.goto(`/share/custom-config?c=${encoded}`);
+
+  const notice = page.getByRole("status").filter({ hasText: "invalid and skipped" });
+  await expect(notice).toContainText("5 settings in this link were invalid and skipped");
+  await expect(notice).toContainText("and 1 more; 1 unrecognized setting");
+  await expect(page.getByText("Verified safe by Spectre")).toHaveCount(0);
 });
 
 test("a share link uses singular wording for one skipped setting", async ({ page }) => {
