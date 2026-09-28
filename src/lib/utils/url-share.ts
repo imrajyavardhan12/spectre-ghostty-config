@@ -4,11 +4,48 @@ import {
   validateSharedConfig,
   validateSharedThemeName,
 } from "@/lib/security/validate-shared-config";
+import { getConfigOption } from "@/lib/utils/config-options";
 
 export interface ShareableConfig {
   config: ConfigValues;
   theme?: string | null;
   version?: number;
+}
+
+export interface DroppedSetting {
+  key: string;
+  reason: string;
+}
+
+/** A validated share link, plus the entries validation rejected. */
+export interface DecodedShareConfig extends ShareableConfig {
+  dropped: DroppedSetting[];
+}
+
+export interface DroppedSettingsSummary {
+  count: number;
+  /** Names safe to display: real Ghostty options only, capped. */
+  names: string[];
+  /** Real Ghostty options beyond the displayed names. */
+  moreCount: number;
+  /** Entries whose key isn't a Ghostty option. */
+  unrecognizedCount: number;
+}
+
+/**
+ * What the share page may say about rejected entries. Keys that aren't
+ * Ghostty options come straight from the URL, so a crafted link could make
+ * them read as arbitrary text; they are counted, never displayed.
+ */
+export function summarizeDroppedSettings(dropped: DroppedSetting[], maxNames = 3): DroppedSettingsSummary {
+  const known = dropped.map(({ key }) => key).filter((key) => getConfigOption(key) !== undefined);
+  const names = known.slice(0, maxNames);
+  return {
+    count: dropped.length,
+    names,
+    moreCount: known.length - names.length,
+    unrecognizedCount: dropped.length - known.length,
+  };
 }
 
 const CURRENT_VERSION = 1;
@@ -48,7 +85,7 @@ export function encodeConfig(config: ConfigValues, themeName?: string | null): s
   return compressed;
 }
 
-export function decodeConfig(encoded: string): ShareableConfig | null {
+export function decodeConfig(encoded: string): DecodedShareConfig | null {
   try {
     const json = LZString.decompressFromEncodedURIComponent(encoded);
     if (!json) return null;
@@ -65,7 +102,7 @@ export function decodeConfig(encoded: string): ShareableConfig | null {
     }
 
     const raw = parsed as { config?: unknown; theme?: unknown };
-    const { config } = validateSharedConfig(raw.config);
+    const { config, dropped } = validateSharedConfig(raw.config);
     const theme = validateSharedThemeName(raw.theme) ?? null;
 
     // If validation stripped every key and there's no usable theme, the
@@ -76,7 +113,7 @@ export function decodeConfig(encoded: string): ShareableConfig | null {
       return null;
     }
 
-    return { config, theme };
+    return { config, theme, dropped };
   } catch {
     return null;
   }
@@ -92,7 +129,7 @@ export function generateShareUrl(config: ConfigValues, themeName?: string | null
   return url.toString();
 }
 
-export function getConfigFromUrl(searchParams: URLSearchParams): ShareableConfig | null {
+export function getConfigFromUrl(searchParams: URLSearchParams): DecodedShareConfig | null {
   const encoded = searchParams.get("c");
   if (!encoded) return null;
   return decodeConfig(encoded);

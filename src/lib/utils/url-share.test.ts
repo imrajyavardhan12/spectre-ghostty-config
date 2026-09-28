@@ -6,6 +6,7 @@ import {
   generateShareSlug,
   generateShareUrl,
   getConfigFromUrl,
+  summarizeDroppedSettings,
 } from '@/lib/utils/url-share';
 
 function encodeRawJson(json: string): string {
@@ -174,6 +175,24 @@ describe('url-share', () => {
 
       expect(result).toBeTruthy();
       expect(result?.config['font-size']).toBe(20);
+      expect(result?.dropped).toEqual([]);
+    });
+
+    it('returns dropped records while preserving valid settings', () => {
+      const encoded = encodeConfig({
+        'font-size': 16,
+        'unknown-option': 'x',
+        'cursor-style': 'rainbow',
+        'font-family': 'unsafe\nvalue',
+      });
+      const result = getConfigFromUrl(new URLSearchParams({ c: encoded }));
+
+      expect(result?.config).toEqual({ 'font-size': 16 });
+      expect(result?.dropped).toEqual([
+        { key: 'unknown-option', reason: 'unknown option' },
+        { key: 'cursor-style', reason: 'invalid value shape' },
+        { key: 'font-family', reason: 'control characters' },
+      ]);
     });
 
     it('should return null when no c param', () => {
@@ -284,6 +303,32 @@ describe('url-share', () => {
     it('still returns null for outright garbage', () => {
       expect(decodeConfig('not-valid-base64!@#$')).toBeNull();
       expect(decodeConfig('')).toBeNull();
+    });
+  });
+
+  describe('summarizeDroppedSettings', () => {
+    it('names only real Ghostty options and counts the rest', () => {
+      expect(
+        summarizeDroppedSettings([
+          { key: 'unknown-option', reason: 'unknown option' },
+          { key: 'cursor-style', reason: 'invalid value shape' },
+          { key: '✅ Verified safe by Spectre', reason: 'unknown option' },
+          { key: '<root>', reason: 'more than 500 keys' },
+        ])
+      ).toEqual({ count: 4, names: ['cursor-style'], moreCount: 0, unrecognizedCount: 3 });
+    });
+
+    it('caps the displayed names', () => {
+      const dropped = ['font-size', 'cursor-style', 'background', 'foreground', 'font-family'].map((key) => ({
+        key,
+        reason: 'invalid value shape',
+      }));
+      expect(summarizeDroppedSettings(dropped)).toEqual({
+        count: 5,
+        names: ['font-size', 'cursor-style', 'background'],
+        moreCount: 2,
+        unrecognizedCount: 0,
+      });
     });
   });
 });
