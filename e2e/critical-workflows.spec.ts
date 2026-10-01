@@ -8,10 +8,10 @@ test("a user can open the configuration editor", async ({ page }) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: /craft your ghostty experience/i })
+    page.getByRole("heading", { name: /configure ghostty without the docs/i })
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "Open Editor" }).first().click();
+  await page.getByRole("link", { name: "Open the editor" }).first().click();
 
   await expect(page).toHaveURL(/\/editor$/);
   await expect(page.getByRole("heading", { name: "Fonts" })).toBeVisible();
