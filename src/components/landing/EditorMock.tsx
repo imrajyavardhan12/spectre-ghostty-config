@@ -47,7 +47,7 @@ export function EditorMock() {
     <div key="b"><span style={{ color: theme.c[1] }}>$</span> ls</div>,
     <div key="c"><span style={{ color: theme.c[3] }}>src</span> <span style={{ color: theme.c[3] }}>public</span> <span style={{ color: theme.c[2] }}>package.json</span></div>,
     <div key="d"><span style={{ color: theme.c[1] }}>$</span> git status</div>,
-    <div key="e"><span style={{ color: theme.c[1] }}>✓</span> working tree clean<span className="ml-1 inline-block h-3.5 w-2 translate-y-0.5 animate-pulse" style={{ background: theme.fg }} /></div>,
+    <div key="e"><span style={{ color: theme.c[1] }}>✓</span> working tree clean<span className="ml-1 inline-block h-3.5 w-2 translate-y-0.5 animate-pulse motion-reduce:animate-none" style={{ background: theme.fg }} /></div>,
   ];
 
   return (
@@ -57,8 +57,8 @@ export function EditorMock() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 animate-pulse rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-10 -left-10 h-48 w-48 animate-pulse rounded-full bg-primary/10 blur-3xl [animation-delay:1s]" />
+      <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 animate-pulse motion-reduce:animate-none rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-10 -left-10 h-48 w-48 animate-pulse motion-reduce:animate-none rounded-full bg-primary/10 blur-3xl [animation-delay:1s]" />
       <Tilt>
         <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-black/20">
           <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-4 py-3">
