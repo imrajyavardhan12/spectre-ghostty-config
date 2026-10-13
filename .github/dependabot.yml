@@ -7,7 +7,9 @@ updates:
     open-pull-requests-limit: 5
     # Packages that must move in lockstep are grouped so a bump can't leave
     # the toolchain skewed (e.g. @tailwindcss/postcss pins its own tailwindcss,
-    # and @vitest/* peer-depend on an exact vitest version).
+    # and @vitest/* peer-depend on an exact vitest version; @playwright/test
+    # pins its own playwright-core, which @axe-core/playwright resolves as a
+    # peer, so a lone bump of either leaves two copies and fails typecheck).
     groups:
       next:
         patterns: ["next", "eslint-config-next", "@next/*"]
@@ -17,6 +19,8 @@ updates:
         patterns: ["vitest", "@vitest/*"]
       radix:
         patterns: ["@radix-ui/*"]
+      playwright:
+        patterns: ["@playwright/test", "playwright-core"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
