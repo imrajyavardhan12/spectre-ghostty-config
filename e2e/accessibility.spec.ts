@@ -73,7 +73,7 @@ test("the landing page has no automatically detectable WCAG A or AA violations",
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /craft your ghostty experience/i })
+    page.getByRole("heading", { name: /configure ghostty without the docs/i })
   ).toBeVisible();
 
   expect(await findAccessibilityViolations(page)).toEqual([]);
