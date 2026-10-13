@@ -63,7 +63,7 @@ export function TypeLines({ lines }: { lines: React.ReactNode[] }) {
         </div>
       ))}
       <span
-        className={`inline-block h-3.5 w-2 translate-y-0.5 bg-current animate-pulse transition-opacity duration-300 ${inView ? "opacity-70" : "opacity-0"}`}
+        className={`inline-block h-3.5 w-2 translate-y-0.5 bg-current animate-pulse motion-reduce:animate-none transition-opacity duration-300 ${inView ? "opacity-70" : "opacity-0"}`}
         style={{ transitionDelay: `${lines.length * 0.45}s` }}
       />
     </div>
