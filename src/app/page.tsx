@@ -114,7 +114,7 @@ export default function HomePage() {
                 </div>
                 <Reveal delay={600}>
                   <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-300">
-                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 animate-pulse" />
+                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 animate-pulse motion-reduce:animate-none" />
                     Also bound to new_window. Ghostty uses the last one you define.
                   </div>
                 </Reveal>

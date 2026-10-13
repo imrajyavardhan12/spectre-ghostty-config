@@ -71,12 +71,33 @@ test("the editor has no automatically detectable WCAG A or AA violations", async
 test("the landing page has no automatically detectable WCAG A or AA violations", async ({
   page,
 }) => {
+  // Reduced motion shows the finished page at once, so axe never measures text mid-fade.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: /configure ghostty without the docs/i })
   ).toBeVisible();
 
   expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
+test("the landing page runs no animations when the user prefers reduced motion", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: /configure ghostty without the docs/i })
+  ).toBeVisible();
+
+  const animations = await page.evaluate(() =>
+    document
+      .getAnimations()
+      .map((animation) =>
+        animation instanceof CSSAnimation ? animation.animationName : "transition"
+      )
+  );
+  expect(animations).toEqual([]);
 });
 
 test("the mobile editor has no automatically detectable WCAG A or AA violations", async ({

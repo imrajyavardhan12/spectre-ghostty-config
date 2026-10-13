@@ -312,6 +312,23 @@
   animation: gradient-shift 8s ease infinite;
 }
 
+/* These utilities are unlayered, so they beat Tailwind's layered `motion-reduce:animate-none`.
+   Switch them off here so reduced motion shows the finished state straight away. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-fade-up,
+  .animate-fade-down,
+  .animate-scale-in,
+  .animate-slide-in-right,
+  .animate-slide-in-left,
+  .animate-float,
+  .animate-pulse-glow,
+  .animate-shimmer,
+  .animate-gradient {
+    animation: none;
+  }
+}
+
 /* Stagger animations for lists */
 .stagger-1 { animation-delay: 0.1s; }
 .stagger-2 { animation-delay: 0.2s; }
