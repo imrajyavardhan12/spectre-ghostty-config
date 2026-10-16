@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Ghost, Code2, Download, Upload, RotateCcw, Check, Loader2, Palette, Sparkles, Search, Undo2, Redo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Tooltip,
   TooltipContent,
@@ -226,9 +227,7 @@ export function Header() {
           >
             <Search className="h-3.5 w-3.5" />
             <span>Search...</span>
-            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-              <span className="text-xs">⌘</span>K
-            </kbd>
+            <Kbd variant="hint">⌘K</Kbd>
           </button>
 
           {/* Modified count badge */}

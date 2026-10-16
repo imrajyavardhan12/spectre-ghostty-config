@@ -442,7 +442,7 @@ test("a user can filter options by Ghostty target version", async ({
   ).toBeVisible();
 
   const searchDialog = page.getByRole("dialog", { name: "Search Settings" });
-  await page.getByRole("button", { name: "Search... \u2318 K" }).click();
+  await page.getByRole("button", { name: "Search... \u2318K" }).click();
   await expect(searchDialog).toBeVisible();
   await searchDialog.getByPlaceholder("Search settings...").fill("background-image");
   await expect(
@@ -456,7 +456,7 @@ test("a user can filter options by Ghostty target version", async ({
   await expect(page.locator("#option-background-image")).not.toBeAttached();
   await expect(page.getByText(/newer Ghostty than 1.1.0/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Search... \u2318 K" }).click();
+  await page.getByRole("button", { name: "Search... \u2318K" }).click();
   await expect(searchDialog).toBeVisible();
   await searchDialog.getByPlaceholder("Search settings...").fill("background-image");
   await expect(searchDialog.getByText("No settings found.")).toBeVisible();
