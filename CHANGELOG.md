@@ -11,8 +11,12 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+## [0.5.0] - 2026-10-16
+
 ### Changed
 
+- Rewrote the landing page around what Spectre does today: the hero is a mock of the editor that cycles sample themes, followed by plain feature rows for the live preview, keybind conflict detection, version targeting (with selectable version chips), and undo, import review and share links. It adds a staggered intro, pointer tilt with glare, scroll reveals and typed terminal lines. "Buy me a coffee" moved to the footer.
+- Updated dependencies: the Radix UI group (tooltip stays on 1.2), lucide-react, Playwright 1.64 (with `playwright-core` now an explicit dev dependency so it always matches `@axe-core/playwright`), axe-core 4.13, Vitest 5.0.3, Testing Library, and `@types/react`.
 - Calmer settings column: empty repeatable options show just their input (no "No values configured" box), the repeatable hint appears only once values exist, the font-preview notice is a single quiet line instead of a banner, and Font Size now follows Font Family instead of the three style-specific font families.
 - Preset cards now show exactly which Ghostty lines a preset writes, required fonts, and platforms, with an explicit Apply button instead of applying on any click.
 - Rewrote the built-in presets so each one sets only values that differ from Ghostty's defaults, uses built-in Ghostty themes (including automatic light/dark pairs) instead of partial hand-copied colors, declares required fonts, and keeps Ghostty's default keybinds. New presets include tmux-style Leader Keys, Rosé Pine, and Catppuccin; per-terminal scrollback is now sized conservatively.
@@ -28,7 +32,8 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ### Fixed
 
-- Share links now show an amber notice with the count of settings skipped by validation, naming up to three real Ghostty options, instead of silently omitting them. Keys that aren't Ghostty options are only counted, so a crafted link can't put its own text in the notice.
+- The intro, fade and scale animations now respect `prefers-reduced-motion` (they ignored it before), including the landing page's pulsing glow and cursor, and an end-to-end check now fails if the landing page animates for someone who prefers reduced motion.
+- Share links now show an amber notice with the count of settings skipped by validation, naming up to three real Ghostty options, instead of silently omitting them. Keys that aren't Ghostty options are only counted, so a crafted link can't put its own text in the notice. Thanks to @pramitsingh0 for the first outside contribution.
 - Opening the terminal preview no longer logs Content Security Policy errors: the preview loads Ghostty's WASM directly from the bundled file instead of first trying a blocked `data:` URL.
 - Keybind notes no longer claim a row replaces a Ghostty default when it only omits the action's default parameter (`copy_to_clipboard` means `copy_to_clipboard:mixed`). The defaults (`copy_to_clipboard`, `new_split`, `close_tab`) are generated from Ghostty 1.3.1's `Binding.zig`.
 - Presets are reachable on phones from a Presets chip at the start of the category bar (the header button is hidden on narrow screens).
