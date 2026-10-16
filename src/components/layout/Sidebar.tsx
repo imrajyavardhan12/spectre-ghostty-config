@@ -148,7 +148,7 @@ export function MobileCategoryBar({
   };
 
   return (
-    <div className="md:hidden border-b border-border bg-background sticky top-14 z-40">
+    <div className="shrink-0 border-b border-border bg-background md:hidden">
       <div className="px-3 pt-2">
         <VersionFilterControls compact />
       </div>

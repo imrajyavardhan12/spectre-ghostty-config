@@ -84,13 +84,14 @@ export default function EditorPage() {
           onCategoryChange={setActiveCategory}
         />
 
-        <main className="min-w-0 flex-1 animate-fade-in">
+        {/* Fills the space under the header so only the options list scrolls, never the window. */}
+        <main className="flex h-[calc(100dvh-3.5rem)] min-w-0 flex-1 animate-fade-in flex-col">
           <MobileCategoryBar
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
           />
 
-          <div className="relative">
+          <div className="relative min-h-0 flex-1">
             <ConfigPanel 
               category={activeCategory} 
               highlightedOption={highlightedOption}

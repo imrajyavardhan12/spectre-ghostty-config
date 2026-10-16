@@ -21,7 +21,7 @@ export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
   // Radix wraps viewport content in a display:table div that grows to its
   // min-content width; block keeps options within narrow screens.
   return (
-    <ScrollArea className="h-[calc(100vh-3.5rem)] [&_[data-slot=scroll-area-viewport]>div]:block!">
+    <ScrollArea className="h-full [&_[data-slot=scroll-area-viewport]>div]:block!">
       <CategoryPage key={category} category={category} highlightedOption={highlightedOption} />
     </ScrollArea>
   );
@@ -132,6 +132,9 @@ function GroupedOptions({ category, groups, highlightedOption }: GroupedOptionsP
   const config = useConfigStore((state) => state.config);
   const [activeGroup, setActiveGroup] = useState(groups[0].id);
   const barRef = useRef<HTMLElement>(null);
+  // While a chip click scrolls the page, keep that chip active instead of
+  // stepping through every group the scroll passes.
+  const jumpingToRef = useRef<string | null>(null);
   const groupIds = groups.map((group) => group.id).join(" ");
 
   useEffect(() => {
@@ -140,14 +143,26 @@ function GroupedOptions({ category, groups, highlightedOption }: GroupedOptionsP
     if (!bar || !viewport) return;
     const ids = groupIds.split(" ");
     let shown = ids[0];
+    let settleTimer: ReturnType<typeof setTimeout> | undefined;
 
     const update = () => {
+      if (jumpingToRef.current) {
+        // The clicked group stays active once the jump settles; later scrolls follow the page.
+        const target = jumpingToRef.current;
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => {
+          shown = target;
+          jumpingToRef.current = null;
+        }, 150);
+        return;
+      }
       let current = ids[0];
       const atBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 2;
       if (atBottom) {
         current = ids[ids.length - 1];
       } else {
-        const line = bar.getBoundingClientRect().bottom + 24;
+        // Sections land a scroll margin below the bar; count one as current from there.
+        const line = bar.getBoundingClientRect().bottom + 64;
         for (const id of ids) {
           const section = document.getElementById(groupSectionId(category, id));
           if (section && section.getBoundingClientRect().top <= line) current = id;
@@ -156,17 +171,33 @@ function GroupedOptions({ category, groups, highlightedOption }: GroupedOptionsP
       if (current === shown) return;
       shown = current;
       setActiveGroup(current);
-      // Keep the active chip visible when the bar scrolls sideways.
-      bar
-        .querySelector<HTMLElement>(`[data-group="${current}"]`)
-        ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      // Keep the active chip visible when the bar scrolls sideways. Scroll only the
+      // chip list: scrollIntoView would also cancel a smooth scroll of the page.
+      const list = bar.querySelector("ul");
+      const chip = bar.querySelector<HTMLElement>(`[data-group="${current}"]`);
+      if (list && chip) {
+        const listBox = list.getBoundingClientRect();
+        const chipBox = chip.getBoundingClientRect();
+        if (chipBox.left < listBox.left) {
+          list.scrollLeft -= listBox.left - chipBox.left + 8;
+        } else if (chipBox.right > listBox.right - 24) {
+          list.scrollLeft += chipBox.right - listBox.right + 32;
+        }
+      }
     };
 
     viewport.addEventListener("scroll", update, { passive: true });
-    return () => viewport.removeEventListener("scroll", update);
+    return () => {
+      clearTimeout(settleTimer);
+      viewport.removeEventListener("scroll", update);
+    };
   }, [category, groupIds]);
 
+  // A filter change can remove the active group; fall back to the first one.
+  const currentGroup = groups.some((group) => group.id === activeGroup) ? activeGroup : groups[0].id;
+
   const jumpTo = (groupId: string) => {
+    jumpingToRef.current = groupId;
     setActiveGroup(groupId);
     document.getElementById(groupSectionId(category, groupId))?.scrollIntoView({
       behavior: prefersReducedMotion() ? "auto" : "smooth",
@@ -184,7 +215,7 @@ function GroupedOptions({ category, groups, highlightedOption }: GroupedOptionsP
         {/* Scrolls sideways on narrow screens; the fade hints at more chips. */}
         <ul className="scrollbar-none flex gap-1 overflow-x-auto pr-6 [mask-image:linear-gradient(to_right,black_calc(100%-1.5rem),transparent)]">
           {groups.map((group) => {
-            const isActive = group.id === activeGroup;
+            const isActive = group.id === currentGroup;
             const modified = group.options.filter((option) => option.id in config).length;
             return (
               <li key={group.id} className="shrink-0">

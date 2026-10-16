@@ -27,7 +27,7 @@ export function PreviewPane({ tab, onTabChange, onCollapse }: PreviewPaneProps) 
   return (
     <aside
       aria-label="Preview and generated config"
-      className="sticky top-14 flex h-[calc(100vh-3.5rem)] w-[42%] max-w-[680px] shrink-0 flex-col border-l border-border"
+      className="sticky top-14 flex h-[calc(100dvh-3.5rem)] w-[42%] max-w-[680px] shrink-0 flex-col border-l border-border"
     >
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div role="tablist" aria-label="Pane view" className="flex gap-1 rounded-lg bg-muted/50 p-1">
