@@ -438,7 +438,7 @@ test("a user can filter options by Ghostty target version", async ({
   await targetSelect.click();
   await page.getByRole("option", { name: "1.1.0" }).click();
   await expect(
-    page.locator("#option-background-image").getByText("Requires Ghostty 1.2.0+", { exact: true })
+    page.locator("#option-background-image").getByText("Needs 1.2.0", { exact: true })
   ).toBeVisible();
 
   const searchDialog = page.getByRole("dialog", { name: "Search Settings" });
@@ -446,7 +446,7 @@ test("a user can filter options by Ghostty target version", async ({
   await expect(searchDialog).toBeVisible();
   await searchDialog.getByPlaceholder("Search settings...").fill("background-image");
   await expect(
-    searchDialog.getByText("Requires Ghostty 1.2.0+", { exact: true }).first()
+    searchDialog.getByText("Needs 1.2.0", { exact: true }).first()
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(searchDialog).not.toBeVisible();
@@ -471,7 +471,7 @@ test("a user can filter options by Ghostty target version", async ({
   await targetSelect.click();
   await page.getByRole("option", { name: "1.3.1" }).click();
   await expect(
-    page.locator("#option-background-image").getByText("Requires Ghostty 1.2.0+", { exact: true })
+    page.locator("#option-background-image").getByText("Needs 1.2.0", { exact: true })
   ).not.toBeVisible();
 });
 

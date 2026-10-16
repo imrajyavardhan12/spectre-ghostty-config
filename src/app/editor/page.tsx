@@ -55,10 +55,12 @@ export default function EditorPage() {
     setTimeout(() => {
       const element = document.getElementById(`option-${option.id}`);
       if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Rows carry a scroll margin that clears the sticky group bar.
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        element.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
       }
       // Clear highlight after animation
-      setTimeout(() => setHighlightedOption(null), 2000);
+      setTimeout(() => setHighlightedOption(null), 2400);
     }, 100);
   }, []);
 
