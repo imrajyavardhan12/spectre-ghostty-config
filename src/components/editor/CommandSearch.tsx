@@ -28,6 +28,7 @@ import { allOptions } from "@/data/ghostty-options";
 import { categories } from "@/data/categories";
 import { Category, ConfigOption } from "@/lib/schema/types";
 import { Badge } from "@/components/ui/badge";
+import { Kbd } from "@/components/ui/kbd";
 import { useConfigStore } from "@/lib/store/config-store";
 import { isOptionSupportedIn } from "@/lib/ghostty-versions";
 
@@ -183,8 +184,8 @@ export function CommandSearch({ onSelectOption, onSelectCategory }: CommandSearc
                         )}
                         {isUnsupported(option) && option.sinceVersion && (
                           <Badge
-                            variant="outline"
-                            className="text-[10px] px-1.5 py-0 h-4 border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            variant="warning"
+                            className="text-[10px] px-1.5 py-0 h-4"
                           >
                             Requires Ghostty {option.sinceVersion}+
                           </Badge>
@@ -213,9 +214,9 @@ export function SearchButton({ onClick }: { onClick: () => void }) {
       className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground bg-muted/50 border border-border rounded-md hover:bg-muted transition-colors"
     >
       <span>Search settings...</span>
-      <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-        <span className="text-xs">⌘</span>K
-      </kbd>
+      <Kbd variant="hint" className="hidden sm:inline-flex">
+        ⌘K
+      </Kbd>
     </button>
   );
 }
