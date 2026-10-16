@@ -110,6 +110,33 @@ test("the mobile editor has no automatically detectable WCAG A or AA violations"
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
 
+test("the tablet header moves actions into an accessible overflow menu", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 800 });
+  await page.goto("/editor");
+  await expect(page.getByRole("heading", { name: "Fonts" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Configuration presets" })).toBeHidden();
+
+  const more = page.getByRole("button", { name: "More actions" });
+  await more.click();
+  const menu = page.getByRole("menu");
+  await expect(menu.getByRole("menuitem", { name: "Import config…" })).toBeVisible();
+  // Export stays in the header from the tablet breakpoint up.
+  await expect(menu.getByRole("menuitem", { name: "Export config" })).toHaveCount(0);
+  await expect(menu.getByRole("menuitem", { name: "Reset all settings" })).toHaveAttribute(
+    "aria-disabled",
+    "true"
+  );
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+
+  await menu.getByRole("menuitem", { name: "Presets" }).click();
+  await expect(page.getByRole("dialog", { name: "Configuration Presets" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Configuration Presets" })).toBeHidden();
+  await expect(more).toBeFocused();
+});
+
 test("the theme browser has no automatically detectable WCAG A or AA violations", async ({
   page,
 }) => {
@@ -126,7 +153,14 @@ async function openImportReview(page: Page, buffer: Buffer) {
   await expect(page.getByRole("heading", { name: "Fonts" })).toBeVisible();
 
   const fileChooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Import Config" }).click();
+  const importButton = page.getByRole("button", { name: "Import Config" });
+  if (await importButton.isVisible()) {
+    await importButton.click();
+  } else {
+    // Below the wide breakpoint, Import lives in the overflow menu.
+    await page.getByRole("button", { name: "More actions" }).click();
+    await page.getByRole("menuitem", { name: "Import config…" }).click();
+  }
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles({
     name: "config",
@@ -282,7 +316,7 @@ test("the version-filtered editor has no automatically detectable WCAG A or AA v
   page,
 }) => {
   await page.goto("/editor");
-  await page.getByRole("combobox", { name: "Ghostty target version" }).click();
+  await page.getByRole("combobox", { name: "Target Ghostty version" }).click();
   await page.getByRole("option", { name: "1.1.0" }).click();
   await page.getByRole("button", { name: "Colors", exact: true }).click();
   await expect(
@@ -314,7 +348,7 @@ test("the mobile version filter remains usable without horizontal overflow", asy
   await page.goto("/editor");
   await expect(page.getByRole("heading", { name: "Fonts" })).toBeVisible();
 
-  const targetSelect = page.getByRole("combobox", { name: "Ghostty target version" });
+  const targetSelect = page.getByRole("combobox", { name: "Target Ghostty version" });
   await expect(targetSelect).toBeVisible();
   await targetSelect.click();
   await page.getByRole("option", { name: "1.0.0" }).click();

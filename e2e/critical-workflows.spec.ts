@@ -434,7 +434,7 @@ test("a user can filter options by Ghostty target version", async ({
   await page.getByRole("button", { name: "Colors", exact: true }).click();
   await expect(page.locator("#option-background-image")).toBeVisible();
 
-  const targetSelect = page.getByRole("combobox", { name: "Ghostty target version" });
+  const targetSelect = page.getByRole("combobox", { name: "Target Ghostty version" });
   await targetSelect.click();
   await page.getByRole("option", { name: "1.1.0" }).click();
   await expect(
@@ -442,7 +442,7 @@ test("a user can filter options by Ghostty target version", async ({
   ).toBeVisible();
 
   const searchDialog = page.getByRole("dialog", { name: "Search Settings" });
-  await page.getByRole("button", { name: "Search... \u2318K" }).click();
+  await page.getByRole("button", { name: /^Search \d+ options/ }).click();
   await expect(searchDialog).toBeVisible();
   await searchDialog.getByPlaceholder("Search settings...").fill("background-image");
   await expect(
@@ -456,7 +456,7 @@ test("a user can filter options by Ghostty target version", async ({
   await expect(page.locator("#option-background-image")).not.toBeAttached();
   await expect(page.getByText(/newer Ghostty than 1.1.0/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Search... \u2318K" }).click();
+  await page.getByRole("button", { name: /^Search \d+ options/ }).click();
   await expect(searchDialog).toBeVisible();
   await searchDialog.getByPlaceholder("Search settings...").fill("background-image");
   await expect(searchDialog.getByText("No settings found.")).toBeVisible();
@@ -479,7 +479,7 @@ test("a user exporting for an older Ghostty target gets explicit warnings", asyn
   page,
 }) => {
   await page.goto("/editor");
-  await page.getByRole("combobox", { name: "Ghostty target version" }).click();
+  await page.getByRole("combobox", { name: "Target Ghostty version" }).click();
   await page.getByRole("option", { name: "1.1.0" }).click();
   await page.getByRole("button", { name: "Colors", exact: true }).click();
   await page.locator("#option-background-image input").fill("/tmp/bg.png");
@@ -500,7 +500,7 @@ test("a user opening a share link sees newer-than-target flags", async ({
   page,
 }) => {
   await page.goto("/editor");
-  await page.getByRole("combobox", { name: "Ghostty target version" }).click();
+  await page.getByRole("combobox", { name: "Target Ghostty version" }).click();
   await page.getByRole("option", { name: "1.1.0" }).click();
 
   const encoded = encodeConfig({ "font-size": 16, "progress-style": true });
@@ -597,7 +597,7 @@ test("a user can target, hide, and still export newer options with warnings", as
   page,
 }) => {
   await page.goto("/editor");
-  await page.getByRole("combobox", { name: "Ghostty target version" }).click();
+  await page.getByRole("combobox", { name: "Target Ghostty version" }).click();
   await page.getByRole("option", { name: "1.1.0" }).click();
   await page.getByRole("button", { name: "Colors", exact: true }).click();
   await page.locator("#option-background-image input").fill("/tmp/bg.png");
@@ -826,7 +826,8 @@ test("a user can undo and redo editor changes", async ({ page }) => {
   await expect(fontSize).toHaveValue("16");
 
   // Reset-all recovery.
-  await page.getByRole("button", { name: "Reset All" }).click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Reset all settings" }).click();
   await expect(fontSize).toHaveValue("13");
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(fontSize).toHaveValue("16");

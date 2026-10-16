@@ -17,8 +17,9 @@ import {
   Apple,
   Monitor,
   Wrench,
-  ChevronRight,
-  Sparkles,
+  ArrowUpRight,
+  BookOpen,
+  Layers,
 } from "lucide-react";
 import { Category } from "@/lib/schema/types";
 import { useConfigStore } from "@/lib/store/config-store";
@@ -62,84 +63,63 @@ export function Sidebar({ activeCategory, onCategoryChange }: SidebarProps) {
   };
 
   return (
-    <aside className="w-60 border-r border-border bg-background hidden md:flex flex-col">
-      <ScrollArea className="flex-1">
-        <div className="p-3 space-y-1">
-          <div className="px-3 py-2">
-            <VersionFilterControls />
-          </div>
-          <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+    <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-56 shrink-0 flex-col border-r border-border bg-background md:flex">
+      <ScrollArea className="min-h-0 flex-1">
+        <nav aria-labelledby="sidebar-categories" className="p-3">
+          <p
+            id="sidebar-categories"
+            className="px-2.5 pb-2 pt-1 text-[11px] font-medium uppercase tracking-wider text-subtle-foreground"
+          >
             Categories
           </p>
-          {categories.map((category, index) => {
-            const Icon = iconMap[category.icon || "Settings"] || Settings;
-            const isActive = activeCategory === category.id;
-            const modifiedCount = getModifiedCount(category.id);
-            if (hideUnsupported && !hasSupportedOptions(category.id)) return null;
+          <ul className="space-y-0.5">
+            {categories.map((category) => {
+              const Icon = iconMap[category.icon || "Settings"] || Settings;
+              const isActive = activeCategory === category.id;
+              const modifiedCount = getModifiedCount(category.id);
+              if (hideUnsupported && !hasSupportedOptions(category.id)) return null;
 
-            return (
-              <button
-                key={category.id}
-                onClick={() => onCategoryChange(category.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative",
-                  "opacity-0 animate-slide-in-left",
-                  isActive 
-                    ? "bg-primary/10 text-primary" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                )}
-                style={{ animationDelay: `${index * 0.03}s`, animationFillMode: 'forwards' }}
-              >
-                {/* Active indicator */}
-                <div 
-                  className={cn(
-                    "absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-primary transition-all duration-200",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )} 
-                />
-                
-                <Icon className={cn(
-                  "h-4 w-4 transition-colors duration-200 shrink-0",
-                  isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                )} />
-                
-                <span className="flex-1 text-left truncate">{category.name}</span>
-                
-                {/* Modified count badge */}
-                {modifiedCount > 0 && (
-                  <span className={cn(
-                    "min-w-5 h-5 flex items-center justify-center text-xs rounded-full transition-colors",
-                    isActive 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted text-muted-foreground"
-                  )}>
-                    {modifiedCount}
-                  </span>
-                )}
-                
-                {/* Arrow indicator */}
-                <ChevronRight className={cn(
-                  "h-4 w-4 transition-all duration-200",
-                  isActive 
-                    ? "opacity-100 translate-x-0 text-primary" 
-                    : "opacity-0 -translate-x-2 text-muted-foreground"
-                )} />
-              </button>
-            );
-          })}
-        </div>
+              return (
+                <li key={category.id}>
+                  <button
+                    type="button"
+                    onClick={() => onCategoryChange(category.id)}
+                    aria-current={isActive ? "true" : undefined}
+                    className={cn(
+                      "flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-[13px] transition-colors",
+                      isActive
+                        ? "bg-muted font-medium text-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <Icon className={cn("size-4 shrink-0", isActive ? "text-foreground" : "text-subtle-foreground")} />
+                    <span className="flex-1 truncate text-left">{category.name}</span>
+                    {modifiedCount > 0 && (
+                      <span className="font-mono text-[11px] tabular-nums text-accent-foreground">
+                        {modifiedCount}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       </ScrollArea>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-border">
+      <div className="space-y-3 p-3 pt-0">
+        <div className="rounded-lg border border-border bg-card p-3">
+          <VersionFilterControls />
+        </div>
         <a
           href="https://ghostty.org/docs/config"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
-          <Terminal className="h-3.5 w-3.5" />
-          <span>Ghostty Docs</span>
+          <BookOpen className="size-3.5" aria-hidden="true" />
+          <span>Ghostty docs</span>
+          <ArrowUpRight className="size-3" aria-hidden="true" />
         </a>
       </div>
     </aside>
@@ -173,13 +153,16 @@ export function MobileCategoryBar({
         <VersionFilterControls compact />
       </div>
       <div className="overflow-x-auto scrollbar-none">
-        <div className="flex p-2 gap-1.5">
-          {/* The header's presets button is hidden below sm; offer it here instead. */}
-          <span className="sm:hidden flex shrink-0 border-r border-border pr-1.5">
+        <div className="flex items-center gap-1.5 p-2">
+          {/* The header's presets button is hidden below xl; offer it here too. */}
+          <span className="flex shrink-0 items-center border-r border-border pr-1.5">
             <PresetsDialog
               trigger={
-                <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap text-muted-foreground hover:text-foreground hover:bg-secondary">
-                  <Sparkles className="h-3.5 w-3.5" />
+                <button
+                  type="button"
+                  className="flex h-9 items-center gap-1.5 rounded-full border border-border-strong px-3.5 text-[13px] font-medium whitespace-nowrap text-foreground transition-colors hover:bg-muted"
+                >
+                  <Layers className="size-3.5" aria-hidden="true" />
                   <span>Presets</span>
                 </button>
               }
@@ -194,25 +177,20 @@ export function MobileCategoryBar({
             return (
               <button
                 key={category.id}
+                type="button"
                 onClick={() => onCategoryChange(category.id)}
+                aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 shrink-0",
-                  isActive 
-                    ? "bg-primary/10 text-primary" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors",
+                  isActive
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="size-3.5" aria-hidden="true" />
                 <span>{category.name}</span>
                 {modifiedCount > 0 && (
-                  <span className={cn(
-                    "min-w-4 h-4 flex items-center justify-center text-[10px] rounded-full",
-                    isActive 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted text-muted-foreground"
-                  )}>
-                    {modifiedCount}
-                  </span>
+                  <span className="font-mono text-[11px] tabular-nums">{modifiedCount}</span>
                 )}
               </button>
             );
