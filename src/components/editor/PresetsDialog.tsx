@@ -142,11 +142,23 @@ function PresetCard({ preset, applied, onApply }: PresetCardProps) {
 }
 
 interface PresetsDialogProps {
+  /** Opens the dialog. Pass `null` to render no trigger and control `open` from outside. */
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Where focus goes on close when the dialog was opened without its own trigger. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
-export function PresetsDialog({ trigger }: PresetsDialogProps) {
-  const [open, setOpen] = useState(false);
+export function PresetsDialog({
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+  onCloseAutoFocus,
+}: PresetsDialogProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [searchQuery, setSearchQuery] = useState("");
   const [appliedPreset, setAppliedPreset] = useState<ConfigPreset | null>(null);
   const loadConfig = useConfigStore((state) => state.loadConfig);
@@ -172,15 +184,17 @@ export function PresetsDialog({ trigger }: PresetsDialogProps) {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm" className="gap-2">
-            <Sparkles className="h-4 w-4" />
-            Presets
-          </Button>
-        )}
-      </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg p-6">
+      {trigger !== null && (
+        <SheetTrigger asChild>
+          {trigger || (
+            <Button variant="outline" size="sm" className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              Presets
+            </Button>
+          )}
+        </SheetTrigger>
+      )}
+      <SheetContent className="w-full sm:max-w-lg p-6" onCloseAutoFocus={onCloseAutoFocus}>
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
