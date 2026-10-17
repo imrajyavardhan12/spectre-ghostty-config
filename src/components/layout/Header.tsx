@@ -2,9 +2,32 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Ghost, Code2, Download, Upload, RotateCcw, Check, Loader2, Palette, Sparkles, Search, Undo2, Redo2 } from "lucide-react";
+import {
+  ArrowUpRight,
+  BookOpen,
+  Check,
+  Download,
+  Ellipsis,
+  FileUp,
+  GitBranch,
+  Ghost,
+  Layers,
+  Loader2,
+  Palette,
+  Redo2,
+  RotateCcw,
+  Search,
+  Undo2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -15,13 +38,34 @@ import { useConfigStore } from "@/lib/store/config-store";
 import { useCanRedo, useCanUndo, useHistoryStore } from "@/lib/store/history-store";
 import { ImportReviewDialog } from "@/components/editor/ImportReviewDialog";
 import { PresetsDialog } from "@/components/editor/PresetsDialog";
-import { cn } from "@/lib/utils";
+import { allOptions } from "@/data/ghostty-options";
+import { TABLET_QUERY, useMediaQuery, WIDE_QUERY } from "@/lib/hooks/use-media-query";
 import {
   ImportFileCoordinator,
   type PendingImportFile,
 } from "@/lib/utils/config-import-coordinator";
 import type { ConfigValues } from "@/lib/schema/types";
 import { SPECTRE_VERSION } from "@/lib/version";
+
+const GITHUB_URL = "https://github.com/imrajyavardhan12/spectre-ghostty-config";
+const GHOSTTY_DOCS_URL = "https://ghostty.org/docs/config";
+
+/** CommandSearch listens for ⌘K on the document. */
+function openCommandSearch() {
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }));
+}
+
+/** An icon-only control; universal actions get a tooltip and an aria-label instead of a visible label. */
+function IconAction({ label, children }: { label: string; children: React.ReactElement }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="bottom">
+        <p>{label}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 function describeConfigCount(): string {
   const count = Object.keys(useConfigStore.getState().config).length;
@@ -45,6 +89,12 @@ export function Header() {
   const [importErrorMessage, setImportErrorMessage] = useState("");
   const [pendingImport, setPendingImport] = useState<PendingImportFile | null>(null);
   const importButtonRef = useRef<HTMLButtonElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const presetsReturnRef = useRef<HTMLButtonElement | null>(null);
+  // Actions that don't fit the header at this width move into the overflow menu.
+  const isWide = useMediaQuery(WIDE_QUERY);
+  const isTablet = useMediaQuery(TABLET_QUERY);
   const importFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const importCoordinatorRef = useRef<ImportFileCoordinator | null>(null);
 
@@ -165,8 +215,27 @@ export function Header() {
   };
 
   const restoreImportFocus = () => {
-    setTimeout(() => importButtonRef.current?.focus(), 0);
+    // Import lives in the overflow menu below the wide breakpoint.
+    setTimeout(() => {
+      const importButton = importButtonRef.current;
+      // offsetParent is null while the button is display:none.
+      (importButton?.offsetParent ? importButton : moreButtonRef.current)?.focus();
+    }, 0);
   };
+
+  const openPresets = (returnFocusTo: HTMLButtonElement | null) => {
+    presetsReturnRef.current = returnFocusTo;
+    setPresetsOpen(true);
+  };
+
+  const transientIcon = (state: "idle" | "loading" | "success", idle: React.ReactNode) =>
+    state === "loading" ? (
+      <Loader2 className="animate-spin" />
+    ) : state === "success" ? (
+      <Check className="text-success" />
+    ) : (
+      idle
+    );
 
   const closeImportReview = () => {
     setPendingImport(null);
@@ -197,238 +266,171 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full glass border-b border-border/50">
-      <div className="flex w-full h-14 items-center justify-between px-4">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
-          <span className="font-medium sr-only min-[400px]:not-sr-only">Spectre</span>
-          <span className="hidden sm:inline text-xs text-muted-foreground">
-            v{SPECTRE_VERSION}
-          </span>
-          <span className="text-sm text-muted-foreground hidden lg:inline">
-            Ghostty Config Generator
-          </span>
-        </Link>
-
-        {/* Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Search button */}
-          <button
-            onClick={() => {
-              const event = new KeyboardEvent("keydown", {
-                key: "k",
-                metaKey: true,
-                bubbles: true,
-              });
-              document.dispatchEvent(event);
-            }}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground bg-muted/50 border border-border rounded-md hover:bg-muted transition-colors"
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
+      <TooltipProvider>
+        <div className="flex h-14 w-full items-center gap-3 px-4">
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <Search className="h-3.5 w-3.5" />
-            <span>Search...</span>
+            <Ghost className="size-5 text-primary" aria-hidden="true" />
+            <span className="sr-only text-[15px] font-semibold tracking-tight min-[360px]:not-sr-only">
+              Spectre
+            </span>
+            <span className="hidden font-mono text-[11px] text-subtle-foreground xl:inline">
+              v{SPECTRE_VERSION}
+            </span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={openCommandSearch}
+            className="hidden h-8 w-full max-w-72 min-w-0 items-center gap-2 rounded-md border border-input bg-field px-2.5 text-[13px] text-subtle-foreground transition-colors hover:border-border-strong hover:text-muted-foreground md:flex xl:ml-6 xl:max-w-sm"
+          >
+            <Search className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1 truncate text-left">
+              <span className="xl:hidden">Search options</span>
+              <span className="hidden xl:inline">Search {allOptions.length} options</span>
+            </span>
             <Kbd variant="hint">⌘K</Kbd>
           </button>
 
-          {/* Modified count badge */}
-          {modifiedCount > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium animate-scale-in">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+          <div className="ml-auto flex items-center gap-1">
+            <IconAction label="Search settings">
+              <Button variant="ghost" size="icon" onClick={openCommandSearch} aria-label="Search settings" className="md:hidden">
+                <Search />
+              </Button>
+            </IconAction>
+
+            {modifiedCount > 0 && (
+              <span className="mr-1 hidden h-7 items-center gap-1.5 rounded-full bg-accent px-2.5 text-xs font-medium text-accent-foreground sm:inline-flex">
+                <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
+                {modifiedCount} modified
               </span>
-              {modifiedCount} modified
-            </div>
-          )}
+            )}
 
-          {/* Import button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  ref={importButtonRef}
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleImport}
-                  aria-label="Import Config"
-                  className="relative h-9 w-9"
-                >
-                  {importState === "loading" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : importState === "success" ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Import Config</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <IconAction label="Undo">
+              <Button variant="ghost" size="icon" onClick={handleUndo} aria-label="Undo" disabled={!canUndo} className="md:size-8">
+                <Undo2 />
+              </Button>
+            </IconAction>
+            <IconAction label="Redo">
+              <Button variant="ghost" size="icon" onClick={handleRedo} aria-label="Redo" disabled={!canRedo} className="md:size-8">
+                <Redo2 />
+              </Button>
+            </IconAction>
 
-          {/* Export button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={handleExport}
-                  aria-label="Export Config"
-                  className="h-9 w-9"
-                >
-                  {exportState === "loading" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : exportState === "success" ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Export Config</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <div className="mx-1.5 hidden h-5 w-px bg-border xl:block" aria-hidden="true" />
 
-          {/* Undo button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleUndo}
-                  aria-label="Undo"
-                  disabled={!canUndo}
-                  className="h-9 w-9"
-                >
-                  <Undo2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Undo</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(event) => openPresets(event.currentTarget)}
+              aria-label="Configuration presets"
+              className="hidden xl:inline-flex"
+            >
+              <Layers />
+              Presets
+            </Button>
+            <Button variant="ghost" size="sm" asChild className="hidden xl:inline-flex">
+              <Link href="/themes" aria-label="Browse themes">
+                <Palette />
+                Themes
+              </Link>
+            </Button>
 
-          {/* Redo button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleRedo}
-                  aria-label="Redo"
-                  disabled={!canRedo}
-                  className="h-9 w-9"
-                >
-                  <Redo2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Redo</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <div className="mx-1.5 hidden h-5 w-px bg-border xl:block" aria-hidden="true" />
 
-          {/* Reset button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={resetAll}
-                  aria-label="Reset All"
-                  disabled={modifiedCount === 0}
-                  className={cn(
-                    "h-9 w-9 transition-all duration-200",
-                    modifiedCount > 0 && "hover:bg-destructive/10 hover:text-destructive"
-                  )}
-                >
-                  <RotateCcw className={cn(
-                    "h-4 w-4 transition-transform duration-300",
-                    modifiedCount > 0 && "hover:-rotate-45"
-                  )} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Reset All</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <Button
+              ref={importButtonRef}
+              variant="outline"
+              size="sm"
+              onClick={handleImport}
+              aria-label="Import config"
+              className="hidden xl:inline-flex"
+            >
+              {transientIcon(importState, <FileUp />)}
+              Import
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleExport}
+              aria-label="Export config"
+              className="ml-1 hidden md:inline-flex"
+            >
+              {transientIcon(exportState, <Download />)}
+              Export
+            </Button>
 
-          {/* Divider */}
-          <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
-
-          {/* Presets */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="hidden sm:inline-flex">
-                  <PresetsDialog
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Configuration Presets"
-                        className="h-9 w-9"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                      </Button>
-                    }
-                  />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Configuration Presets</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          {/* Themes */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" asChild className="h-9 w-9">
-                  <Link href="/themes" aria-label="Browse Themes">
-                    <Palette className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Browse Themes</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          {/* GitHub - hidden on very small screens to keep the header within 320px */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" asChild className="hidden h-9 w-9 sm:inline-flex">
-                  <a
-                    href="https://github.com/imrajyavardhan12/spectre-ghostty-config"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="View Spectre on GitHub"
-                  >
-                    <Code2 className="h-4 w-4" />
+            {/* Non-modal: the page stays in the accessibility tree and scrollable while it is open. */}
+            <DropdownMenu modal={false}>
+              <IconAction label="More actions">
+                <DropdownMenuTrigger asChild>
+                  <Button ref={moreButtonRef} variant="ghost" size="icon" aria-label="More actions" className="ml-1 md:size-8">
+                    <Ellipsis />
+                  </Button>
+                </DropdownMenuTrigger>
+              </IconAction>
+              <DropdownMenuContent align="end">
+                {!isWide && (
+                  <>
+                    <DropdownMenuItem onSelect={() => openPresets(moreButtonRef.current)}>
+                      <Layers />
+                      Presets
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/themes">
+                        <Palette />
+                        Browse themes
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleImport}>
+                      <FileUp />
+                      Import config…
+                    </DropdownMenuItem>
+                    {!isTablet && (
+                      <DropdownMenuItem onSelect={handleExport}>
+                        <Download />
+                        Export config
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem asChild>
+                  <a href={GHOSTTY_DOCS_URL} target="_blank" rel="noopener noreferrer">
+                    <BookOpen />
+                    <span className="flex-1">Ghostty docs</span>
+                    <ArrowUpRight className="size-3.5" />
                   </a>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>View on GitHub</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                    <GitBranch />
+                    <span className="flex-1">Source on GitHub</span>
+                    <ArrowUpRight className="size-3.5" />
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={resetAll} disabled={modifiedCount === 0}>
+                  <RotateCcw />
+                  Reset all settings
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
+
+      <PresetsDialog
+        trigger={null}
+        open={presetsOpen}
+        onOpenChange={setPresetsOpen}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          presetsReturnRef.current?.focus();
+        }}
+      />
 
       {pendingImport && (
         <ImportReviewDialog

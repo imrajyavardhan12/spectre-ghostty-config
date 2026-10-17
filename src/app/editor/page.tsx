@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useSyncExternalStore } from "react";
+import { useState, useCallback } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar, MobileCategoryBar } from "@/components/layout/Sidebar";
 import { ConfigPanel } from "@/components/editor/ConfigPanel";
@@ -9,20 +9,9 @@ import { CommandSearch } from "@/components/editor/CommandSearch";
 import { GhosttyPreview, PreviewToggleButton } from "@/components/preview";
 import { PreviewPane, type PreviewPaneTab } from "@/components/editor/PreviewPane";
 import { Category, ConfigOption } from "@/lib/schema/types";
+import { useMediaQuery, WIDE_QUERY } from "@/lib/hooks/use-media-query";
 
-// The docked preview pane needs room for a readable settings column beside it.
-const WIDE_QUERY = "(min-width: 1280px)";
 const PANE_STORAGE_KEY = "spectre-preview-pane";
-
-function subscribeToWide(onChange: () => void) {
-  const query = window.matchMedia(WIDE_QUERY);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-
-function useIsWide(): boolean {
-  return useSyncExternalStore(subscribeToWide, () => window.matchMedia(WIDE_QUERY).matches, () => false);
-}
 
 /** Pane open/collapsed is a per-browser convenience; storage may be unavailable. */
 function readPaneOpen(): boolean {
@@ -36,7 +25,8 @@ function readPaneOpen(): boolean {
 export default function EditorPage() {
   const [activeCategory, setActiveCategory] = useState<Category>("fonts");
   const [previewOpen, setPreviewOpen] = useState(false);
-  const isWide = useIsWide();
+  // The docked preview pane needs room for a readable settings column beside it.
+  const isWide = useMediaQuery(WIDE_QUERY);
   const [paneOpen, setPaneOpenState] = useState(() => (typeof window === "undefined" ? true : readPaneOpen()));
   const [paneTab, setPaneTab] = useState<PreviewPaneTab>("preview");
   const docked = isWide && paneOpen;
