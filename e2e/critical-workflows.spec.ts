@@ -799,6 +799,19 @@ test("a phone user can open presets from the category bar", async ({ page }) => 
   expect(hasHorizontalPageOverflow).toBe(false);
 });
 
+test("a first-time visitor sees a setting as modified and can reset it", async ({ page }) => {
+  await page.goto("/editor");
+  const row = page.locator("#option-font-size");
+  const fontSize = row.getByRole("spinbutton");
+  await fontSize.fill("16");
+
+  await expect(row.getByText("Modified", { exact: true })).toBeVisible();
+  await row.hover();
+  await row.getByRole("button", { name: "Reset Font Size to default" }).click();
+  await expect(fontSize).toHaveValue("13");
+  await expect(row.getByText("Modified", { exact: true })).toHaveCount(0);
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');
