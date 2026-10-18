@@ -907,6 +907,19 @@ unknown-option = true
       });
     });
 
+    it('should finish hydrating on a first visit with nothing in storage', async () => {
+      const merge = useConfigStore.persist.getOptions().merge!;
+      // zustand passes undefined when storage holds no state yet.
+      const fresh = merge(undefined, getStoreState());
+      expect(fresh.config).toEqual({});
+      expect(fresh.targetVersion).toBe(GHOSTTY_COMPATIBILITY_VERSION);
+      expect(fresh.hideUnsupported).toBe(false);
+
+      localStorage.removeItem('spectre-config');
+      await useConfigStore.persist.rehydrate();
+      expect(useConfigStore.persist.hasHydrated()).toBe(true);
+    });
+
     it('should coerce invalid persisted view preferences to defaults on merge', () => {
       const merge = useConfigStore.persist.getOptions().merge!;
       const current = getStoreState();

@@ -169,7 +169,9 @@ export const useConfigStore = create<ConfigStore>()(
       name: "spectre-config",
       partialize: (state) => ({ config: state.config, appliedTheme: state.appliedTheme, targetVersion: state.targetVersion, hideUnsupported: state.hideUnsupported }),
       merge: (persistedState, currentState) => {
-        const persisted = persistedState as Partial<
+        // Storage is empty on a first visit and zustand passes undefined. Throwing here
+        // would leave the store unhydrated, hiding modified state until a reload.
+        const persisted = (persistedState ?? {}) as Partial<
           Pick<ConfigStore, "config" | "appliedTheme" | "targetVersion" | "hideUnsupported">
         >;
         const config = persisted.config &&
