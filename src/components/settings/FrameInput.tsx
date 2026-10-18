@@ -38,6 +38,7 @@ export function FrameInput({ option }: FrameInputProps) {
             deprecated={option.deprecated}
             sinceVersion={option.sinceVersion}
             platform={option.platform}
+            layout="stacked"
         >
             <FramePickerDialog
                 trigger={

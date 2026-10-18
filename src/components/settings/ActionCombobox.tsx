@@ -318,7 +318,7 @@ export function ActionCombobox({
                                                             </Badge>
                                                         )}
                                                         {action.deprecated && (
-                                                            <AlertTriangle className="h-3 w-3 text-amber-500" />
+                                                            <AlertTriangle className="h-3 w-3 text-warning" />
                                                         )}
                                                     </div>
                                                 </div>

@@ -51,6 +51,7 @@ export function IconInput({ option }: IconInputProps) {
       deprecated={option.deprecated}
       sinceVersion={option.sinceVersion}
       platform={option.platform}
+      layout="stacked"
     >
       <IconPickerDialog
         trigger={

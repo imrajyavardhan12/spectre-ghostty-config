@@ -284,7 +284,7 @@ test("keybind row errors meet WCAG contrast", async ({ page }) => {
 
   expect(await findAccessibilityViolations(page)).toEqual([]);
 
-  const rowWarningIcon = page.locator('#option-keybind svg.text-amber-500').first();
+  const rowWarningIcon = page.locator('#option-keybind svg.text-warning').first();
   await expect(rowWarningIcon).toBeVisible();
   await rowWarningIcon.hover();
   await expect(page.getByText(/is deprecated/).first()).toBeAttached();

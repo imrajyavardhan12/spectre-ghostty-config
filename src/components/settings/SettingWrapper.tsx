@@ -1,9 +1,12 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { RotateCcw, Info, ExternalLink, ClockArrowUp } from "lucide-react";
 import { useConfigStore } from "@/lib/store/config-store";
 import { isOptionSupportedIn } from "@/lib/ghostty-versions";
+import { getOptionById } from "@/data/ghostty-options";
+import { formatDefaultText } from "@/lib/utils/default-text";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +35,8 @@ interface SettingWrapperProps {
   deprecated?: boolean;
   sinceVersion?: string;
   platform?: string[];
+  /** "side" puts the control beside the label; "stacked" gives wide controls the full row. */
+  layout?: "side" | "stacked";
 }
 
 /**
@@ -49,15 +54,26 @@ export function SettingWrapper({
   deprecated,
   sinceVersion,
   platform,
+  layout = "side",
 }: SettingWrapperProps) {
   const targetVersion = useConfigStore((state) => state.targetVersion);
   const needsNewerGhostty = !isOptionSupportedIn(id, targetVersion);
 
+  const defaultText = useMemo(() => {
+    const option = layout === "side" ? getOptionById(id) : undefined;
+    return option ? formatDefaultText(option) : null;
+  }, [id, layout]);
+
   return (
-    <div className="px-5 py-4">
-      <div className="mb-3 min-w-0">
+    <div
+      className={cn(
+        "px-[18px] py-4",
+        layout === "side" ? "flex flex-wrap items-start gap-x-6 gap-y-3" : "flex flex-col gap-3"
+      )}
+    >
+      <div className={cn("min-w-0", layout === "side" && "flex-[1_1_200px]")}>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <label htmlFor={id} className="text-sm font-medium text-foreground">
+          <label htmlFor={id} id={`${id}-label`} className="text-sm font-medium text-foreground">
             {name}
           </label>
           {isModified && (
@@ -121,7 +137,17 @@ export function SettingWrapper({
         </div>
 
         <div className="mt-1.5 flex items-start gap-1.5">
-          <p className="text-[13px] leading-relaxed text-muted-foreground">{description}</p>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            {description}
+            {defaultText && (
+              <>
+                {" "}
+                <span className="font-mono text-xs whitespace-pre-wrap [overflow-wrap:anywhere] text-subtle-foreground">
+                  Default {defaultText}
+                </span>
+              </>
+            )}
+          </p>
           {note && (
             <TooltipProvider>
               <Tooltip>
@@ -143,7 +169,14 @@ export function SettingWrapper({
         </div>
       </div>
 
-      <div className="relative">{children}</div>
+      <div
+        className={cn(
+          "relative min-w-0",
+          layout === "side" && "flex-[0_1_260px] min-w-[min(100%,220px)]"
+        )}
+      >
+        {children}
+      </div>
     </div>
   );
 }

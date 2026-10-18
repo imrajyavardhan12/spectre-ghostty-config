@@ -170,7 +170,7 @@ export function ImportReviewDialog({
                   </a>
                   {` = ${formatInstructionValue(instruction)}`}
                   {!instruction.known && (
-                    <span className="ml-2 inline-flex rounded border px-1.5 py-0.5 font-sans text-[10px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                    <span className="ml-2 inline-flex rounded border px-1.5 py-0.5 font-sans text-[10px] font-medium uppercase tracking-wide text-warning-foreground">
                       Unverified
                     </span>
                   )}
@@ -226,7 +226,7 @@ export function ImportReviewDialog({
                     className={
                       diagnostic.severity === "error"
                         ? "wrap-anywhere text-destructive"
-                        : "wrap-anywhere text-amber-600 dark:text-amber-400"
+                        : "wrap-anywhere text-warning-foreground"
                     }
                   >
                     {`${formatDiagnosticSeverity(diagnostic)} — Line ${diagnostic.lineNumber}`}

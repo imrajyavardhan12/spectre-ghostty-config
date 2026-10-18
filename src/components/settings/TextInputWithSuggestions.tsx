@@ -62,6 +62,7 @@ export function TextInputWithSuggestions({ option }: TextInputWithSuggestionsPro
             deprecated={option.deprecated}
             sinceVersion={option.sinceVersion}
             platform={option.platform}
+            layout="stacked"
         >
             <div className="space-y-3">
                 <Input

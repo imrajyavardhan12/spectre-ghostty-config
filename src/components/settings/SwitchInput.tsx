@@ -13,6 +13,7 @@ export function SwitchInput({ option }: SwitchInputProps) {
   const { getValue, setValue, resetValue } = useConfigStore();
   const value = getValue(option.id) as boolean;
   const modified = useIsModified(option.id);
+  const checked = value ?? option.default;
 
   return (
     <SettingWrapper
@@ -26,11 +27,14 @@ export function SwitchInput({ option }: SwitchInputProps) {
       sinceVersion={option.sinceVersion}
       platform={option.platform}
     >
-      <Switch
-        id={option.id}
-        checked={value ?? option.default}
-        onCheckedChange={(checked) => setValue(option.id, checked)}
-      />
+      <div className="flex items-center justify-end gap-2.5 text-[13px] text-muted-foreground">
+        <span aria-hidden="true">{checked ? "On" : "Off"}</span>
+        <Switch
+          id={option.id}
+          checked={checked}
+          onCheckedChange={(next) => setValue(option.id, next)}
+        />
+      </div>
     </SettingWrapper>
   );
 }

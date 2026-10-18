@@ -36,4 +36,25 @@ describe('NumberInput', () => {
     expect(useConfigStore.getState().config['cursor-opacity']).toBe(2);
     expect(screen.getByText('Ghostty will clamp values above 1 down to 1.')).toBeTruthy();
   });
+
+  it('steps by the option step without float drift and stays inside the range', () => {
+    render(<NumberInput option={option} showSlider={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease Cursor Opacity' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease Cursor Opacity' }));
+    expect(useConfigStore.getState().config['cursor-opacity']).toBe(0.9);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Cursor Opacity' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Cursor Opacity' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Cursor Opacity' }));
+    expect(useConfigStore.getState().config['cursor-opacity']).toBeUndefined();
+  });
+
+  it('keeps the precision of a typed value when stepping', () => {
+    render(<NumberInput option={option} showSlider={false} />);
+
+    fireEvent.change(screen.getByLabelText('Cursor Opacity'), { target: { value: '0.234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Cursor Opacity' }));
+    expect(useConfigStore.getState().config['cursor-opacity']).toBe(0.284);
+  });
 });

@@ -55,7 +55,7 @@ export function DurationInput({ option }: DurationInputProps) {
         onBlur={handleInputBlur}
         placeholder={option.placeholder || option.default || "e.g., 750ms, 1s, 1h30m"}
         aria-invalid={hasErrors}
-        className={cn("max-w-xs font-mono", hasErrors && "border-destructive focus-visible:ring-destructive/40")}
+        className={cn("w-full font-mono", hasErrors && "border-destructive focus-visible:ring-destructive/40")}
       />
       <p className="mt-1 text-xs text-muted-foreground">
         Format: 1h, 30m, 45s, 750ms, 100us, 50ns

@@ -97,7 +97,7 @@ export function CommandSearch({ onSelectOption, onSelectCategory }: CommandSearc
       case "color":
         return "bg-pink-500/10 text-pink-500 border-pink-500/20";
       case "enum":
-        return "bg-amber-500/10 text-amber-500 border-amber-500/20";
+        return "bg-warning-soft text-warning-foreground border-warning-border";
       case "keybind":
         return "bg-green-500/10 text-green-500 border-green-500/20";
       default:

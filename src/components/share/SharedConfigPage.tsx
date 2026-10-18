@@ -191,9 +191,9 @@ function SharePageContent() {
           {skipped.count > 0 && (
             <div
               role="status"
-              className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3"
+              className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-3"
             >
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+              <p className="text-sm font-medium text-warning-foreground">
                 {skipped.count} {skipped.count === 1 ? "setting" : "settings"} in this link {skipped.count === 1 ? "was" : "were"} invalid and skipped
               </p>
               <p className="mt-1 font-mono text-xs text-muted-foreground break-words">
@@ -204,9 +204,9 @@ function SharePageContent() {
           {newerSharedOptions.length > 0 && (
             <div
               role="status"
-              className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3"
+              className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-3"
             >
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+              <p className="text-sm font-medium text-warning-foreground">
                 {newerSharedOptions.length} {newerSharedOptions.length === 1 ? "setting" : "settings"} in this shared config {newerSharedOptions.length === 1 ? "requires" : "require"} Ghostty newer than {targetVersion}
               </p>
               <p className="mt-1 font-mono text-xs text-muted-foreground break-words">

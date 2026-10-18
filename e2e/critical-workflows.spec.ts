@@ -836,6 +836,26 @@ test("a first-time visitor sees a setting as modified and can reset it", async (
   await expect(row.getByText("Modified", { exact: true })).toHaveCount(0);
 });
 
+test("a user can pick short choices from a segmented control and sees each default", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await page.getByRole("button", { name: "Window", exact: true }).click();
+
+  const row = page.locator("#option-window-decoration");
+  await expect(row.getByText("Default Auto", { exact: true })).toBeVisible();
+
+  const choices = row.getByRole("radiogroup", { name: "Window Decoration" });
+  await expect(choices.getByRole("radio", { name: "Auto" })).toBeChecked();
+  await choices.getByRole("radio", { name: "Auto" }).focus();
+  await page.keyboard.press("ArrowRight");
+
+  await expect(choices.getByRole("radio", { name: "None" })).toBeChecked();
+  await expect(row.getByText("Modified", { exact: true })).toBeVisible();
+  await row.getByRole("button", { name: "Reset Window Decoration to default" }).click();
+  await expect(choices.getByRole("radio", { name: "Auto" })).toBeChecked();
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');
