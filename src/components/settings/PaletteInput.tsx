@@ -64,6 +64,7 @@ export function PaletteInput({ option }: PaletteInputProps) {
       deprecated={option.deprecated}
       sinceVersion={option.sinceVersion}
       platform={option.platform}
+      layout="stacked"
     >
       <div className="space-y-4">
         {/* Normal Colors */}

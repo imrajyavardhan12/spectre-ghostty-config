@@ -21,7 +21,7 @@ export function ValidationMessages({ result, className }: ValidationMessagesProp
         </p>
       ))}
       {result.warnings.map((message) => (
-        <p key={message} className="flex items-start gap-1.5 text-xs text-amber-500" role="status">
+        <p key={message} className="flex items-start gap-1.5 text-xs text-warning-foreground" role="status">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{message}</span>
         </p>

@@ -130,12 +130,13 @@ export function KeybindInput({ option }: KeybindInputProps) {
       deprecated={option.deprecated}
       sinceVersion={option.sinceVersion}
       platform={option.platform}
+      layout="stacked"
     >
       <div className="space-y-4">
         {/* Existing keybinds */}
         {value.length > 0 && (
           <div className="space-y-2">
-            <p role="status" className="text-xs text-amber-700 dark:text-amber-300 empty:sr-only">
+            <p role="status" className="text-xs text-warning-foreground empty:sr-only">
               {conflicts.size > 0 &&
                 `${conflicts.size} of ${value.length} keybinds ${conflicts.size === 1 ? "has" : "have"} no effect in Ghostty.`}
             </p>
@@ -154,7 +155,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
                     hasErrors
                       ? "border-destructive/50 bg-destructive/5"
                       : hasWarnings
-                        ? "border-amber-500/50 bg-amber-500/5"
+                        ? "border-warning-border bg-warning-soft"
                         : "border-border bg-muted/50"
                   )}
                 >
@@ -177,7 +178,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
                             <AlertCircle
                               className={cn(
                                 "h-4 w-4 shrink-0",
-                                hasErrors ? "text-destructive" : "text-amber-500"
+                                hasErrors ? "text-destructive" : "text-warning"
                               )}
                             />
                           </TooltipTrigger>
@@ -213,7 +214,7 @@ export function KeybindInput({ option }: KeybindInputProps) {
                     </Button>
                   </div>
                   {conflict && (
-                    <p className="mt-1 pl-7 text-xs text-amber-700 dark:text-amber-300">
+                    <p className="mt-1 pl-7 text-xs text-warning-foreground">
                       {describeKeybindConflict(conflict)}
                     </p>
                   )}

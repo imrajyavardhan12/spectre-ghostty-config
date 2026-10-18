@@ -7,7 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SettingWrapper } from "./SettingWrapper";
+import { fitsSegmentedControl } from "@/lib/utils/segmented";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { EnumOption } from "@/lib/schema/types";
 
@@ -44,21 +46,30 @@ export function SelectInput({ option }: SelectInputProps) {
       sinceVersion={option.sinceVersion}
       platform={option.platform}
     >
-      <Select
-        value={toUiValue(value ?? option.default)}
-        onValueChange={(v) => setValue(option.id, fromUiValue(v))}
-      >
-        <SelectTrigger className="max-w-xs" aria-label={option.name}>
-          <SelectValue placeholder="Select an option" />
-        </SelectTrigger>
-        <SelectContent>
-          {option.options.map((opt) => (
-            <SelectItem key={opt.value} value={toUiValue(opt.value)}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {fitsSegmentedControl(option.options.map((opt) => opt.label)) ? (
+        <SegmentedControl
+          aria-labelledby={`${option.id}-label`}
+          value={value ?? option.default}
+          onValueChange={(v) => setValue(option.id, v)}
+          options={option.options}
+        />
+      ) : (
+        <Select
+          value={toUiValue(value ?? option.default)}
+          onValueChange={(v) => setValue(option.id, fromUiValue(v))}
+        >
+          <SelectTrigger className="w-full" aria-label={option.name}>
+            <SelectValue placeholder="Select an option" />
+          </SelectTrigger>
+          <SelectContent>
+            {option.options.map((opt) => (
+              <SelectItem key={opt.value} value={toUiValue(opt.value)}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </SettingWrapper>
   );
 }

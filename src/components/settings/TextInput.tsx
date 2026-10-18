@@ -32,7 +32,7 @@ export function TextInput({ option }: TextInputProps) {
         value={value || ""}
         onChange={(e) => setValue(option.id, e.target.value)}
         placeholder={option.placeholder || `Default: ${option.default || "empty"}`}
-        className="max-w-md"
+        className="w-full font-mono"
       />
     </SettingWrapper>
   );
