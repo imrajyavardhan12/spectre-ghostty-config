@@ -1,33 +1,31 @@
 # Spectre
 
-A visual configuration generator for the Ghostty terminal: Next.js 16, React 19, Zustand, Tailwind 4, with a
-live preview rendered by Ghostty's own VT engine (WASM). Ghostty is the source of truth for every option.
-How to contribute (sources to check, advancing the stable target, presets, PR workflow): @CONTRIBUTING.md
+Visual configuration generator for the Ghostty terminal: Next.js 16, React 19, Zustand, Tailwind 4, Bun. The live
+preview is Ghostty's own VT engine (WASM). Ghostty is the source of truth for every option name, type and default.
 
-## Checks
+## Commands
 
-```bash
-bun run typecheck && bun run lint && bun run test -- --run   # every change, ~10 s
-bun run test:e2e                     # Playwright (starts its own server on :3100); `bunx playwright install chromium` once
-bun run schema:check                 # options vs Ghostty's reference (needs network)
-bun run keybinds:defaults --check    # generated default keybinds match the pinned Ghostty
-bun run themes:builtin --check       # generated built-in theme names match the pinned Ghostty
-```
+- `bun run typecheck && bun run lint && bun run test -- --run`: types, ESLint, Vitest once (~10 s). Plain
+  `bun run test` starts watch mode.
+- `bun run test:e2e`: Playwright with axe checks; starts its own server on :3100 (`bunx playwright install chromium` once)
+- `bun run schema:check`: options vs Ghostty's reference (needs network)
+- `bun run keybinds:defaults --check`, `bun run themes:builtin --check`: generated data matches the pinned Ghostty
 
-Plain `bun run test` starts watch mode; pass `-- --run` for a single run.
+## Verify before you say done
 
-## Proving a change works
+- Every change: run the first command above and quote the result lines.
+- UI, routing, preview, import/export or sharing: also run `bun run test:e2e`.
+- Visual change: look at the page in Playwright at desktop width and 390 px, light and dark; compare with `screenshots/`.
+- Option behaviour: with Ghostty installed, `ghostty +validate-config --config-file=<exported file>` proves an
+  export parses. Check upstream sources in the order CONTRIBUTING.md lists.
+- Bug fix: first write the test that fails without the fix. Tests sit next to the code (`*.test.ts(x)`).
 
-- Report the summary lines you saw, not "tests pass".
-- UI, routing, preview, import/export or sharing: also run `bun run test:e2e`. It covers the import → edit →
-  preview → export/share path and axe accessibility checks.
-- Visual changes: look at the page in Playwright at desktop width and 390 px, light and dark, and compare with
-  `screenshots/`. Put before/after screenshots in the PR.
-- Option schema: check behaviour against Ghostty itself. With Ghostty installed,
-  `ghostty +validate-config --config-file=<exported file>` proves an exported config parses.
-- Generated files (`src/data/ghostty-default-keybinds.ts`, `src/data/ghostty-builtin-themes.ts`): regenerate,
-  never hand-edit.
-- Bug fix: add the test that fails without the fix. Tests sit next to the code (`*.test.ts(x)`).
+## Rules
+
+- Never hand-edit `src/data/ghostty-default-keybinds.ts` or `src/data/ghostty-builtin-themes.ts`: regenerate them.
+- Advancing the Ghostty stable target is a checklist (`compatibility.json`, docs, tests): follow CONTRIBUTING.md.
+- No repo-wide formatter: match the surrounding file and don't reformat unrelated lines.
+- Conventional commit messages (`feat:`, `fix:`, `docs:`, `test:`, `chore:`).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
