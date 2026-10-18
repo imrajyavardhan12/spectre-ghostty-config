@@ -55,10 +55,12 @@ export default function EditorPage() {
     setTimeout(() => {
       const element = document.getElementById(`option-${option.id}`);
       if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Rows carry a scroll margin that clears the sticky group bar.
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        element.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
       }
       // Clear highlight after animation
-      setTimeout(() => setHighlightedOption(null), 2000);
+      setTimeout(() => setHighlightedOption(null), 2400);
     }, 100);
   }, []);
 
@@ -82,13 +84,14 @@ export default function EditorPage() {
           onCategoryChange={setActiveCategory}
         />
 
-        <main className="min-w-0 flex-1 animate-fade-in">
+        {/* Fills the space under the header so only the options list scrolls, never the window. */}
+        <main className="flex h-[calc(100dvh-3.5rem)] min-w-0 flex-1 animate-fade-in flex-col">
           <MobileCategoryBar
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
           />
 
-          <div className="relative">
+          <div className="relative min-h-0 flex-1">
             <ConfigPanel 
               category={activeCategory} 
               highlightedOption={highlightedOption}

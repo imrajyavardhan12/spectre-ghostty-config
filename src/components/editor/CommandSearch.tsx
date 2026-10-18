@@ -187,7 +187,7 @@ export function CommandSearch({ onSelectOption, onSelectCategory }: CommandSearc
                             variant="warning"
                             className="text-[10px] px-1.5 py-0 h-4"
                           >
-                            Requires Ghostty {option.sinceVersion}+
+                            Needs {option.sinceVersion}
                           </Badge>
                         )}
                       </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { ReactNode, useState } from "react";
-import { RotateCcw, Info, ExternalLink } from "lucide-react";
+import { ReactNode } from "react";
+import { RotateCcw, Info, ExternalLink, ClockArrowUp } from "lucide-react";
 import { useConfigStore } from "@/lib/store/config-store";
 import { isOptionSupportedIn } from "@/lib/ghostty-versions";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -11,9 +12,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 
 const GHOSTTY_DOCS_BASE_URL = "https://ghostty.org/docs/config/reference";
+
+const PLATFORM_LABELS: Record<string, string> = {
+  macos: "macOS",
+  linux: "Linux",
+  windows: "Windows",
+};
 
 interface SettingWrapperProps {
   id: string;
@@ -28,6 +34,10 @@ interface SettingWrapperProps {
   platform?: string[];
 }
 
+/**
+ * One setting as a row inside its group card. States never rely on color alone:
+ * modified adds a word and a reset button, newer-than-target says "Needs x.y".
+ */
 export function SettingWrapper({
   id,
   name,
@@ -40,147 +50,100 @@ export function SettingWrapper({
   sinceVersion,
   platform,
 }: SettingWrapperProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const targetVersion = useConfigStore((state) => state.targetVersion);
   const needsNewerGhostty = !isOptionSupportedIn(id, targetVersion);
 
   return (
-    <div
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={cn(
-        "group relative rounded-xl border transition-all duration-300",
-        isModified
-          ? "border-primary/30 bg-primary/[0.02] shadow-sm shadow-primary/5"
-          : "border-border bg-card hover:border-border/80 hover:shadow-sm"
-      )}
-    >
-      {/* Modified indicator bar */}
-      <div 
-        className={cn(
-          "absolute left-0 top-4 bottom-4 w-0.5 rounded-full bg-primary transition-all duration-300",
-          isModified ? "opacity-100" : "opacity-0"
-        )} 
-      />
+    <div className="px-5 py-4">
+      <div className="mb-3 min-w-0">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <label htmlFor={id} className="text-sm font-medium text-foreground">
+            {name}
+          </label>
+          {isModified && (
+            <>
+              <Badge>
+                <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
+                Modified
+              </Badge>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="-my-1 size-7"
+                      aria-label={`Reset ${name} to default`}
+                      onClick={onReset}
+                    >
+                      <RotateCcw className="size-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>Reset to default</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </>
+          )}
+          {deprecated && <Badge variant="destructive">Deprecated</Badge>}
+          {needsNewerGhostty && sinceVersion ? (
+            <Badge variant="warning">
+              <ClockArrowUp aria-hidden="true" />
+              Needs {sinceVersion}
+            </Badge>
+          ) : (
+            sinceVersion && (
+              <Badge variant="outline" className="font-mono">
+                {sinceVersion}+
+              </Badge>
+            )
+          )}
+          {platform && platform.length > 0 && (
+            <Badge variant="outline">
+              {platform.map((p) => PLATFORM_LABELS[p] ?? p).join(", ")}
+            </Badge>
+          )}
+        </div>
 
-      <div className="p-4 pl-5">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex-1 min-w-0">
-            {/* Title row with badges */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5">
-                <label
-                  htmlFor={id}
-                  className={cn(
-                    "text-sm font-medium transition-colors duration-200",
-                    isModified && "text-primary"
-                  )}
-                >
-                  {name}
-                </label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <a
-                        href={`${GHOSTTY_DOCS_BASE_URL}#${id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`View ${name} in Ghostty docs`}
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>View in Ghostty docs</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              
-              {/* Inline badges */}
-              <div className="flex items-center gap-1.5">
-                {isModified && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-primary/10 text-primary animate-scale-in">
-                    Modified
-                  </span>
-                )}
-                {deprecated && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-destructive/10 text-destructive">
-                    Deprecated
-                  </span>
-                )}
-                {sinceVersion && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-muted text-muted-foreground">
-                    v{sinceVersion}+
-                  </span>
-                )}
-                {platform && platform.length > 0 && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-muted text-muted-foreground">
-                    {platform.join(", ")}
-                  </span>
-                )}
-                {needsNewerGhostty && sinceVersion && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
-                    Requires Ghostty {sinceVersion}+
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Description with info tooltip */}
-            <div className="flex items-start gap-1.5 mt-1">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {description}
-              </p>
-              {note && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs">
-                      <p className="text-xs">{note}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </div>
-          </div>
-
-          {/* Reset button */}
-          <div 
-            className={cn(
-              "transition-all duration-200",
-              isModified && isHovered ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none"
-            )}
+        <div className="mt-0.5 flex items-center gap-1.5">
+          <code className="font-mono text-xs text-subtle-foreground">{id}</code>
+          <a
+            href={`${GHOSTTY_DOCS_BASE_URL}#${id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`View ${name} in Ghostty docs`}
+            title="View in Ghostty docs"
+            className="rounded-xs text-subtle-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
+            <ExternalLink className="size-3" />
+          </a>
+        </div>
+
+        <div className="mt-1.5 flex items-start gap-1.5">
+          <p className="text-[13px] leading-relaxed text-muted-foreground">{description}</p>
+          {note && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                    aria-label={`Reset ${name} to default`}
-                    onClick={onReset}
+                  <button
+                    type="button"
+                    aria-label={`Note about ${name}`}
+                    className="mt-0.5 shrink-0 rounded-xs text-warning focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                  </Button>
+                    <Info className="size-3.5" />
+                  </button>
                 </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>Reset to default</p>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="text-xs">{note}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          </div>
+          )}
         </div>
-
-        {/* Input area */}
-        <div className="relative">{children}</div>
       </div>
+
+      <div className="relative">{children}</div>
     </div>
   );
 }

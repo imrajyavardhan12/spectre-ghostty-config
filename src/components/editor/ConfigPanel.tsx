@@ -1,45 +1,16 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { Info } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingRenderer } from "@/components/settings";
 import { getOptionsByCategory } from "@/data/ghostty-options";
+import { groupOptions, type OptionGroup } from "@/data/option-groups";
 import { splitOptionsBySupport } from "@/lib/ghostty-versions";
 import { useConfigStore } from "@/lib/store/config-store";
 import { categories } from "@/data/categories";
 import { Category } from "@/lib/schema/types";
 import { cn } from "@/lib/utils";
-import {
-  Type,
-  Palette,
-  AppWindow,
-  MousePointer2,
-  Mouse,
-  Clipboard,
-  Keyboard,
-  Terminal,
-  Settings,
-  TerminalSquare,
-  Apple,
-  Monitor,
-  Wrench,
-  Info,
-} from "lucide-react";
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Type,
-  Palette,
-  AppWindow,
-  MousePointer2,
-  Mouse,
-  Clipboard,
-  Keyboard,
-  Terminal,
-  Settings,
-  TerminalSquare,
-  Apple,
-  Monitor,
-  Wrench,
-};
 
 interface ConfigPanelProps {
   category: Category;
@@ -47,87 +18,257 @@ interface ConfigPanelProps {
 }
 
 export function ConfigPanel({ category, highlightedOption }: ConfigPanelProps) {
+  // Radix wraps viewport content in a display:table div that grows to its
+  // min-content width; block keeps options within narrow screens.
+  return (
+    <ScrollArea className="h-full [&_[data-slot=scroll-area-viewport]>div]:block!">
+      <CategoryPage key={category} category={category} highlightedOption={highlightedOption} />
+    </ScrollArea>
+  );
+}
+
+function groupSectionId(category: Category, groupId: string): string {
+  return `group-${category}-${groupId}`;
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function CategoryPage({ category, highlightedOption }: ConfigPanelProps) {
   const targetVersion = useConfigStore((state) => state.targetVersion);
   const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
+  const config = useConfigStore((state) => state.config);
   const allCategoryOptions = getOptionsByCategory(category);
   const { supported, unsupported } = splitOptionsBySupport(allCategoryOptions, targetVersion);
   const options = hideUnsupported ? supported : allCategoryOptions;
   const hiddenCount = hideUnsupported ? unsupported.length : 0;
   const categoryInfo = categories.find((c) => c.id === category);
-  const Icon = iconMap[categoryInfo?.icon || "Settings"] || Settings;
+  const groups = groupOptions(category, options);
+  const modifiedCount = options.filter((option) => option.id in config).length;
 
-  // Radix wraps viewport content in a display:table div that grows to its
-  // min-content width; block keeps options within narrow screens.
   return (
-    <ScrollArea className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)] [&_[data-slot=scroll-area-viewport]>div]:block!">
-      <div className="px-6 pt-6 pb-24 max-w-3xl mx-auto" key={category}>
-        {/* Category header */}
-        <div className="mb-8 animate-fade-down">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-              <Icon className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                {categoryInfo?.name}
-              </h1>
-              {categoryInfo?.description && (
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {categoryInfo.description}
-                </p>
-              )}
-            </div>
-          </div>
+    <div className="mx-auto max-w-3xl px-6 pt-8 pb-32">
+      <header className="mb-6">
+        <h1 className="text-h1">{categoryInfo?.name}</h1>
+        {categoryInfo?.description && (
+          <p className="mt-1 text-sm text-muted-foreground">{categoryInfo.description}</p>
+        )}
+        <p className="mt-3 flex items-center gap-2 text-[13px] text-muted-foreground">
+          {options.length} {options.length === 1 ? "option" : "options"}
+          {modifiedCount > 0 && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1.5 font-medium text-accent-foreground">
+                <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
+                {modifiedCount} modified
+              </span>
+            </>
+          )}
+        </p>
+      </header>
+
+      {/* The preview renders with browser fonts, so say so once, quietly. */}
+      {category === "fonts" && (
+        <p className="mb-6 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Info className="size-3.5 shrink-0" aria-hidden="true" />
+          The preview can only show fonts installed on this device. Ghostty&apos;s default is JetBrains Mono.
+        </p>
+      )}
+
+      {hiddenCount > 0 && (
+        <p role="status" className="mb-4 text-xs text-muted-foreground">
+          {hiddenCount} {hiddenCount === 1 ? "option needs" : "options need"} a newer Ghostty than {targetVersion} and {hiddenCount === 1 ? "is" : "are"} hidden.
+        </p>
+      )}
+
+      {groups.length > 1 ? (
+        <GroupedOptions category={category} groups={groups} highlightedOption={highlightedOption} />
+      ) : (
+        groups.map((group) => (
+          <OptionCard key={group.id} group={group} highlightedOption={highlightedOption} />
+        ))
+      )}
+
+      {options.length === 0 && (
+        <p className="py-16 text-center text-sm text-muted-foreground">
+          {hiddenCount > 0
+            ? `Every option here needs a newer Ghostty than ${targetVersion}.`
+            : "No options available for this category."}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function OptionCard({ group, highlightedOption }: { group: OptionGroup; highlightedOption?: string | null }) {
+  return (
+    <div className="divide-y divide-border rounded-lg border border-border bg-card">
+      {group.options.map((option) => (
+        <div
+          id={`option-${option.id}`}
+          key={option.id}
+          className={cn(
+            // Search jumps land just below the sticky group bar.
+            "scroll-mt-20 transition-colors duration-200 first:rounded-t-lg last:rounded-b-lg",
+            highlightedOption === option.id && "bg-accent/60 ring-2 ring-inset ring-primary"
+          )}
+        >
+          <SettingRenderer option={option} />
         </div>
+      ))}
+    </div>
+  );
+}
 
-        {/* The preview renders with browser fonts, so say so once, quietly. */}
-        {category === "fonts" && (
-          <p className="-mt-4 mb-6 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Info className="h-3.5 w-3.5 shrink-0" />
-            The preview can only show fonts installed on this device. Ghostty&apos;s default is JetBrains Mono.
-          </p>
-        )}
+interface GroupedOptionsProps {
+  category: Category;
+  groups: OptionGroup[];
+  highlightedOption?: string | null;
+}
 
-        {hiddenCount > 0 && (
-          <p role="status" className="mb-4 text-xs text-muted-foreground">
-            {hiddenCount} {hiddenCount === 1 ? "option needs" : "options need"} a newer Ghostty than {targetVersion} and {hiddenCount === 1 ? "is" : "are"} hidden.
-          </p>
-        )}
+/** Long categories: a sticky jump bar that follows scroll, then one headed card per group. */
+function GroupedOptions({ category, groups, highlightedOption }: GroupedOptionsProps) {
+  const config = useConfigStore((state) => state.config);
+  const [activeGroup, setActiveGroup] = useState(groups[0].id);
+  const barRef = useRef<HTMLElement>(null);
+  // While a chip click scrolls the page, keep that chip active instead of
+  // stepping through every group the scroll passes.
+  const jumpingToRef = useRef<string | null>(null);
+  const groupIds = groups.map((group) => group.id).join(" ");
 
-        {/* Options list */}
-        <div className="space-y-3">
-          {options.map((option, index) => (
-            <div
-              id={`option-${option.id}`}
-              key={option.id}
-              className={cn(
-                "animate-fade-up [animation-fill-mode:backwards] rounded-lg transition-all duration-500",
-                highlightedOption === option.id && "ring-2 ring-primary ring-offset-2 ring-offset-background"
-              )}
-              style={{ animationDelay: `${Math.min(index * 0.03, 0.3)}s` }}
+  useEffect(() => {
+    const bar = barRef.current;
+    const viewport = bar?.closest<HTMLElement>("[data-slot=scroll-area-viewport]");
+    if (!bar || !viewport) return;
+    const ids = groupIds.split(" ");
+    let shown = ids[0];
+    let settleTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const update = () => {
+      if (jumpingToRef.current) {
+        // The clicked group stays active once the jump settles; later scrolls follow the page.
+        const target = jumpingToRef.current;
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => {
+          shown = target;
+          jumpingToRef.current = null;
+        }, 150);
+        return;
+      }
+      let current = ids[0];
+      const atBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 2;
+      if (atBottom) {
+        current = ids[ids.length - 1];
+      } else {
+        // Sections land a scroll margin below the bar; count one as current from there.
+        const line = bar.getBoundingClientRect().bottom + 64;
+        for (const id of ids) {
+          const section = document.getElementById(groupSectionId(category, id));
+          if (section && section.getBoundingClientRect().top <= line) current = id;
+        }
+      }
+      if (current === shown) return;
+      shown = current;
+      setActiveGroup(current);
+      // Keep the active chip visible when the bar scrolls sideways. Scroll only the
+      // chip list: scrollIntoView would also cancel a smooth scroll of the page.
+      const list = bar.querySelector("ul");
+      const chip = bar.querySelector<HTMLElement>(`[data-group="${current}"]`);
+      if (list && chip) {
+        const listBox = list.getBoundingClientRect();
+        const chipBox = chip.getBoundingClientRect();
+        if (chipBox.left < listBox.left) {
+          list.scrollLeft -= listBox.left - chipBox.left + 8;
+        } else if (chipBox.right > listBox.right - 24) {
+          list.scrollLeft += chipBox.right - listBox.right + 32;
+        }
+      }
+    };
+
+    viewport.addEventListener("scroll", update, { passive: true });
+    return () => {
+      clearTimeout(settleTimer);
+      viewport.removeEventListener("scroll", update);
+    };
+  }, [category, groupIds]);
+
+  // A filter change can remove the active group; fall back to the first one.
+  const currentGroup = groups.some((group) => group.id === activeGroup) ? activeGroup : groups[0].id;
+
+  const jumpTo = (groupId: string) => {
+    jumpingToRef.current = groupId;
+    setActiveGroup(groupId);
+    document.getElementById(groupSectionId(category, groupId))?.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "start",
+    });
+  };
+
+  return (
+    <>
+      <nav
+        ref={barRef}
+        aria-label="Groups"
+        className="sticky top-0 z-10 -mx-6 mb-6 border-b border-border bg-background px-6 py-2"
+      >
+        {/* Scrolls sideways on narrow screens; the fade hints at more chips. */}
+        <ul className="scrollbar-none flex gap-1 overflow-x-auto pr-6 [mask-image:linear-gradient(to_right,black_calc(100%-1.5rem),transparent)]">
+          {groups.map((group) => {
+            const isActive = group.id === currentGroup;
+            const modified = group.options.filter((option) => option.id in config).length;
+            return (
+              <li key={group.id} className="shrink-0">
+                <button
+                  type="button"
+                  data-group={group.id}
+                  onClick={() => jumpTo(group.id)}
+                  aria-current={isActive ? "location" : undefined}
+                  className={cn(
+                    "flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium whitespace-nowrap transition-colors md:h-7",
+                    isActive
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {group.name}
+                  <span className={cn("font-mono text-[11px]", isActive ? "text-background/75" : "text-subtle-foreground")}>
+                    {group.options.length}
+                  </span>
+                  {modified > 0 && (
+                    <>
+                      <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
+                      <span className="sr-only">, {modified} modified</span>
+                    </>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className="space-y-8">
+        {groups.map((group) => {
+          const headingId = `${groupSectionId(category, group.id)}-heading`;
+          return (
+            <section
+              key={group.id}
+              id={groupSectionId(category, group.id)}
+              aria-labelledby={headingId}
+              className="scroll-mt-16"
             >
-              <SettingRenderer option={option} />
-            </div>
-          ))}
-        </div>
-
-        {/* Empty state */}
-        {options.length === 0 && (
-          <div className="text-center py-16 animate-fade-up">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-              <Icon className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <p className="text-muted-foreground">
-              {hiddenCount > 0
-                ? `Every option here needs a newer Ghostty than ${targetVersion}.`
-                : "No options available for this category."}
-            </p>
-          </div>
-        )}
-
-        {/* Bottom padding for floating button */}
-        <div className="h-24" />
+              <h2 id={headingId} className="mb-2 flex items-baseline gap-2 text-sm font-semibold">
+                {group.name}
+                <span className="font-mono text-xs font-normal text-subtle-foreground">
+                  {group.options.length}
+                </span>
+              </h2>
+              <OptionCard group={group} highlightedOption={highlightedOption} />
+            </section>
+          );
+        })}
       </div>
-    </ScrollArea>
+    </>
   );
 }

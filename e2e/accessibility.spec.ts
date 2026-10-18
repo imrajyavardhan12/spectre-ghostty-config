@@ -320,7 +320,7 @@ test("the version-filtered editor has no automatically detectable WCAG A or AA v
   await page.getByRole("option", { name: "1.1.0" }).click();
   await page.getByRole("button", { name: "Colors", exact: true }).click();
   await expect(
-    page.getByText("Requires Ghostty 1.2.0+", { exact: true }).first()
+    page.getByText("Needs 1.2.0", { exact: true }).first()
   ).toBeVisible();
 
   await page.getByRole("switch", { name: /Hide newer/ }).click();
@@ -354,7 +354,7 @@ test("the mobile version filter remains usable without horizontal overflow", asy
   await page.getByRole("option", { name: "1.0.0" }).click();
   await page.getByRole("button", { name: "Colors", exact: true }).click();
   await expect(
-    page.getByText("Requires Ghostty 1.2.0+", { exact: true }).first()
+    page.getByText("Needs 1.2.0", { exact: true }).first()
   ).toBeVisible();
 
   const hideSwitch = page.getByRole("switch", { name: /Hide newer/ });

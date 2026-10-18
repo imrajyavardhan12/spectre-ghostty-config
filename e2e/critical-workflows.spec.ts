@@ -25,7 +25,7 @@ test("a user can edit, inspect, share, and reopen a configuration", async ({
   const fontSize = page.locator("#option-font-size").getByRole("spinbutton");
   await fontSize.fill("16");
 
-  await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("1 modified", { exact: true })).toBeVisible();
   await page.getByRole("tab", { name: /^Config/ }).click();
   await expect(page.locator("pre")).toContainText(
     `Spectre schema target: Ghostty ${compatibility.ghostty.stableVersion}`
@@ -125,7 +125,7 @@ test("a user can import and export a Ghostty configuration", async ({ page }) =>
   await fileChooser.setFiles(importedFile);
   await page.getByRole("button", { name: "Replace with 2 settings" }).click();
 
-  await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("2 modified", { exact: true })).toBeVisible();
   await expect(page.getByText("Imported 2 settings.", { exact: true })).toBeAttached();
   await expect(importButton).toBeFocused();
   await expect(
@@ -172,7 +172,7 @@ test("a user can explicitly import valid settings from a partially invalid file"
     .getByRole("button", { name: "Replace with 2 settings and skip 1 line" })
     .click();
 
-  await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("2 modified", { exact: true })).toBeVisible();
   await expect(
     page.getByText("Imported 2 settings and skipped 1 line.", {
       exact: true,
@@ -223,7 +223,7 @@ test("a user can retain unverified options while unsafe names are rejected", asy
   await page
     .getByRole("button", { name: "Replace with 2 settings and skip 2 lines" })
     .click();
-  await expect(page.getByText("2 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("2 modified", { exact: true })).toBeVisible();
 
   await page.getByRole("tab", { name: /^Config/ }).click();
   const output = page.locator("pre");
@@ -287,7 +287,7 @@ test("a user can review and apply duplicate, reset, repeatable, and path semanti
   await page
     .getByRole("button", { name: "Replace with 4 settings and skip 1 line" })
     .click();
-  await expect(page.getByText("4 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("4 modified", { exact: true })).toBeVisible();
 
   await page.getByRole("tab", { name: /^Config/ }).click();
   const output = page.locator("pre");
@@ -353,7 +353,7 @@ test("a user can review structured palette, keybind, and config-file instruction
   await page
     .getByRole("button", { name: "Replace with 3 settings and skip 3 lines" })
     .click();
-  await expect(page.getByText("3 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("3 modified", { exact: true })).toBeVisible();
 
   await page.getByRole("tab", { name: /^Config/ }).click();
   const output = page.locator("pre");
@@ -438,7 +438,7 @@ test("a user can filter options by Ghostty target version", async ({
   await targetSelect.click();
   await page.getByRole("option", { name: "1.1.0" }).click();
   await expect(
-    page.locator("#option-background-image").getByText("Requires Ghostty 1.2.0+", { exact: true })
+    page.locator("#option-background-image").getByText("Needs 1.2.0", { exact: true })
   ).toBeVisible();
 
   const searchDialog = page.getByRole("dialog", { name: "Search Settings" });
@@ -446,7 +446,7 @@ test("a user can filter options by Ghostty target version", async ({
   await expect(searchDialog).toBeVisible();
   await searchDialog.getByPlaceholder("Search settings...").fill("background-image");
   await expect(
-    searchDialog.getByText("Requires Ghostty 1.2.0+", { exact: true }).first()
+    searchDialog.getByText("Needs 1.2.0", { exact: true }).first()
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(searchDialog).not.toBeVisible();
@@ -471,7 +471,7 @@ test("a user can filter options by Ghostty target version", async ({
   await targetSelect.click();
   await page.getByRole("option", { name: "1.3.1" }).click();
   await expect(
-    page.locator("#option-background-image").getByText("Requires Ghostty 1.2.0+", { exact: true })
+    page.locator("#option-background-image").getByText("Needs 1.2.0", { exact: true })
   ).not.toBeVisible();
 });
 
@@ -687,7 +687,7 @@ test("a user can inspect a preset, apply it, and undo it in one step", async ({ 
   await page.goto("/editor");
   const fontSize = page.locator("#option-font-size").getByRole("spinbutton");
   await fontSize.fill("16");
-  await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("1 modified", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Configuration Presets" }).click();
   const comfortable = page.getByRole("article", { name: "Comfortable" });
@@ -703,7 +703,7 @@ test("a user can inspect a preset, apply it, and undo it in one step", async ({ 
   // Applying is a single history step: one undo restores the previous config.
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(fontSize).toHaveValue("16");
-  await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("1 modified", { exact: true })).toBeVisible();
 });
 
 test("a wide-screen user edits beside a docked preview and can collapse it", async ({ page }) => {
@@ -799,6 +799,30 @@ test("a phone user can open presets from the category bar", async ({ page }) => 
   expect(hasHorizontalPageOverflow).toBe(false);
 });
 
+test("a user can jump between option groups in a long category", async ({ page }) => {
+  await page.goto("/editor");
+  await page.getByRole("button", { name: "Window", exact: true }).click();
+
+  const groupNav = page.getByRole("navigation", { name: "Groups" });
+  const splits = groupNav.getByRole("button", { name: /^Splits/ });
+  await splits.click();
+  await expect(page.getByRole("heading", { name: /^Splits/, level: 2 })).toBeInViewport();
+  await expect(splits).toHaveAttribute("aria-current", "location");
+  await expect(groupNav.getByRole("button", { name: /^Appearance/ })).not.toHaveAttribute(
+    "aria-current",
+    "location"
+  );
+
+  // A modified group says so in its chip.
+  await page.locator("#option-unfocused-split-opacity").getByRole("spinbutton").fill("0.5");
+  await expect(splits).toHaveAccessibleName(/1 modified/);
+
+  // Short categories are a single list with no group bar.
+  await page.getByRole("button", { name: "Cursor", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Cursor", level: 1 })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Groups" })).toHaveCount(0);
+});
+
 test("a first-time visitor sees a setting as modified and can reset it", async ({ page }) => {
   await page.goto("/editor");
   const row = page.locator("#option-font-size");
@@ -816,7 +840,7 @@ test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');
   await fontSize.fill("16");
-  await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("1 modified", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(fontSize).toHaveValue("13");
@@ -850,11 +874,11 @@ test("a user can undo a typing burst in a single step", async ({ page }) => {
   await page.goto("/editor");
   const fontStyle = page.locator("#option-font-style input");
   await fontStyle.pressSequentially("Heavy", { delay: 20 });
-  await expect(page.getByText("1 modified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("1 modified", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(fontStyle).toHaveValue("");
-  await expect(page.getByText("1 modified", { exact: true })).not.toBeVisible();
+  await expect(page.getByRole("banner").getByText("1 modified", { exact: true })).not.toBeVisible();
   await expect(page.getByText("Undid change (no settings).")).toBeAttached();
 
   await page.getByRole("button", { name: "Redo" }).click();
