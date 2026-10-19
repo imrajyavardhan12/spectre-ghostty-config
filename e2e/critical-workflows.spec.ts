@@ -856,6 +856,47 @@ test("a user can pick short choices from a segmented control and sees each defau
   await expect(choices.getByRole("radio", { name: "Auto" })).toBeChecked();
 });
 
+test("a user can pick a built-in theme in the Theme row and reset it", async ({ page }) => {
+  await page.goto("/editor");
+  await page.getByRole("button", { name: "Colors", exact: true }).click();
+
+  const row = page.locator("#option-theme");
+  await expect(row.getByRole("link", { name: /Browse all themes/ })).toHaveAttribute("href", "/themes");
+
+  await row.getByRole("combobox", { name: /Color Theme/ }).click();
+  await page.getByPlaceholder("Search themes...").fill("dracu");
+  await page.getByRole("option", { name: "Dracula", exact: true }).click();
+
+  await expect(row.getByRole("combobox", { name: /Color Theme/ })).toHaveText(/Dracula/);
+  // The control is named by its label and its value, so a screen reader hears which theme is set.
+  await expect(row.getByRole("combobox")).toHaveAccessibleName("Color Theme Dracula");
+  await expect(row.getByText("Modified", { exact: true })).toBeVisible();
+  await row.getByRole("button", { name: "Reset Color Theme to default" }).click();
+  await expect(row.getByRole("combobox", { name: /Color Theme/ })).toHaveText(/None \(Ghostty default\)/);
+});
+
+test("a user can build a custom app icon inside the App Icon row", async ({ page }) => {
+  await page.goto("/editor");
+  await page.getByRole("button", { name: "macOS", exact: true }).click();
+
+  const row = page.locator("#option-macos-icon");
+  await expect(row.getByTestId("custom-icon-builder")).toHaveCount(0);
+
+  await row.getByRole("button", { name: /Click to change/ }).click();
+  await page.getByRole("button", { name: /^Custom/ }).click();
+  await page.keyboard.press("Escape");
+
+  const builder = row.getByTestId("custom-icon-builder");
+  await expect(builder).toBeVisible();
+  await builder.getByRole("button", { name: "Chrome" }).click();
+  await expect(builder.getByRole("button", { name: "Chrome" })).toHaveAttribute("aria-pressed", "true");
+  await builder.getByRole("textbox", { name: "Ghost color" }).fill("#ff6b6b");
+
+  await page.getByRole("tab", { name: "Config" }).click();
+  await expect(page.getByText("macos-icon-frame = chrome")).toBeVisible();
+  await expect(page.getByText("macos-icon-ghost-color = #ff6b6b")).toBeVisible();
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');

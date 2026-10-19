@@ -13,6 +13,7 @@ import { KeybindInput } from "./KeybindInput";
 import { DurationInput } from "./DurationInput";
 import { IconInput } from "./IconInput";
 import { FrameInput } from "./FrameInput";
+import { ThemeInput } from "./ThemeInput";
 
 interface SettingRendererProps {
   option: ConfigOption;
@@ -27,6 +28,11 @@ export function SettingRenderer({ option }: SettingRendererProps) {
   // Special case for macos-icon-frame - use visual picker
   if (option.id === "macos-icon-frame") {
     return <FrameInput option={option} />;
+  }
+
+  // The theme is picked from Ghostty's built-in list, with a link to the full browser
+  if (option.id === "theme" && option.type === "string") {
+    return <ThemeInput option={option} />;
   }
 
   switch (option.type) {
