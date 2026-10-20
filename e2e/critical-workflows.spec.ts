@@ -711,6 +711,8 @@ test("a wide-screen user edits beside a docked preview and can collapse it", asy
   const pane = page.getByRole("complementary", { name: "Preview and generated config" });
   await expect(pane).toBeVisible();
   await expect(pane.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
+  await expect(pane.getByText("Live — updates as you edit")).toBeVisible({ timeout: 15_000 });
+  await expect(pane.getByText(/^\d+×\d+$/)).toBeVisible();
 
   await page.locator("#option-font-size").getByRole("spinbutton").fill("16");
   await pane.getByRole("tab", { name: /^Config/ }).click();
@@ -1063,12 +1065,12 @@ test("a user can retry the terminal preview after WASM loading fails", async ({
   await page.goto("/editor");
 
   // Wide screens start with the preview docked open.
-  await expect(page.getByText("Failed to load preview")).toBeVisible();
+  await expect(page.getByText("Preview couldn't start")).toBeVisible();
 
   await page.unroute(wasmUrl, failWasmRequest);
   await page.getByRole("button", { name: "Retry" }).click();
-  await expect(page.getByText("Failed to load preview")).not.toBeVisible({
+  await expect(page.getByText("Preview couldn't start")).not.toBeVisible({
     timeout: 15_000,
   });
-  await expect(page.getByText("Loading Ghostty WASM...")).not.toBeVisible();
+  await expect(page.getByText("Starting Ghostty…")).not.toBeVisible();
 });

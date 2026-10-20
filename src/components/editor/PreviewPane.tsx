@@ -2,7 +2,7 @@
 
 import { FileText, Monitor, PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ConfigFileContent } from "@/components/editor/ConfigOutput";
+import { ConfigActions, ConfigFileContent } from "@/components/editor/ConfigOutput";
 import { GhosttyPreview } from "@/components/preview";
 import { useConfigStore } from "@/lib/store/config-store";
 import { cn } from "@/lib/utils";
@@ -27,33 +27,38 @@ export function PreviewPane({ tab, onTabChange, onCollapse }: PreviewPaneProps) 
   return (
     <aside
       aria-label="Preview and generated config"
-      className="sticky top-14 flex h-[calc(100dvh-3.5rem)] w-[42%] max-w-[680px] shrink-0 flex-col border-l border-border"
+      className="sticky top-14 flex h-[calc(100dvh-3.5rem)] w-[42%] max-w-[680px] shrink-0 flex-col border-l border-border bg-background"
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <div role="tablist" aria-label="Pane view" className="flex gap-1 rounded-lg bg-muted/50 p-1">
+      <div className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border pr-2.5 pl-3.5">
+        <div role="tablist" aria-label="Pane view" className="flex gap-0.5 rounded-lg bg-muted p-0.5">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
+              type="button"
               role="tab"
               id={`preview-pane-tab-${id}`}
               aria-selected={tab === id}
               aria-controls={`preview-pane-panel-${id}`}
               onClick={() => onTabChange(id)}
               className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors",
-                tab === id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                "flex h-[30px] items-center gap-1.5 rounded-md px-3 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                tab === id
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Icon className="h-3.5 w-3.5" />
+              <Icon className="size-3.5" aria-hidden="true" />
               {label}
               {id === "config" && modifiedCount > 0 && (
-                <span className="rounded-full bg-primary/15 px-1.5 text-[10px] text-primary">{modifiedCount}</span>
+                <span className="font-mono text-[11px] font-medium text-accent-foreground">{modifiedCount}</span>
               )}
             </button>
           ))}
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onCollapse} aria-label="Collapse preview pane">
-          <PanelRightClose className="h-4 w-4" />
+        <div className="flex-1" />
+        {tab === "config" && <ConfigActions compact />}
+        <Button variant="ghost" size="icon" className="size-8" onClick={onCollapse} aria-label="Collapse preview pane">
+          <PanelRightClose className="size-4" />
         </Button>
       </div>
 
@@ -61,12 +66,12 @@ export function PreviewPane({ tab, onTabChange, onCollapse }: PreviewPaneProps) 
         role="tabpanel"
         id={`preview-pane-panel-${tab}`}
         aria-labelledby={`preview-pane-tab-${tab}`}
-        className={cn("min-h-0 flex-1", tab === "preview" ? "p-3" : "flex flex-col")}
+        className={cn("min-h-0 flex-1", tab === "preview" ? "p-3.5" : "flex flex-col")}
       >
         {tab === "preview" ? (
-          <GhosttyPreview isOpen docked onToggle={onCollapse} />
+          <GhosttyPreview isOpen docked onToggle={onCollapse} onViewConfig={() => onTabChange("config")} />
         ) : (
-          <ConfigFileContent />
+          <ConfigFileContent showActions={false} />
         )}
       </div>
     </aside>

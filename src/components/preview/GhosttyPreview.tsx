@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Minimize2, Maximize2, Loader2, AlertCircle, Monitor } from "lucide-react";
+import { Minimize2, Maximize2, Loader2, MonitorX, RefreshCw, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfigStore } from "@/lib/store/config-store";
 import { initGhostty } from "@/lib/ghostty/init";
@@ -22,6 +22,8 @@ interface GhosttyPreviewProps {
   onToggle: () => void;
   /** Fill the parent (the editor's preview pane) instead of floating over the page. */
   docked?: boolean;
+  /** Offered beside Retry when the preview can't start, so the config is one click away. */
+  onViewConfig?: () => void;
 }
 
 type LoadingState = "idle" | "loading" | "ready" | "error";
@@ -29,11 +31,12 @@ type FitAddonLike = ITerminalAddon & { fit: () => void };
 
 const DEBOUNCE_MS = 300;
 
-export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPreviewProps) {
+export function GhosttyPreview({ isOpen, onToggle, docked = false, onViewConfig }: GhosttyPreviewProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [clientOS] = useState<ClientOS>(() => detectClientOS());
+  const [gridSize, setGridSize] = useState<{ cols: number; rows: number } | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<GhosttyTerminal | null>(null);
@@ -62,6 +65,15 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
   configRef.current = config;
   appliedThemeRef.current = appliedTheme;
 
+  // Fit the terminal to its box, then report the grid it ended up with.
+  const fitAndMeasure = useCallback((fitAddon: FitAddonLike | null) => {
+    fitAddon?.fit();
+    const term = terminalRef.current;
+    if (!term || typeof term.cols !== "number" || typeof term.rows !== "number") return;
+    const { cols, rows } = term;
+    setGridSize((prev) => (prev?.cols === cols && prev.rows === rows ? prev : { cols, rows }));
+  }, []);
+
   const writeContent = useCallback(
     (term: GhosttyTerminal, fitAddon: FitAddonLike) => {
       if (terminalRef.current !== term || fitAddonRef.current !== fitAddon) return;
@@ -74,11 +86,11 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
       }
       fitTimerRef.current = setTimeout(() => {
         if (terminalRef.current === term && fitAddonRef.current === fitAddon) {
-          fitAddon.fit();
+          fitAndMeasure(fitAddon);
         }
       }, 10);
     },
-    [clientOS]
+    [clientOS, fitAndMeasure]
   );
 
   const disposeTerminal = useCallback(() => {
@@ -111,6 +123,7 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
 
     if (showLoading) {
       setLoadingState("loading");
+      setGridSize(null);
     }
     setError(null);
 
@@ -178,7 +191,7 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
 
       setTimeout(() => {
         if (!isCurrentRequest() || terminalRef.current !== createdTerm) return;
-        createdFitAddon?.fit();
+        fitAndMeasure(createdFitAddon);
         if (createdTerm && createdFitAddon) {
           writeContent(createdTerm, createdFitAddon);
         }
@@ -195,11 +208,12 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
       }
 
       disposeCreatedResources();
+      setGridSize(null);
       console.error("Failed to initialize Ghostty preview:", err);
       setError(err instanceof Error ? err.message : "Failed to load preview");
       setLoadingState("error");
     }
-  }, [disposeTerminal, isOpen, writeContent]);
+  }, [disposeTerminal, fitAndMeasure, isOpen, writeContent]);
 
   // Initial terminal creation when preview opens
   useEffect(() => {
@@ -271,6 +285,7 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
       }
       disposeTerminal();
       setLoadingState("idle");
+      setGridSize(null);
       isInitializedRef.current = false;
       configVersionRef.current = 0;
       lastCreatedConfigRef.current = null;
@@ -284,17 +299,17 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
     const container = containerRef.current;
     if (!isOpen || isMinimized || loadingState !== "ready" || !container) return;
 
-    const observer = new ResizeObserver(() => fitAddonRef.current?.fit());
+    const observer = new ResizeObserver(() => fitAndMeasure(fitAddonRef.current));
     observer.observe(container);
     return () => observer.disconnect();
-  }, [isOpen, isMinimized, loadingState]);
+  }, [isOpen, isMinimized, loadingState, fitAndMeasure]);
 
   // Re-fit terminal when unminimizing
   useEffect(() => {
     if (!isMinimized && loadingState === "ready" && fitAddonRef.current) {
-      setTimeout(() => fitAddonRef.current?.fit(), 50);
+      setTimeout(() => fitAndMeasure(fitAddonRef.current), 50);
     }
-  }, [isMinimized, loadingState]);
+  }, [isMinimized, loadingState, fitAndMeasure]);
 
   if (!isOpen) return null;
 
@@ -307,7 +322,7 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
     <div
       className={cn(
         docked
-          ? "h-full w-full"
+          ? "flex h-full w-full flex-col gap-2.5"
           : "fixed z-50 transition-all duration-300 ease-out",
         !docked &&
           (isMinimized
@@ -318,7 +333,7 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
       <div
         className={cn(
           "rounded-xl border border-border overflow-hidden transition-all duration-300",
-          docked ? "flex h-full flex-col" : "shadow-2xl",
+          docked ? "flex min-h-0 flex-1 flex-col" : "shadow-2xl",
           isMinimized && "w-auto"
         )}
         style={{
@@ -332,17 +347,27 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
           style={{ backgroundColor: `${background}dd` }}
         >
           {docked ? (
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center gap-2">
               {!isGtkDecoration && (
-                <div className="flex gap-2" aria-hidden="true">
-                  <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
-                  <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
-                  <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+                <div className="flex gap-1.5" aria-hidden="true">
+                  {[0, 1, 2].map((dot) => (
+                    <span
+                      key={dot}
+                      className="size-[9px] rounded-full"
+                      style={{ backgroundColor: foreground, opacity: 0.25 }}
+                    />
+                  ))}
                 </div>
               )}
-              <span className={cn("text-xs", !isGtkDecoration && "ml-2 opacity-60")} style={{ color: foreground }}>
+              <span className={cn("text-xs", !isGtkDecoration && "ml-1 opacity-60")} style={{ color: foreground }}>
                 Ghostty Preview
               </span>
+              <span className="flex-1" />
+              {gridSize && (
+                <span className="font-mono text-[11px] opacity-60" style={{ color: foreground }}>
+                  {gridSize.cols}×{gridSize.rows}
+                </span>
+              )}
             </div>
           ) : isGtkDecoration ? (
             <>
@@ -461,17 +486,23 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
               role="status"
               aria-live="polite"
               aria-atomic="true"
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 z-10 flex flex-col gap-2.5 bg-card p-4 text-foreground"
             >
-              <div className="flex flex-col items-center gap-3">
+              {["46%", "68%", "38%"].map((width, i) => (
+                <div
+                  key={width}
+                  aria-hidden="true"
+                  className="h-2.5 rounded-[3px] bg-muted motion-safe:animate-pulse"
+                  style={{ width, animationDelay: `${i * 150}ms` }}
+                />
+              ))}
+              <div className="flex flex-1 flex-col items-center justify-center gap-2.5 text-center">
                 <Loader2
                   aria-hidden="true"
-                  className="h-8 w-8 animate-spin"
-                  style={{ color: foreground }}
+                  className="size-5 text-muted-foreground motion-safe:animate-spin"
                 />
-                <span className="text-sm" style={{ color: foreground }}>
-                  Loading Ghostty WASM...
-                </span>
+                <p className="text-[13px]">Starting Ghostty…</p>
+                <p className="text-xs text-muted-foreground">Loading the terminal engine. First run only.</p>
               </div>
             </div>
           )}
@@ -480,25 +511,31 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
             <div
               role="alert"
               aria-atomic="true"
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-card p-6 text-center text-foreground"
             >
-              <div className="flex flex-col items-center gap-3 text-center px-4">
-                <AlertCircle aria-hidden="true" className="h-8 w-8 text-red-500" />
-                <span className="text-sm" style={{ color: foreground }}>
-                  Failed to load preview
-                </span>
-                <span className="text-xs opacity-60" style={{ color: foreground }}>
-                  {error}
-                </span>
+              <span className="grid size-10 place-items-center rounded-[10px] bg-destructive-soft text-destructive-foreground">
+                <MonitorX aria-hidden="true" className="size-5" />
+              </span>
+              <p className="text-[15px] font-semibold">Preview couldn&apos;t start</p>
+              <p className="max-w-[300px] text-[13px] leading-normal text-pretty text-muted-foreground">
+                The terminal engine failed to load. Your settings are safe and the config is still up to date.
+              </p>
+              {error && <p className="font-mono text-[11px] text-subtle-foreground">{error}</p>}
+              <div className="mt-1 flex gap-2">
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={() => {
                     void createTerminal(true);
                   }}
                 >
+                  <RefreshCw aria-hidden="true" className="size-3.5" />
                   Retry
                 </Button>
+                {onViewConfig && (
+                  <Button variant="outline" size="sm" onClick={onViewConfig}>
+                    View config
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -513,11 +550,30 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false }: GhosttyPrev
           />
         </div>
       </div>
+
+      {docked && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "size-1.5 rounded-full",
+              loadingState === "ready" ? "bg-success" : loadingState === "error" ? "bg-destructive" : "bg-warning"
+            )}
+          />
+          {loadingState === "ready"
+            ? "Live — updates as you edit"
+            : loadingState === "error"
+              ? "Preview unavailable"
+              : "Loading preview"}
+          <span className="flex-1" />
+          <span className="font-mono text-subtle-foreground">libghostty · wasm</span>
+        </div>
+      )}
     </div>
   );
 }
 
-// Floating button to toggle preview
+// Button that toggles the preview; it sits in the floating pill with the config button.
 export function PreviewToggleButton({
   isOpen,
   onToggle,
@@ -529,13 +585,10 @@ export function PreviewToggleButton({
     <Button
       onClick={onToggle}
       aria-label={isOpen ? "Close Preview" : "Open Preview"}
-      variant={isOpen ? "secondary" : "outline"}
-      className={cn(
-        "gap-2 shadow-lg transition-all duration-300",
-        isOpen && "bg-primary text-primary-foreground hover:bg-primary/90"
-      )}
+      variant="ghost"
+      className={cn("h-9 gap-2 px-3.5", isOpen && "bg-accent text-accent-foreground hover:bg-accent")}
     >
-      <Monitor className="h-4 w-4" />
+      <Monitor className="size-4" />
       <span className="hidden sm:inline">Preview</span>
     </Button>
   );
