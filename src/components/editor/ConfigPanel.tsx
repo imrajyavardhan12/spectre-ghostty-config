@@ -48,7 +48,7 @@ function CategoryPage({ category, highlightedOption }: ConfigPanelProps) {
   const modifiedCount = options.filter((option) => option.id in config).length;
 
   return (
-    <div className="mx-auto max-w-3xl px-6 pt-8 pb-32">
+    <div className="mx-auto max-w-3xl px-6 pt-8 pb-10 md:pb-32">
       <header className="mb-6">
         <h1 className="text-h1">{categoryInfo?.name}</h1>
         {categoryInfo?.description && (

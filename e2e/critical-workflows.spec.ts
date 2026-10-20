@@ -1045,15 +1045,76 @@ test("a user can navigate and inspect configuration on a mobile screen", async (
   await page.getByRole("button", { name: "Colors", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Colors" })).toBeVisible();
 
-  await page.getByRole("button", { name: "View Config" }).click();
-  await expect(page.getByRole("heading", { name: "Generated Config" })).toBeVisible();
-  await expect(page.getByText("No modifications yet")).toBeVisible();
+  // Phones get a bottom bar, not the floating buttons.
+  await expect(page.getByRole("button", { name: "View Config" })).toBeHidden();
+  await page.getByRole("button", { name: "Config", exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: "Preview and generated config" });
+  await expect(sheet.getByRole("tab", { name: /^Config/ })).toHaveAttribute("aria-selected", "true");
+  await expect(sheet.getByText("No modifications yet")).toBeVisible();
   await page.waitForTimeout(600);
 
   const hasHorizontalPageOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth
   );
   expect(hasHorizontalPageOverflow).toBe(false);
+});
+
+test("a phone user can watch the live preview in a sheet and export from the bar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/editor");
+
+  await expect(page.getByRole("button", { name: /^Export/ })).toBeDisabled();
+  await page.locator("#option-font-size").getByRole("spinbutton").fill("16");
+  await expect(page.getByRole("button", { name: "Export · 1" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: "Preview and generated config" });
+  await expect(sheet.locator("canvas")).toBeVisible({ timeout: 15_000 });
+  await expect(sheet.getByText("Live — updates as you edit")).toBeVisible();
+
+  await sheet.getByRole("tab", { name: /^Config/ }).click();
+  await expect(sheet.locator("pre")).toContainText("font-size = 16");
+
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole("button", { name: "Export · 1" })).toBeVisible();
+
+  const hasHorizontalPageOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth
+  );
+  expect(hasHorizontalPageOverflow).toBe(false);
+});
+
+test("the sheet header keeps its Close button on screen on the narrowest phones", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto("/editor");
+  await page.locator("#option-font-size").getByRole("spinbutton").fill("16");
+
+  await page.getByRole("button", { name: "Config", exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: "Preview and generated config" });
+  await expect(sheet.getByRole("button", { name: "Share" })).toBeVisible();
+  const close = await sheet.getByRole("button", { name: "Close" }).boundingBox();
+  expect(close).not.toBeNull();
+  expect(close!.x + close!.width).toBeLessThanOrEqual(320);
+});
+
+test("a tablet user opens the preview as a drawer from the floating buttons", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 800 });
+  await page.goto("/editor");
+
+  await page.getByRole("button", { name: "Open Preview" }).click();
+  const drawer = page.getByRole("dialog", { name: "Preview and generated config" });
+  await expect(drawer.locator("canvas")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: /^Export ·/ })).toBeHidden();
+
+  await drawer.getByRole("button", { name: "Close" }).click();
+  await expect(drawer).toBeHidden();
 });
 
 test("a user can retry the terminal preview after WASM loading fails", async ({
