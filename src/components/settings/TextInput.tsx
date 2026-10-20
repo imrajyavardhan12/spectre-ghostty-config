@@ -31,7 +31,7 @@ export function TextInput({ option }: TextInputProps) {
         type="text"
         value={value || ""}
         onChange={(e) => setValue(option.id, e.target.value)}
-        placeholder={option.placeholder || `Default: ${option.default || "empty"}`}
+        placeholder={option.placeholder || option.default || "Not set"}
         className="w-full font-mono"
       />
     </SettingWrapper>

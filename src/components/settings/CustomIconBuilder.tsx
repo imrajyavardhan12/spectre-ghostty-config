@@ -1,15 +1,11 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import Image from "next/image";
-import { Paintbrush } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getOptionById } from "@/data/ghostty-options";
 import { useConfigStore } from "@/lib/store/config-store";
-import { hasValidationErrors, validateConfigValue } from "@/lib/utils/config-validation";
 import { cn } from "@/lib/utils";
+import { ColorField, toCssColor } from "./ColorField";
 import { CustomIconPreview } from "./CustomIconPreview";
 
 const FRAMES = [
@@ -19,18 +15,6 @@ const FRAMES = [
   { id: "chrome", name: "Chrome" },
 ] as const;
 
-const PRESET_COLORS = [
-  "#ffffff", "#000000", "#1a1a2e", "#16213e",
-  "#e94560", "#ff6b6b", "#feca57", "#48dbfb",
-  "#1dd1a1", "#10ac84", "#5f27cd", "#341f97",
-  "#ff9ff3", "#ffeaa7", "#dfe6e9", "#b2bec3",
-];
-
-/** Ghostty accepts bare hex ("ffffff"); CSS and the canvas preview need the "#". */
-function toCssColor(color: string): string {
-  return /^[0-9a-f]{3}$|^[0-9a-f]{6}$/i.test(color) ? `#${color}` : color;
-}
-
 interface IconColorFieldProps {
   label: string;
   optionId: string;
@@ -38,94 +22,17 @@ interface IconColorFieldProps {
   onChange: (color: string) => void;
 }
 
-/**
- * A color field for one of the icon's color options. Typing reaches the config only once the
- * text is a color Ghostty accepts; until then it stays a local draft, so undo and the
- * pickers always show the stored value.
- */
 function IconColorField({ label, optionId, value, onChange }: IconColorFieldProps) {
   const inputId = useId();
-  const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? value;
-  const invalid = draft !== null && draft !== "";
-  const cssColor = toCssColor(value);
-
-  function type(next: string) {
-    const option = getOptionById(optionId);
-    const result = option ? validateConfigValue(option, next) : undefined;
-    if (result && !hasValidationErrors(result)) {
-      setDraft(null);
-      onChange(String(result.normalizedValue ?? next));
-    } else {
-      setDraft(next);
-    }
-  }
-
-  function pick(color: string) {
-    setDraft(null);
-    onChange(color);
-  }
+  const option = getOptionById(optionId);
+  if (option?.type !== "color") return null;
 
   return (
     <div className="space-y-1.5">
       <label htmlFor={inputId} className="text-[13px] font-medium text-foreground">
         {label}
       </label>
-      <div className="flex items-center gap-2">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="h-[34px] w-12 p-1"
-              aria-label={`Choose ${label.toLowerCase()}`}
-              style={{ backgroundColor: value ? cssColor : "transparent" }}
-            >
-              {!value && <Paintbrush className="size-4 text-muted-foreground" aria-hidden="true" />}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-3" align="start">
-            <div className="space-y-3">
-              <input
-                type="color"
-                aria-label={`${label} picker`}
-                value={/^#[0-9a-f]{6}$/i.test(cssColor) ? cssColor : "#ffffff"}
-                onChange={(e) => pick(e.target.value)}
-                className="h-32 w-32 cursor-pointer rounded border-0"
-              />
-              <div className="grid grid-cols-8 gap-1">
-                {PRESET_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    aria-label={color}
-                    className="size-6 rounded border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                    style={{ backgroundColor: color }}
-                    onClick={() => pick(color)}
-                  />
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-        <Input
-          id={inputId}
-          type="text"
-          value={shown}
-          onChange={(e) => type(e.target.value)}
-          onBlur={() => setDraft(null)}
-          placeholder="#ffffff"
-          aria-invalid={invalid}
-          spellCheck={false}
-          className="w-28 font-mono"
-        />
-
-        {value && (
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => pick("")}>
-            Clear
-          </Button>
-        )}
-      </div>
+      <ColorField option={option} id={inputId} label={label} value={value} onChange={onChange} />
     </div>
   );
 }

@@ -38,7 +38,8 @@ describe('CustomIconBuilder', () => {
     fireEvent.change(ghost, { target: { value: '#123abc' } });
     expect(useConfigStore.getState().config['macos-icon-ghost-color']).toBe('#123abc');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Ghost color' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use default' }));
     expect(useConfigStore.getState().config['macos-icon-ghost-color']).toBeUndefined();
   });
 

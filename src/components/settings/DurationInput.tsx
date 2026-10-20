@@ -53,12 +53,12 @@ export function DurationInput({ option }: DurationInputProps) {
         value={displayValue}
         onChange={(e) => handleInputChange(e.target.value)}
         onBlur={handleInputBlur}
-        placeholder={option.placeholder || option.default || "e.g., 750ms, 1s, 1h30m"}
+        placeholder={option.placeholder || option.default || "Not set"}
         aria-invalid={hasErrors}
         className={cn("w-full font-mono", hasErrors && "border-destructive focus-visible:ring-destructive/40")}
       />
-      <p className="mt-1 text-xs text-muted-foreground">
-        Format: 1h, 30m, 45s, 750ms, 100us, 50ns
+      <p className="mt-1.5 font-mono text-[11px] text-subtle-foreground">
+        1h 30m · 45s · 750ms · 100us · 50ns
       </p>
       <ValidationMessages result={validation} />
     </SettingWrapper>

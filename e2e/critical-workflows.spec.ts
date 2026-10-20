@@ -897,6 +897,29 @@ test("a user can build a custom app icon inside the App Icon row", async ({ page
   await expect(page.getByText("macos-icon-ghost-color = #ff6b6b")).toBeVisible();
 });
 
+test("a user can set a color from its picker and choose a suggested value", async ({ page }) => {
+  await page.goto("/editor");
+  await page.getByRole("button", { name: "Colors", exact: true }).click();
+
+  const background = page.locator("#option-background");
+  await background.getByRole("button", { name: "Choose Background Color" }).click();
+  await page.getByRole("button", { name: "#e94560" }).click();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(background.getByRole("textbox")).toHaveValue("#e94560");
+
+  await background.getByRole("textbox").fill("#12345");
+  await expect(background.getByRole("alert")).toContainText("Not applied until fixed.");
+
+  await page.getByRole("button", { name: "Window", exact: true }).click();
+  const blur = page.locator("#option-background-blur");
+  await blur.getByRole("button", { name: "Default (20)" }).click();
+  await expect(blur.getByRole("button", { name: "Default (20)" })).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByRole("tab", { name: "Config" }).click();
+  await expect(page.getByText("background = #e94560")).toBeVisible();
+  await expect(page.getByText("background-blur = true")).toBeVisible();
+});
+
 test("a user can undo and redo editor changes", async ({ page }) => {
   await page.goto("/editor");
   const fontSize = page.locator('#option-font-size input[type="number"]');
