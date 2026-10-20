@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Check, Monitor, Palette } from "lucide-react";
+import { Check, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/sheet";
 import { useConfigStore } from "@/lib/store/config-store";
 import { cn } from "@/lib/utils";
-import { CustomIconBuilderDialog } from "./CustomIconBuilderDialog";
 
 // Icon definitions with metadata
 const GHOSTTY_ICONS = [
@@ -192,24 +191,10 @@ export function IconPickerDialog({ trigger }: IconPickerDialogProps) {
             </div>
           </div>
 
-          {/* Custom Icon Builder Button */}
           {currentIcon === "custom-style" && (
-            <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-sm">Customize Your Icon</h4>
-                  <p className="text-xs text-muted-foreground">Set frame, ghost color, and screen color</p>
-                </div>
-                <CustomIconBuilderDialog
-                  trigger={
-                    <Button size="sm" className="gap-2">
-                      <Palette className="h-4 w-4" />
-                      Customize
-                    </Button>
-                  }
-                />
-              </div>
-            </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              The frame and colors are set in the App Icon row.
+            </p>
           )}
 
           {/* Note */}

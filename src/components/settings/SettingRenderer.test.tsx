@@ -76,6 +76,12 @@ vi.mock('./FrameInput', () => ({
   ),
 }));
 
+vi.mock('./ThemeInput', () => ({
+  ThemeInput: ({ option }: { option: ConfigOption }) => (
+    <div data-testid="theme-input">{option.name}</div>
+  ),
+}));
+
 describe('SettingRenderer', () => {
   it('should render string type with TextInput', () => {
     const option = {
@@ -256,6 +262,21 @@ describe('SettingRenderer', () => {
 
     render(<SettingRenderer option={option} />);
     expect(screen.getByTestId('frame-input')).toBeTruthy();
+  });
+
+  it('should render the theme option with ThemeInput', () => {
+    const option = {
+      id: 'theme',
+      name: 'Color Theme',
+      description: 'The color theme to use.',
+      type: 'string' as const,
+      default: '',
+      category: 'colors' as const,
+    };
+
+    render(<SettingRenderer option={option} />);
+    expect(screen.getByTestId('theme-input')).toBeTruthy();
+    expect(screen.queryByTestId('text-input')).toBeNull();
   });
 
   it('should show unsupported message for unknown type', () => {

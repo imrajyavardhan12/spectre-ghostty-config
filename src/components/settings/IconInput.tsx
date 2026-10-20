@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SettingWrapper } from "./SettingWrapper";
 import { IconPickerDialog } from "./IconPickerDialog";
 import { CustomIconPreview } from "./CustomIconPreview";
+import { CustomIconBuilder } from "./CustomIconBuilder";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { ConfigOption } from "@/lib/schema/types";
 
@@ -88,6 +89,7 @@ export function IconInput({ option }: IconInputProps) {
           </Button>
         }
       />
+      {isCustom && <CustomIconBuilder />}
     </SettingWrapper>
   );
 }
