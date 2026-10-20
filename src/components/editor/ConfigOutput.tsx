@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useConfigStore } from "@/lib/store/config-store";
+import { downloadConfigFile } from "@/lib/utils/download-config";
 import { generateShareUrl } from "@/lib/utils/url-share";
 import { cn } from "@/lib/utils";
 
@@ -44,15 +45,7 @@ export function ConfigActions({ compact = false }: { compact?: boolean }) {
 
   const handleDownload = () => {
     setDownloadTooltipOpen(false);
-    const blob = new Blob([exportConfig()], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "config";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadConfigFile(exportConfig());
   };
 
   const handleShare = async () => {
@@ -74,17 +67,19 @@ export function ConfigActions({ compact = false }: { compact?: boolean }) {
             variant="outline"
             size="sm"
             onClick={handleCopy}
+            // On a phone the pane header has no room for the word.
+            aria-label={compact ? (copied ? "Copied!" : "Copy") : undefined}
             className={cn("gap-2", !compact && "flex-1 sm:flex-none")}
           >
             {copied ? (
               <>
                 <Check className={cn(iconSize, "text-success")} />
-                Copied!
+                <span className={cn(compact && "max-sm:hidden")}>Copied!</span>
               </>
             ) : (
               <>
                 <Copy className={iconSize} />
-                Copy
+                <span className={cn(compact && "max-sm:hidden")}>Copy</span>
               </>
             )}
           </Button>

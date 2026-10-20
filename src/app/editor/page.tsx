@@ -7,8 +7,10 @@ import { ConfigPanel } from "@/components/editor/ConfigPanel";
 import { ConfigOutput } from "@/components/editor/ConfigOutput";
 import { FloatingActions } from "@/components/editor/FloatingActions";
 import { CommandSearch } from "@/components/editor/CommandSearch";
-import { GhosttyPreview, PreviewToggleButton } from "@/components/preview";
+import { PreviewToggleButton } from "@/components/preview";
 import { PreviewPane, type PreviewPaneTab } from "@/components/editor/PreviewPane";
+import { PreviewSheet } from "@/components/editor/PreviewSheet";
+import { MobileActionBar } from "@/components/editor/MobileActionBar";
 import { Category, ConfigOption } from "@/lib/schema/types";
 import { useMediaQuery, WIDE_QUERY } from "@/lib/hooks/use-media-query";
 
@@ -25,7 +27,7 @@ function readPaneOpen(): boolean {
 
 export default function EditorPage() {
   const [activeCategory, setActiveCategory] = useState<Category>("fonts");
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   // The docked preview pane needs room for a readable settings column beside it.
   const isWide = useMediaQuery(WIDE_QUERY);
   const [paneOpen, setPaneOpenState] = useState(() => (typeof window === "undefined" ? true : readPaneOpen()));
@@ -41,10 +43,19 @@ export default function EditorPage() {
     }
   }, []);
 
+  // Wide screens dock the pane; narrower ones open it as a sheet over the settings.
+  // The docked pane takes over when the window widens, so a sheet left open must not come back later.
+  const [wasWide, setWasWide] = useState(isWide);
+  if (wasWide !== isWide) {
+    setWasWide(isWide);
+    if (isWide) setSheetOpen(false);
+  }
+
   const openPane = useCallback((tab: PreviewPaneTab) => {
     setPaneTab(tab);
-    setPaneOpen(true);
-  }, [setPaneOpen]);
+    if (isWide) setPaneOpen(true);
+    else setSheetOpen(true);
+  }, [isWide, setPaneOpen]);
   const [highlightedOption, setHighlightedOption] = useState<string | null>(null);
 
   const handleSelectOption = useCallback((option: ConfigOption) => {
@@ -98,33 +109,27 @@ export default function EditorPage() {
               highlightedOption={highlightedOption}
             />
 
-            {/* Narrow screens: floating preview window and config sheet. */}
-            {!isWide && (
-              <GhosttyPreview
-                isOpen={previewOpen}
-                onToggle={() => setPreviewOpen(false)}
-              />
-            )}
-
-            {/* Floating buttons; on wide screens they reopen the docked pane. */}
+            {/* Floating buttons open the docked pane, or the sheet on narrower screens. Phones have the bottom bar. */}
             {!docked && (
               <FloatingActions
-                preview={
-                  <PreviewToggleButton
-                    isOpen={!isWide && previewOpen}
-                    onToggle={() => (isWide ? openPane("preview") : setPreviewOpen(!previewOpen))}
-                  />
-                }
-                config={<ConfigOutput onOpen={isWide ? () => openPane("config") : undefined} />}
+                className="max-md:hidden"
+                preview={<PreviewToggleButton isOpen={false} onToggle={() => openPane("preview")} />}
+                config={<ConfigOutput onOpen={() => openPane("config")} />}
               />
             )}
           </div>
+
+          <MobileActionBar onOpen={openPane} />
         </main>
 
         {docked && (
           <PreviewPane tab={paneTab} onTabChange={setPaneTab} onCollapse={() => setPaneOpen(false)} />
         )}
       </div>
+
+      {!isWide && (
+        <PreviewSheet open={sheetOpen} onOpenChange={setSheetOpen} tab={paneTab} onTabChange={setPaneTab} />
+      )}
     </div>
   );
 }
