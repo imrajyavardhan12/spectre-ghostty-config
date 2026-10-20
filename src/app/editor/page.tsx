@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar, MobileCategoryBar } from "@/components/layout/Sidebar";
 import { ConfigPanel } from "@/components/editor/ConfigPanel";
 import { ConfigOutput } from "@/components/editor/ConfigOutput";
+import { FloatingActions } from "@/components/editor/FloatingActions";
 import { CommandSearch } from "@/components/editor/CommandSearch";
 import { GhosttyPreview, PreviewToggleButton } from "@/components/preview";
 import { PreviewPane, type PreviewPaneTab } from "@/components/editor/PreviewPane";
@@ -107,13 +108,15 @@ export default function EditorPage() {
 
             {/* Floating buttons; on wide screens they reopen the docked pane. */}
             {!docked && (
-              <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2">
-                <PreviewToggleButton
-                  isOpen={!isWide && previewOpen}
-                  onToggle={() => (isWide ? openPane("preview") : setPreviewOpen(!previewOpen))}
-                />
-                <ConfigOutput onOpen={isWide ? () => openPane("config") : undefined} />
-              </div>
+              <FloatingActions
+                preview={
+                  <PreviewToggleButton
+                    isOpen={!isWide && previewOpen}
+                    onToggle={() => (isWide ? openPane("preview") : setPreviewOpen(!previewOpen))}
+                  />
+                }
+                config={<ConfigOutput onOpen={isWide ? () => openPane("config") : undefined} />}
+              />
             )}
           </div>
         </main>

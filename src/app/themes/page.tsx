@@ -6,6 +6,7 @@ import { Ghost, Palette, ArrowRight, Code2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeBrowser } from "@/components/themes";
 import { ConfigOutput } from "@/components/editor/ConfigOutput";
+import { FloatingActions } from "@/components/editor/FloatingActions";
 import { GhosttyPreview, PreviewToggleButton } from "@/components/preview";
 
 export default function ThemesPage() {
@@ -107,13 +108,15 @@ export default function ThemesPage() {
       />
 
       {/* Floating buttons */}
-      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2">
-        <PreviewToggleButton
-          isOpen={previewOpen}
-          onToggle={() => setPreviewOpen(!previewOpen)}
-        />
-        <ConfigOutput />
-      </div>
+      <FloatingActions
+        preview={
+          <PreviewToggleButton
+            isOpen={previewOpen}
+            onToggle={() => setPreviewOpen(!previewOpen)}
+          />
+        }
+        config={<ConfigOutput />}
+      />
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Copy, Check, Code, Download, FileText, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -21,9 +20,8 @@ import { useConfigStore } from "@/lib/store/config-store";
 import { generateShareUrl } from "@/lib/utils/url-share";
 import { cn } from "@/lib/utils";
 
-/** Copy / Download / Share actions and the generated file, shared by the sheet and the editor's preview pane. */
-export function ConfigFileContent() {
-  // Use selectors to properly subscribe to config changes
+/** Copy, download and share the generated file. `compact` is the docked pane's header version. */
+export function ConfigActions({ compact = false }: { compact?: boolean }) {
   const config = useConfigStore((state) => state.config);
   const appliedTheme = useConfigStore((state) => state.appliedTheme);
   const exportConfig = useConfigStore((state) => state.exportConfig);
@@ -35,20 +33,18 @@ export function ConfigFileContent() {
   const [downloadTooltipOpen, setDownloadTooltipOpen] = useState(false);
   const [shareTooltipOpen, setShareTooltipOpen] = useState(false);
 
-
-  const configString = exportConfig();
   const modifiedCount = Object.keys(config).length;
 
   const handleCopy = async () => {
     setCopyTooltipOpen(false);
-    await navigator.clipboard.writeText(configString);
+    await navigator.clipboard.writeText(exportConfig());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownload = () => {
     setDownloadTooltipOpen(false);
-    const blob = new Blob([configString], { type: "application/octet-stream" });
+    const blob = new Blob([exportConfig()], { type: "application/octet-stream" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -67,26 +63,27 @@ export function ConfigFileContent() {
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
+  // In the pane header only Copy keeps its word; Download and Share are icons with names.
+  const iconSize = compact ? "size-3.5" : "size-4";
+
   return (
     <>
-    {/* Action buttons */}
-    <div className="flex items-center gap-2 px-6 py-3 bg-muted/30 border-b border-border">
       <Tooltip open={copyTooltipOpen} onOpenChange={setCopyTooltipOpen}>
         <TooltipTrigger asChild>
           <Button
             variant="outline"
             size="sm"
             onClick={handleCopy}
-            className="gap-2 flex-1 sm:flex-none"
+            className={cn("gap-2", !compact && "flex-1 sm:flex-none")}
           >
             {copied ? (
               <>
-                <Check className="h-4 w-4 text-green-500" />
+                <Check className={cn(iconSize, "text-success")} />
                 Copied!
               </>
             ) : (
               <>
-                <Copy className="h-4 w-4" />
+                <Copy className={iconSize} />
                 Copy
               </>
             )}
@@ -99,12 +96,13 @@ export function ConfigFileContent() {
         <TooltipTrigger asChild>
           <Button
             variant="outline"
-            size="sm"
+            size={compact ? "icon-sm" : "sm"}
             onClick={handleDownload}
-            className="gap-2 flex-1 sm:flex-none"
+            aria-label={compact ? "Download" : undefined}
+            className={cn("gap-2", !compact && "flex-1 sm:flex-none")}
           >
-            <Download className="h-4 w-4" />
-            Download
+            <Download className={iconSize} />
+            {!compact && "Download"}
           </Button>
         </TooltipTrigger>
         <TooltipContent>Download as config file</TooltipContent>
@@ -114,90 +112,98 @@ export function ConfigFileContent() {
         <TooltipTrigger asChild>
           <Button
             variant="outline"
-            size="sm"
+            size={compact ? "icon-sm" : "sm"}
             onClick={handleShare}
             disabled={modifiedCount === 0}
-            className="gap-2 flex-1 sm:flex-none"
+            aria-label={compact ? (linkCopied ? "Link Copied!" : "Share") : undefined}
+            className={cn("gap-2", !compact && "flex-1 sm:flex-none")}
           >
             {linkCopied ? (
               <>
-                <Check className="h-4 w-4 text-green-500" />
-                Link Copied!
+                <Check className={cn(iconSize, "text-success")} />
+                {!compact && "Link Copied!"}
               </>
             ) : (
               <>
-                <Share2 className="h-4 w-4" />
-                Share
+                <Share2 className={iconSize} />
+                {!compact && "Share"}
               </>
             )}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          {modifiedCount === 0
-            ? "Add some settings to share"
-            : "Copy shareable link"}
+          {modifiedCount === 0 ? "Add some settings to share" : "Copy shareable link"}
         </TooltipContent>
       </Tooltip>
-    </div>
+    </>
+  );
+}
 
-    {/* Config content */}
-    <ScrollArea className="flex-1 min-h-0">
-      <div className="px-6 py-4">
+/** The generated file with line numbers; the sheet and the editor's preview pane both show it. */
+export function ConfigFileContent({ showActions = true }: { showActions?: boolean }) {
+  const config = useConfigStore((state) => state.config);
+  const exportConfig = useConfigStore((state) => state.exportConfig);
+
+  const configString = exportConfig();
+  const modifiedCount = Object.keys(config).length;
+  const lines = configString.split("\n");
+
+  return (
+    <>
+      {showActions && (
+        <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-6 py-3">
+          <ConfigActions />
+        </div>
+      )}
+
+      {/* Plain overflow, so a long line (a keybind, a shader path) scrolls sideways instead of clipping. */}
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Generated config"
+        className="min-h-0 flex-1 overflow-auto bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      >
         {modifiedCount > 0 ? (
-          <pre className="text-sm font-mono leading-relaxed">
-            {configString.split('\n').map((line, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "py-0.5 transition-colors",
-                  line.startsWith('#')
-                    ? "text-muted-foreground"
-                    : line.includes('=')
-                      ? "text-foreground"
-                      : ""
-                )}
-              >
-                {line.includes('=') ? (
-                  <>
-                    <span className="text-muted-foreground">
-                      {line.split('=')[0]}
+          <pre className="min-w-max py-3.5 font-mono text-[12.5px] leading-[1.75]">
+            {lines.map((line, i) => {
+              const eq = line.indexOf("=");
+              return (
+                <div key={i} className="flex pr-4">
+                  <span
+                    aria-hidden="true"
+                    className="w-11 shrink-0 pr-3.5 text-right text-subtle-foreground select-none"
+                  >
+                    {i + 1}
+                  </span>
+                  {line.startsWith("#") ? (
+                    <span className="whitespace-pre text-muted-foreground">{line}</span>
+                  ) : eq >= 0 ? (
+                    <span className="whitespace-pre">
+                      <span className="text-foreground">{line.slice(0, eq)}</span>
+                      <span className="text-subtle-foreground">=</span>
+                      <span className="text-accent-foreground">{line.slice(eq + 1)}</span>
                     </span>
-                    <span className="text-muted-foreground">=</span>
-                    <span className="text-primary">
-                      {line.split('=').slice(1).join('=')}
-                    </span>
-                  </>
-                ) : (
-                  line || '\u00A0'
-                )}
-              </div>
-            ))}
+                  ) : (
+                    <span className="whitespace-pre">{line || "\u00A0"}</span>
+                  )}
+                </div>
+              );
+            })}
           </pre>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-              <Code className="h-6 w-6 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+            <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
+              <Code className="size-6 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground text-sm">
-              No modifications yet
-            </p>
-            <p className="text-muted-foreground text-xs mt-1">
-              Change some settings to see your config
-            </p>
+            <p className="text-sm text-muted-foreground">No modifications yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">Change some settings to see your config</p>
           </div>
         )}
       </div>
-    </ScrollArea>
 
-    {/* Footer */}
-    <div className="px-6 py-4 border-t border-border bg-muted/30">
-      <p className="text-xs text-muted-foreground">
-        Save this file to{" "}
-        <code className="px-1.5 py-0.5 rounded bg-muted text-foreground font-mono">
-          ~/.config/ghostty/config
-        </code>
-      </p>
-    </div>
+      <div className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
+        Save to <code className="font-mono text-foreground">~/.config/ghostty/config</code>
+      </div>
     </>
   );
 }
@@ -213,20 +219,11 @@ export function ConfigOutput({ onOpen }: ConfigOutputProps = {}) {
   const modifiedCount = Object.keys(config).length;
 
   const trigger = (
-    <Button
-      aria-label="View Config"
-      onClick={onOpen}
-      className={cn(
-        "gap-2 shadow-lg transition-all duration-300",
-        modifiedCount > 0 && "shadow-primary/20"
-      )}
-    >
-      <Code className="h-4 w-4" />
-      <span className="hidden sm:inline">View Config</span>
+    <Button variant="ghost" aria-label="View Config" onClick={onOpen} className="h-9 gap-2 px-3.5">
+      <Code className="size-4" />
+      <span className="hidden sm:inline">Config</span>
       {modifiedCount > 0 && (
-        <span className="ml-1 min-w-5 h-5 flex items-center justify-center rounded-full bg-primary-foreground/20 text-xs font-medium">
-          {modifiedCount}
-        </span>
+        <span className="font-mono text-[11px] font-medium text-accent-foreground">{modifiedCount}</span>
       )}
     </Button>
   );

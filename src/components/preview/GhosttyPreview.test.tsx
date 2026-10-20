@@ -47,6 +47,8 @@ vi.mock('ghostty-web', () => {
     }
     write = vi.fn();
     dispose = vi.fn();
+    cols = 92;
+    rows = 34;
 
     constructor(options: Record<string, unknown>) {
       this.options = options;
@@ -100,7 +102,7 @@ describe('GhosttyPreview lifecycle', () => {
       <GhosttyPreview isOpen onToggle={vi.fn()} />
     );
     await waitFor(() => expect(mocks.initGhosttyMock).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole('status')).toHaveTextContent('Loading Ghostty WASM...');
+    expect(screen.getByRole('status')).toHaveTextContent('Starting Ghostty…');
 
     rerender(<GhosttyPreview isOpen={false} onToggle={vi.fn()} />);
 
@@ -208,7 +210,7 @@ describe('GhosttyPreview lifecycle', () => {
     render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Failed to load preview');
+    expect(alert).toHaveTextContent("Preview couldn't start");
     expect(alert).toHaveTextContent('open failed');
     expect(mocks.terminalInstances[0].dispose).toHaveBeenCalledTimes(1);
     expect(mocks.fitAddonInstances[0].dispose).toHaveBeenCalledTimes(1);
@@ -244,5 +246,73 @@ describe('GhosttyPreview focus', () => {
     expect(document.activeElement).toBe(field);
     // The terminal's own focus() is restored for explicit use afterwards.
     expect(Object.prototype.hasOwnProperty.call(terminal, 'focus')).toBe(false);
+  });
+});
+
+describe('GhosttyPreview docked pane', () => {
+  beforeEach(() => {
+    mocks.initGhosttyMock.mockReset();
+    mocks.initGhosttyMock.mockResolvedValue(undefined);
+    mocks.terminalInstances.length = 0;
+    mocks.fitAddonInstances.length = 0;
+    mocks.failNextOpen = false;
+    act(() => {
+      useConfigStore.getState().resetAll();
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('says it is loading, then live, and shows the terminal grid', async () => {
+    render(<GhosttyPreview isOpen docked onToggle={vi.fn()} />);
+    expect(screen.getByText('Loading preview')).toBeTruthy();
+
+    expect(await screen.findByText('Live — updates as you edit')).toBeTruthy();
+    expect(await screen.findByText('92×34')).toBeTruthy();
+    expect(screen.getByText('libghostty · wasm')).toBeTruthy();
+  });
+
+  it('draws a failure on the app surface, not the terminal colors, and offers the config', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.failNextOpen = true;
+    const onViewConfig = vi.fn();
+
+    render(<GhosttyPreview isOpen docked onToggle={vi.fn()} onViewConfig={onViewConfig} />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.className).toContain('bg-card');
+    expect(screen.getByText('Preview unavailable')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View config' }));
+    expect(onViewConfig).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops the grid size when the preview stops being live', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    render(<GhosttyPreview isOpen docked onToggle={vi.fn()} />);
+    await screen.findByText('92×34');
+
+    mocks.initGhosttyMock.mockRejectedValueOnce(new Error('engine gone'));
+    mocks.terminalInstances.length = 0;
+    act(() => {
+      useConfigStore.getState().setValue('font-size', 17);
+    });
+
+    await screen.findByRole('alert', {}, { timeout: 2000 });
+    expect(screen.queryByText('92×34')).toBeNull();
+  });
+
+  it('leaves out the status line and the config shortcut when floating', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.failNextOpen = true;
+
+    render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
+
+    await screen.findByRole('alert');
+    expect(screen.queryByText('libghostty · wasm')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'View config' })).toBeNull();
   });
 });
