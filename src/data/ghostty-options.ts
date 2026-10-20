@@ -679,6 +679,7 @@ const windowOptions: ConfigOption[] = [
     category: "window",
     placeholder: "navigation",
     sinceVersion: "1.3.0",
+    multiValue: true,
     validValues: [
       { value: "navigation", label: "Navigation", description: "Keep zoom when navigating between splits" },
     ],
@@ -939,6 +940,7 @@ const mouseOptions: ConfigOption[] = [
     category: "mouse",
     placeholder: "keystroke,no-output",
     sinceVersion: "1.2.0",
+    multiValue: true,
     validValues: [
       { value: "keystroke", label: "Keystroke", description: "Scroll on keypress (default)" },
       { value: "output", label: "Output", description: "Scroll on new output" },
@@ -1244,6 +1246,7 @@ const applicationOptions: ConfigOption[] = [
     category: "application",
     placeholder: "no-bell,notify",
     sinceVersion: "1.3.0",
+    multiValue: true,
     validValues: [
       { value: "bell", label: "Bell", description: "Ring the terminal bell (on by default)" },
       { value: "notify", label: "Desktop Notify", description: "Show a desktop notification" },
@@ -1269,6 +1272,7 @@ const applicationOptions: ConfigOption[] = [
     default: "",
     category: "application",
     placeholder: "no-clipboard-copy",
+    multiValue: true,
     validValues: [
       { value: "clipboard-copy", label: "Clipboard Copy", description: "Notify when text is copied (on by default)" },
       { value: "config-reload", label: "Config Reload", description: "Notify when config is reloaded (on by default)" },
@@ -1399,6 +1403,7 @@ const applicationOptions: ConfigOption[] = [
     category: "application",
     placeholder: "attention,title",
     sinceVersion: "1.2.0",
+    multiValue: true,
     validValues: [
       { value: "attention", label: "Attention", description: "Request user attention when unfocused (on by default)" },
       { value: "title", label: "Title", description: "Add 🔔 emoji to window title (on by default)" },
@@ -2237,6 +2242,7 @@ const advancedOptions: ConfigOption[] = [
     default: "",
     category: "advanced",
     sinceVersion: "1.2.0",
+    multiValue: true,
     validValues: [
       { value: "cursor", label: "Cursor", description: "Break runs under the cursor" },
       { value: "no-cursor", label: "No Cursor", description: "Don't break at cursor" },

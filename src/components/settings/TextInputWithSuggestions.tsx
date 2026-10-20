@@ -1,126 +1,118 @@
 "use client";
 
+import { Fragment } from "react";
+import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SettingWrapper } from "./SettingWrapper";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { StringOption } from "@/lib/schema/types";
 import { cn } from "@/lib/utils";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 
 interface TextInputWithSuggestionsProps {
-    option: StringOption;
+  option: StringOption;
 }
 
+/**
+ * A text field with its known values as chips. Options that take a list of flags toggle each
+ * chip in and out of the comma-separated value; the rest take one value, which a second click
+ * on the chosen chip puts back to the default.
+ */
 export function TextInputWithSuggestions({ option }: TextInputWithSuggestionsProps) {
-    const { getValue, setValue, resetValue } = useConfigStore();
-    const value = getValue(option.id) as string;
-    const modified = useIsModified(option.id);
+  const { getValue, setValue, resetValue } = useConfigStore();
+  const value = (getValue(option.id) as string) || "";
+  const modified = useIsModified(option.id);
+  const multiple = option.multiValue === true;
 
-    // Parse current values into an array
-    const currentValues = value
-        ? value.split(",").map((v) => v.trim()).filter(Boolean)
-        : [];
+  const currentValues = value.split(",").map((v) => v.trim()).filter(Boolean);
 
-    // Check if a value is already in the input
-    const isValueSelected = (val: string) => currentValues.includes(val);
+  function isOn(chip: string) {
+    return multiple ? currentValues.includes(chip) : value === chip;
+  }
 
-    // Add a value to the input
-    const addValue = (val: string) => {
-        if (isValueSelected(val)) return;
-        const newValues = [...currentValues, val];
-        setValue(option.id, newValues.join(","));
-    };
+  function toggle(chip: string) {
+    if (!multiple) {
+      if (isOn(chip)) resetValue(option.id);
+      else setValue(option.id, chip);
+      return;
+    }
+    const next = isOn(chip) ? currentValues.filter((v) => v !== chip) : [...currentValues, chip];
+    if (next.length === 0) resetValue(option.id);
+    else setValue(option.id, next.join(","));
+  }
 
-    // Remove a value from the input
-    const removeValue = (val: string) => {
-        const newValues = currentValues.filter((v) => v !== val);
-        setValue(option.id, newValues.join(","));
-    };
+  return (
+    <SettingWrapper
+      id={option.id}
+      name={option.name}
+      description={option.description}
+      isModified={modified}
+      onReset={() => resetValue(option.id)}
+      note={option.note}
+      deprecated={option.deprecated}
+      sinceVersion={option.sinceVersion}
+      platform={option.platform}
+    >
+      <div className="space-y-2">
+        <Input
+          id={option.id}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(option.id, e.target.value)}
+          placeholder={option.placeholder || option.default || "Not set"}
+          spellCheck={false}
+          className="font-mono"
+        />
 
-    // Toggle a value
-    const toggleValue = (val: string) => {
-        if (isValueSelected(val)) {
-            removeValue(val);
-        } else {
-            addValue(val);
-        }
-    };
+        {option.validValues && option.validValues.length > 0 && (
+          <div
+            role="group"
+            aria-label={`${option.name} suggestions`}
+            className="flex flex-wrap items-center gap-1.5"
+          >
+            <span className="mr-0.5 text-[11px] text-subtle-foreground" aria-hidden="true">
+              {multiple ? "Add" : "Use"}
+            </span>
+            <TooltipProvider>
+              {option.validValues.map((validValue) => {
+                const on = isOn(validValue.value);
+                const chip = (
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggle(validValue.value)}
+                    className={cn(
+                      "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 font-mono text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      on
+                        ? "border-primary bg-accent text-accent-foreground"
+                        : "border-border-strong text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {on && <Check className="size-3" aria-hidden="true" />}
+                    {validValue.label}
+                  </button>
+                );
 
-    return (
-        <SettingWrapper
-            id={option.id}
-            name={option.name}
-            description={option.description}
-            isModified={modified}
-            onReset={() => resetValue(option.id)}
-            note={option.note}
-            deprecated={option.deprecated}
-            sinceVersion={option.sinceVersion}
-            platform={option.platform}
-            layout="stacked"
-        >
-            <div className="space-y-3">
-                <Input
-                    id={option.id}
-                    type="text"
-                    value={value || ""}
-                    onChange={(e) => setValue(option.id, e.target.value)}
-                    placeholder={option.placeholder || `Default: ${option.default || "empty"}`}
-                    className="max-w-md"
-                />
+                if (!validValue.description) return <Fragment key={validValue.value}>{chip}</Fragment>;
 
-                {/* Valid values chips */}
-                {option.validValues && option.validValues.length > 0 && (
-                    <div className="space-y-2">
-                        <p className="text-xs text-muted-foreground">Click to add/remove:</p>
-                        <div className="flex flex-wrap gap-1.5">
-                            {option.validValues.map((validValue) => {
-                                const isSelected = isValueSelected(validValue.value);
-
-                                const chip = (
-                                    <button
-                                        key={validValue.value}
-                                        type="button"
-                                        onClick={() => toggleValue(validValue.value)}
-                                        className={cn(
-                                            "inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-200",
-                                            "border focus:outline-none focus:ring-2 focus:ring-primary/20",
-                                            isSelected
-                                                ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                                                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground hover:border-primary/30"
-                                        )}
-                                    >
-                                        {!isSelected && <span className="mr-1 opacity-60">+</span>}
-                                        {validValue.label}
-                                        {isSelected && <span className="ml-1.5 opacity-80">✓</span>}
-                                    </button>
-                                );
-
-                                // Wrap with tooltip if description exists
-                                if (validValue.description) {
-                                    return (
-                                        <TooltipProvider key={validValue.value}>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>{chip}</TooltipTrigger>
-                                                <TooltipContent side="top" className="max-w-xs">
-                                                    <p className="text-xs">{validValue.description}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    );
-                                }
-
-                                return chip;
-                            })}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </SettingWrapper>
-    );
+                return (
+                  <Tooltip key={validValue.value}>
+                    <TooltipTrigger asChild>{chip}</TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="text-xs">{validValue.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </TooltipProvider>
+          </div>
+        )}
+      </div>
+    </SettingWrapper>
+  );
 }

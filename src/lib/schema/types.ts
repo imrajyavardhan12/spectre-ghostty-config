@@ -48,6 +48,8 @@ export interface StringOption extends BaseConfigOption {
   placeholder?: string;
   repeatable?: boolean;
   validValues?: { value: string; label: string; description?: string }[];
+  /** Comma-separated flags Ghostty merges ("bell-features = audio,title"); otherwise one value. */
+  multiValue?: boolean;
 }
 
 /** Scalar grammar from the pinned Ghostty Config.zig field type. */
