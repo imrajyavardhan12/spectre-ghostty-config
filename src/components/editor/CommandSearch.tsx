@@ -1,70 +1,43 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import {
-  Type,
-  Palette,
-  AppWindow,
-  MousePointer2,
-  Mouse,
-  Clipboard,
-  Keyboard,
-  Terminal,
-  Settings,
-  TerminalSquare,
-  Apple,
-  Monitor,
-  Wrench,
-} from "lucide-react";
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { allOptions } from "@/data/ghostty-options";
-import { categories } from "@/data/categories";
-import { Category, ConfigOption } from "@/lib/schema/types";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Command as CommandPrimitive } from "cmdk";
+import { Search, SearchX, X } from "lucide-react";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Kbd } from "@/components/ui/kbd";
+import { allOptions } from "@/data/ghostty-options";
+import { categories } from "@/data/categories";
+import { ConfigOption, Platform } from "@/lib/schema/types";
 import { useConfigStore } from "@/lib/store/config-store";
 import { isOptionSupportedIn } from "@/lib/ghostty-versions";
+import { searchOptions } from "@/lib/utils/option-search";
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Type,
-  Palette,
-  AppWindow,
-  MousePointer2,
-  Mouse,
-  Clipboard,
-  Keyboard,
-  Terminal,
-  Settings,
-  TerminalSquare,
-  Apple,
-  Monitor,
-  Wrench,
+const PLATFORM_LABEL: Record<Platform, string> = {
+  macos: "macOS",
+  linux: "Linux",
+  windows: "Windows",
 };
 
 interface CommandSearchProps {
   onSelectOption: (option: ConfigOption) => void;
-  onSelectCategory: (category: Category) => void;
 }
 
-export function CommandSearch({ onSelectOption, onSelectCategory }: CommandSearchProps) {
+export function CommandSearch({ onSelectOption }: CommandSearchProps) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const targetVersion = useConfigStore((state) => state.targetVersion);
   const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
 
-  const isUnsupported = (option: ConfigOption) =>
-    !isOptionSupportedIn(option.id, targetVersion);
-
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+      if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
+        // Opening or closing, the next search starts empty.
+        setQuery("");
         setOpen((open) => !open);
       }
     };
@@ -73,150 +46,170 @@ export function CommandSearch({ onSelectOption, onSelectCategory }: CommandSearc
     return () => document.removeEventListener("keydown", down);
   }, []);
 
+  const changeOpen = useCallback((next: boolean) => {
+    setOpen(next);
+    // Each search starts empty, whichever way the last one ended.
+    if (!next) setQuery("");
+  }, []);
+
   const handleSelectOption = useCallback((option: ConfigOption) => {
-    setOpen(false);
+    changeOpen(false);
     onSelectOption(option);
-  }, [onSelectOption]);
+  }, [changeOpen, onSelectOption]);
 
-  const handleSelectCategory = useCallback((category: Category) => {
-    setOpen(false);
-    onSelectCategory(category);
-  }, [onSelectCategory]);
-
-  const getCategoryIcon = (categoryId: string) => {
-    const category = categories.find((c) => c.id === categoryId);
-    return iconMap[category?.icon || "Settings"] || Settings;
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "boolean":
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-      case "number":
-        return "bg-purple-500/10 text-purple-500 border-purple-500/20";
-      case "color":
-        return "bg-pink-500/10 text-pink-500 border-pink-500/20";
-      case "enum":
-        return "bg-warning-soft text-warning-foreground border-warning-border";
-      case "keybind":
-        return "bg-green-500/10 text-green-500 border-green-500/20";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
-
-  // Filter out hidden options, plus newer-than-target options when hiding.
-  const visibleOptions = allOptions.filter(
-    (opt) => !opt.hidden && (!hideUnsupported || !isUnsupported(opt))
+  // Options hidden from the editor, and newer-than-target ones when hiding, are not searchable.
+  const visibleOptions = useMemo(
+    () =>
+      allOptions.filter(
+        (opt) => !opt.hidden && (!hideUnsupported || isOptionSupportedIn(opt.id, targetVersion))
+      ),
+    [hideUnsupported, targetVersion]
   );
+  const { results, total } = useMemo(() => searchOptions(visibleOptions, query), [visibleOptions, query]);
+  const hasQuery = query.trim() !== "";
+  const countLabel = total > results.length ? `${results.length} of ${total}` : `${total}`;
+  // Spoken for screen readers; the list and the empty state are what sighted users see.
+  const announcement = !hasQuery
+    ? ""
+    : results.length === 0
+      ? "No matching options"
+      : `${countLabel} ${total === 1 ? "option" : "options"}`;
 
   return (
-    <CommandDialog 
-      open={open} 
-      onOpenChange={setOpen}
-      title="Search Settings"
-      description="Search for Ghostty configuration options"
-    >
-      <CommandInput placeholder="Search settings..." />
-      <CommandList className="max-h-[400px]">
-        <CommandEmpty>No settings found.</CommandEmpty>
-        
-        {/* Categories */}
-        <CommandGroup heading="Categories">
-          {categories.map((category) => {
-            const Icon = iconMap[category.icon || "Settings"] || Settings;
-            const optionCount = visibleOptions.filter(
-              (opt) => opt.category === category.id
-            ).length;
-            
-            return (
-              <CommandItem
-                key={category.id}
-                value={`category-${category.id} ${category.name}`}
-                onSelect={() => handleSelectCategory(category.id)}
+    <Dialog open={open} onOpenChange={changeOpen}>
+      <DialogContent
+        showCloseButton={false}
+        className="gap-0 overflow-hidden bg-popover p-0 sm:max-w-[620px] md:top-[88px] md:translate-y-0 max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none"
+      >
+        <DialogTitle className="sr-only">Search Settings</DialogTitle>
+        <DialogDescription className="sr-only">
+          Search for Ghostty configuration options by name, key or description
+        </DialogDescription>
+
+        <Command
+          label="Search"
+          shouldFilter={false}
+          className="rounded-none max-md:h-full md:max-h-[min(520px,calc(100dvh-120px))]"
+        >
+          <div
+            data-slot="command-input-wrapper"
+            className="flex h-[54px] shrink-0 items-center gap-2.5 border-b border-border px-3.5"
+          >
+            <Search className="size-[17px] shrink-0 text-subtle-foreground" aria-hidden="true" />
+            <CommandPrimitive.Input
+              ref={inputRef}
+              value={query}
+              onValueChange={setQuery}
+              placeholder="Search options or keys"
+              autoFocus
+              spellCheck={false}
+              className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-foreground outline-hidden placeholder:text-subtle-foreground"
+            />
+            <Kbd variant="hint" className="max-md:hidden">esc</Kbd>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="-mr-2 size-11 md:hidden"
+              aria-label="Close"
+              onClick={() => changeOpen(false)}
+            >
+              <X className="size-5" />
+            </Button>
+          </div>
+
+          <div role="status" className="sr-only">
+            {announcement}
+          </div>
+
+          {/* Always present, so the input's aria-controls has a target; hidden when empty. */}
+          <CommandList hidden={results.length === 0} className="max-h-none min-h-0 flex-1 p-1.5">
+            {results.length > 0 && (
+              <CommandGroup
+                heading={hasQuery ? `Options · ${countLabel}` : "Suggested"}
+                className="p-0 [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:tracking-[.06em] [&_[cmdk-group-heading]]:text-subtle-foreground [&_[cmdk-group-heading]]:uppercase"
               >
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <span>{category.name}</span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {optionCount} options
-                </span>
-              </CommandItem>
-            );
-          })}
-        </CommandGroup>
-
-        {/* Options grouped by category */}
-        {categories.map((category) => {
-          const categoryOptions = visibleOptions.filter(
-            (opt) => opt.category === category.id
-          );
-          
-          if (categoryOptions.length === 0) return null;
-
-          return (
-            <CommandGroup key={category.id} heading={category.name}>
-              {categoryOptions.map((option) => {
-                const Icon = getCategoryIcon(option.category);
-                
-                return (
-                  <CommandItem
+                {results.map((option) => (
+                  <ResultRow
                     key={option.id}
-                    value={`${option.id} ${option.name} ${option.description} ${option.category}`}
-                    onSelect={() => handleSelectOption(option)}
-                  >
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{option.name}</span>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-[10px] px-1.5 py-0 h-4 ${getTypeColor(option.type)}`}
-                        >
-                          {option.type}
-                        </Badge>
-                        {option.platform && (
-                          <Badge 
-                            variant="outline" 
-                            className="text-[10px] px-1.5 py-0 h-4"
-                          >
-                            {option.platform.join(", ")}
-                          </Badge>
-                        )}
-                        {isUnsupported(option) && option.sinceVersion && (
-                          <Badge
-                            variant="warning"
-                            className="text-[10px] px-1.5 py-0 h-4"
-                          >
-                            Needs {option.sinceVersion}
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground truncate">
-                        {option.description}
-                      </span>
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          );
-        })}
-      </CommandList>
-    </CommandDialog>
+                    option={option}
+                    needsNewer={!isOptionSupportedIn(option.id, targetVersion)}
+                    onSelect={handleSelectOption}
+                  />
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+          {results.length === 0 && (
+            // Outside the list: this is a message, not a result.
+            <div className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto px-6 py-12 text-center">
+              <SearchX className="size-[22px] text-subtle-foreground" aria-hidden="true" />
+              <p className="text-sm font-medium">No options match “{query.trim()}”</p>
+              <p className="max-w-80 text-[13px] leading-normal text-muted-foreground">
+                Try a name, a key like <code className="font-mono">cursor-style</code>, or words from a
+                description.
+              </p>
+              <Button variant="outline" size="sm" className="mt-1.5" onClick={() => {
+                  setQuery("");
+                  // The button goes away with the message; keep focus in the dialog.
+                  inputRef.current?.focus();
+                }}
+              >
+                Clear search
+              </Button>
+            </div>
+          )}
+
+          <div className="flex h-[38px] shrink-0 items-center gap-4 border-t border-border px-3.5 text-xs text-subtle-foreground max-md:hidden">
+            <span className="flex items-center gap-1.5">
+              <span className="font-mono">↑↓</span>Navigate
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="font-mono">↵</span>Go to option
+            </span>
+            <span className="flex-1" />
+            <span>
+              {visibleOptions.length} options · {categories.length} categories
+            </span>
+          </div>
+        </Command>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-// Button to trigger search (for header)
-export function SearchButton({ onClick }: { onClick: () => void }) {
+function ResultRow({
+  option,
+  needsNewer,
+  onSelect,
+}: {
+  option: ConfigOption;
+  needsNewer: boolean;
+  onSelect: (option: ConfigOption) => void;
+}) {
+  const category = categories.find((c) => c.id === option.category);
+  // The macOS and Linux categories already say it.
+  const platform = option.platform?.map((p) => PLATFORM_LABEL[p]).join(", ");
+  const showPlatform = platform && platform !== category?.name;
+
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground bg-muted/50 border border-border rounded-md hover:bg-muted transition-colors"
+    <CommandItem
+      value={option.id}
+      onSelect={() => onSelect(option)}
+      className="min-h-11 gap-3 rounded-[7px] px-2.5 py-1.5 data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
     >
-      <span>Search settings...</span>
-      <Kbd variant="hint" className="hidden sm:inline-flex">
-        ⌘K
-      </Kbd>
-    </button>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm">{option.name}</span>
+        <span className="truncate font-mono text-xs text-subtle-foreground">{option.id}</span>
+      </span>
+      {needsNewer && option.sinceVersion && (
+        <Badge variant="warning" className="h-4 px-1.5 py-0 text-[10px]">
+          Needs {option.sinceVersion}
+        </Badge>
+      )}
+      <span className="shrink-0 text-xs text-muted-foreground">
+        {category?.name}
+        {showPlatform && ` · ${platform} only`}
+      </span>
+    </CommandItem>
   );
 }

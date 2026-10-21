@@ -76,19 +76,12 @@ export default function EditorPage() {
     }, 100);
   }, []);
 
-  const handleSelectCategory = useCallback((category: Category) => {
-    setActiveCategory(category);
-  }, []);
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       {/* Command Search (Cmd+K) */}
-      <CommandSearch 
-        onSelectOption={handleSelectOption}
-        onSelectCategory={handleSelectCategory}
-      />
+      <CommandSearch onSelectOption={handleSelectOption} />
 
       <div className="flex">
         <Sidebar

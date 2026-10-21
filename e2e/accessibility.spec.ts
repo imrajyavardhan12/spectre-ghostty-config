@@ -110,6 +110,22 @@ test("the mobile editor has no automatically detectable WCAG A or AA violations"
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
 
+test("the search dialog has no automatically detectable WCAG A or AA violations", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await expect(page.getByRole("heading", { name: "Fonts" })).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+k");
+  const search = page.getByRole("dialog", { name: "Search Settings" });
+  await expect(search.getByText("Suggested")).toBeVisible();
+  await expect(search).toHaveCSS("opacity", "1");
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+
+  await search.getByRole("combobox", { name: "Search" }).fill("blink rate");
+  await expect(search.getByText(/No options match/)).toBeVisible();
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
 test("the tablet header moves actions into an accessible overflow menu", async ({
   page,
 }) => {
