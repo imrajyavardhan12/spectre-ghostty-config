@@ -111,7 +111,7 @@ function OptionCard({ group, highlightedOption }: { group: OptionGroup; highligh
           className={cn(
             // Search jumps land just below the sticky group bar.
             "scroll-mt-20 transition-colors duration-200 first:rounded-t-lg last:rounded-b-lg",
-            highlightedOption === option.id && "bg-accent/60 ring-2 ring-inset ring-primary"
+            highlightedOption === option.id && "bg-accent ring-2 ring-inset ring-ring"
           )}
         >
           <SettingRenderer option={option} />

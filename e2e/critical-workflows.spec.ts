@@ -444,7 +444,7 @@ test("a user can filter options by Ghostty target version", async ({
   const searchDialog = page.getByRole("dialog", { name: "Search Settings" });
   await page.getByRole("button", { name: /^Search \d+ options/ }).click();
   await expect(searchDialog).toBeVisible();
-  await searchDialog.getByPlaceholder("Search settings...").fill("background-image");
+  await searchDialog.getByRole("combobox", { name: "Search" }).fill("background-image");
   await expect(
     searchDialog.getByText("Needs 1.2.0", { exact: true }).first()
   ).toBeVisible();
@@ -458,8 +458,8 @@ test("a user can filter options by Ghostty target version", async ({
 
   await page.getByRole("button", { name: /^Search \d+ options/ }).click();
   await expect(searchDialog).toBeVisible();
-  await searchDialog.getByPlaceholder("Search settings...").fill("background-image");
-  await expect(searchDialog.getByText("No settings found.")).toBeVisible();
+  await searchDialog.getByRole("combobox", { name: "Search" }).fill("background-image");
+  await expect(searchDialog.getByText("No options match “background-image”")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(searchDialog).not.toBeVisible();
 
@@ -1057,6 +1057,36 @@ test("a user can navigate and inspect configuration on a mobile screen", async (
     () => document.documentElement.scrollWidth > window.innerWidth
   );
   expect(hasHorizontalPageOverflow).toBe(false);
+});
+
+test("a user can search by key with the keyboard and land on the highlighted setting", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await expect(page.getByRole("heading", { name: "Fonts" })).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+k");
+  const search = page.getByRole("dialog", { name: "Search Settings" });
+  await expect(search.getByText("Suggested")).toBeVisible();
+  await search.getByRole("combobox", { name: "Search" }).fill("unfocused-split-opacity");
+  await expect(search.getByText(/^Options · (\d+ of )?\d+$/)).toBeVisible();
+  await page.keyboard.press("Enter");
+
+  await expect(search).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Window", exact: true })).toBeVisible();
+  await expect(page.locator("#option-unfocused-split-opacity")).toHaveClass(/ring-ring/);
+});
+
+test("search is full screen on a phone and closes from its own button", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/editor");
+
+  await page.getByRole("button", { name: "Search settings" }).click();
+  const search = page.getByRole("dialog", { name: "Search Settings" });
+  // The dialog scales in, so wait for it to settle before measuring.
+  await expect.poll(() => search.boundingBox()).toMatchObject({ x: 0, y: 0, width: 390 });
+  await search.getByRole("button", { name: "Close" }).click();
+  await expect(search).toBeHidden();
 });
 
 test("a phone user can watch the live preview in a sheet and export from the bar", async ({
