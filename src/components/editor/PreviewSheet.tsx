@@ -9,10 +9,12 @@ interface PreviewSheetProps {
   onOpenChange: (open: boolean) => void;
   tab: PreviewPaneTab;
   onTabChange: (tab: PreviewPaneTab) => void;
+  /** Where focus goes on close. The sheet has no trigger of its own, so the opener decides. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 /** The preview pane below the wide breakpoint: a drawer from the right on tablets, a bottom sheet on phones. */
-export function PreviewSheet({ open, onOpenChange, tab, onTabChange }: PreviewSheetProps) {
+export function PreviewSheet({ open, onOpenChange, tab, onTabChange, onCloseAutoFocus }: PreviewSheetProps) {
   const isTablet = useMediaQuery(TABLET_QUERY);
 
   return (
@@ -20,6 +22,7 @@ export function PreviewSheet({ open, onOpenChange, tab, onTabChange }: PreviewSh
       <SheetContent
         side={isTablet ? "right" : "bottom"}
         hideClose
+        onCloseAutoFocus={onCloseAutoFocus}
         className={
           isTablet
             ? "w-full gap-0 p-0 sm:max-w-[460px]"

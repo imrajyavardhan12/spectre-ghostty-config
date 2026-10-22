@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useId } from "react";
-import { Check } from "lucide-react";
+import { useId } from "react";
+import { Check, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { Theme, categorizeTheme } from "@/lib/utils/themes";
+import { cn } from "@/lib/utils";
 
 interface ThemeCardProps {
   theme: Theme;
@@ -14,180 +14,103 @@ interface ThemeCardProps {
 
 export function ThemeCard({ theme, isActive, onApply }: ThemeCardProps) {
   const titleId = useId();
-  const cardRef = useRef<HTMLElement>(null);
-  const [transform, setTransform] = useState({ rotateX: 0, rotateY: 0 });
-  const [isHovering, setIsHovering] = useState(false);
 
   const isDark = categorizeTheme(theme) === "dark";
+  const KindIcon = isDark ? Moon : Sun;
   const { background, foreground, palette } = theme.colors;
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const mouseX = e.clientX - centerX;
-    const mouseY = e.clientY - centerY;
-    const rotateY = (mouseX / (rect.width / 2)) * 5;
-    const rotateX = -(mouseY / (rect.height / 2)) * 5;
-    setTransform({ rotateX, rotateY });
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovering(false);
-    setTransform({ rotateX: 0, rotateY: 0 });
-  };
-
-  const handleApply = () => {
-    onApply(theme);
-  };
 
   // Get 8 main colors from palette for preview
   const previewColors = palette.slice(0, 8).filter(Boolean);
 
   return (
-    <div style={{ perspective: "800px" }}>
-      <article
-        ref={cardRef}
-        aria-labelledby={titleId}
-        onMouseMove={handleMouseMove}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={handleMouseLeave}
-        className={cn(
-          "group relative overflow-hidden rounded-xl border transition-all duration-300",
-          isActive
-            ? "border-primary ring-2 ring-primary/20"
-            : "border-border hover:border-primary/30"
-        )}
-        style={{
-          transformStyle: "preserve-3d",
-          transform: `rotateX(${transform.rotateX}deg) rotateY(${transform.rotateY}deg)`,
-          transition: isHovering
-            ? "transform 0.1s ease-out"
-            : "transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
-        }}
+    <article
+      aria-labelledby={titleId}
+      className="flex flex-col overflow-hidden rounded-[11px] border border-border bg-card transition-[transform,box-shadow,border-color] duration-200 hover:border-border-strong hover:shadow-md motion-safe:hover:-translate-y-0.5"
+    >
+      {/* Terminal sample. The colors belong to the theme, so they are not held to the page's contrast. */}
+      <div
+        aria-hidden="true"
+        className="px-3.5 pt-3.5 pb-3 font-mono text-xs leading-[1.65]"
+        style={{ backgroundColor: background, color: foreground }}
       >
-        {/* Terminal Preview */}
-        <div
-          aria-hidden="true"
-          className="p-4"
-          style={{ backgroundColor: background, color: foreground }}
-        >
-          {/* Fake terminal header */}
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
-            <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
-            <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
-          </div>
-
-          {/* Fake terminal content */}
-          <div className="font-mono text-xs space-y-1">
-            <div className="flex">
-              <span style={{ color: palette[2] || "#4ec9b0" }}>~</span>
-              <span className="mx-1" style={{ color: foreground }}>
-                $
-              </span>
-              <span style={{ color: palette[4] || "#569cd6" }}>echo</span>
-              <span className="ml-1" style={{ color: palette[3] || "#ce9178" }}>
-                &quot;Hello, Ghostty!&quot;
-              </span>
-            </div>
-            <div style={{ color: foreground }}>Hello, Ghostty!</div>
-            <div className="flex">
-              <span style={{ color: palette[2] || "#4ec9b0" }}>~</span>
-              <span className="mx-1" style={{ color: foreground }}>
-                $
-              </span>
-              <span
-                className="inline-block w-2 h-3.5 animate-pulse"
-                style={{ backgroundColor: theme.colors.cursorColor || foreground }}
-              />
-            </div>
-          </div>
+        <div className="truncate">
+          <span style={{ color: palette[2] || "#4ec9b0" }}>~</span>{" "}
+          <span style={{ color: palette[4] || "#569cd6" }}>echo</span>{" "}
+          <span style={{ color: palette[3] || "#ce9178" }}>&quot;Hello, Ghostty&quot;</span>
         </div>
+        <div>Hello, Ghostty</div>
+        <div className="truncate">
+          <span style={{ color: palette[2] || "#4ec9b0" }}>~</span>{" "}
+          <span style={{ color: palette[1] || "#f44747" }}>git</span> status{" "}
+          <span style={{ color: palette[5] || "#c586c0" }}>--short</span>
+        </div>
+        <div>
+          <span style={{ color: palette[2] || "#4ec9b0" }}>~</span>{" "}
+          <span
+            className="inline-block h-[1.1em] w-[0.6em] align-[-0.2em]"
+            style={{ backgroundColor: theme.colors.cursorColor || foreground }}
+          />
+        </div>
+      </div>
 
-        {/* Color palette strip */}
-        <div aria-hidden="true" className="flex h-2">
-          {previewColors.length > 0
-            ? previewColors.map((color, i) => (
+      {/* Color palette strip */}
+      <div aria-hidden="true" className="flex h-1.5">
+        {previewColors.length > 0
+          ? previewColors.map((color, i) => (
+              <div key={i} className="flex-1" style={{ backgroundColor: color }} />
+            ))
+          : Array(8)
+              .fill(0)
+              .map((_, i) => (
                 <div
                   key={i}
                   className="flex-1"
-                  style={{ backgroundColor: color }}
+                  style={{ backgroundColor: `hsl(${i * 45}, 70%, 50%)` }}
                 />
-              ))
-            : Array(8)
-                .fill(0)
-                .map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-1"
-                    style={{
-                      backgroundColor: `hsl(${i * 45}, 70%, 50%)`,
-                    }}
-                  />
-                ))}
+              ))}
+      </div>
+
+      {/* Info and action */}
+      <div className="flex items-center gap-2.5 py-3 pr-3 pl-3.5">
+        <div className="min-w-0 flex-1">
+          <h3 id={titleId} className="truncate text-sm font-medium" title={theme.name}>
+            {theme.name}
+          </h3>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <KindIcon className="size-3" aria-hidden="true" />
+            {isDark ? "Dark" : "Light"}
+            <span className="sr-only"> theme</span>
+          </p>
         </div>
 
-        {/* Info and action */}
-        <div className="p-3 bg-card flex items-center justify-between">
-          <div>
-            <h3
-              id={titleId}
-              className="font-medium text-sm truncate"
-              title={theme.name}
-            >
-              {theme.name}
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {isDark ? "Dark" : "Light"} theme
-            </p>
-          </div>
-
-          <Button
-            size="sm"
-            variant={isActive ? "secondary" : "default"}
-            onClick={handleApply}
-            aria-label={
-              isActive
-                ? `Applied ${theme.name} theme`
-                : `Apply ${theme.name} theme`
-            }
-            className="gap-1.5"
-          >
-            {isActive ? (
-              <>
-                <Check className="h-3.5 w-3.5" />
-                Applied
-              </>
-            ) : (
-              "Apply"
-            )}
-          </Button>
-        </div>
-      </article>
-    </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onApply(theme)}
+          aria-label={isActive ? `Applied ${theme.name} theme` : `Apply ${theme.name} theme`}
+          className={cn(
+            isActive && "border-transparent bg-accent text-accent-foreground hover:bg-accent"
+          )}
+        >
+          {isActive && <Check className="size-3.5" aria-hidden="true" />}
+          {isActive ? "Applied" : "Apply"}
+        </Button>
+      </div>
+    </article>
   );
 }
 
 // Skeleton loader for theme card
 export function ThemeCardSkeleton() {
   return (
-    <div className="rounded-xl border border-border overflow-hidden animate-pulse">
-      <div className="h-28 bg-muted" />
-      <div className="flex h-2">
-        {Array(8)
-          .fill(0)
-          .map((_, i) => (
-            <div key={i} className="flex-1 bg-muted" />
-          ))}
-      </div>
-      <div className="p-3 bg-card flex items-center justify-between">
-        <div className="space-y-1.5">
-          <div className="h-4 w-24 bg-muted rounded" />
-          <div className="h-3 w-16 bg-muted rounded" />
+    <div className="overflow-hidden rounded-[11px] border border-border bg-card">
+      <div className="h-[98px] animate-pulse bg-muted motion-reduce:animate-none" />
+      <div className="flex items-center gap-2.5 p-3.5">
+        <div className="flex flex-1 flex-col gap-[7px]">
+          <div className="h-2.5 w-3/5 rounded-[3px] bg-muted" />
+          <div className="h-2 w-1/3 rounded-[3px] bg-muted" />
         </div>
-        <div className="h-8 w-16 bg-muted rounded" />
+        <div className="h-8 w-16 rounded-[7px] bg-muted" />
       </div>
     </div>
   );
