@@ -169,9 +169,9 @@ test("the tablet header moves actions into an accessible overflow menu", async (
   expect(await findAccessibilityViolations(page)).toEqual([]);
 
   await menu.getByRole("menuitem", { name: "Presets" }).click();
-  await expect(page.getByRole("dialog", { name: "Configuration Presets" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Presets", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Configuration Presets" })).toBeHidden();
+  await expect(page.getByRole("dialog", { name: "Presets", exact: true })).toBeHidden();
   await expect(more).toBeFocused();
 });
 
@@ -206,7 +206,7 @@ async function openImportReview(page: Page, buffer: Buffer) {
     buffer,
   });
   await expect(
-    page.getByRole("heading", { name: "Review imported configuration" })
+    page.getByRole("heading", { name: "Review import" })
   ).toBeVisible();
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
@@ -40,6 +41,8 @@ import { useToastStore } from "@/lib/store/toast-store";
 import { useCanRedo, useCanUndo, useHistoryStore } from "@/lib/store/history-store";
 import { ImportReviewDialog } from "@/components/editor/ImportReviewDialog";
 import { PresetsDialog } from "@/components/editor/PresetsDialog";
+import { configValuesEqual } from "@/lib/utils/config-normalization";
+import { registerEditorActions } from "@/lib/editor-actions";
 import { ResetDialog } from "@/components/editor/ResetDialog";
 import { allOptions } from "@/data/ghostty-options";
 import { TABLET_QUERY, useMediaQuery, WIDE_QUERY } from "@/lib/hooks/use-media-query";
@@ -92,6 +95,7 @@ export function Header() {
   const [pendingImport, setPendingImport] = useState<PendingImportFile | null>(null);
   const importButtonRef = useRef<HTMLButtonElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
   const [resetOpen, setResetOpen] = useState(false);
   // Taken when the dialog opens, so it still lists them while it fades out after a reset.
   const [resetEntries, setResetEntries] = useState<ResetEntry[]>([]);
@@ -246,6 +250,17 @@ export function Header() {
     setPresetsOpen(true);
   };
 
+  // The search palette offers the same actions; it runs them through this registry.
+  useEffect(
+    () =>
+      registerEditorActions({
+        export: handleExport,
+        import: handleImport,
+        presets: () => openPresets(null),
+        themes: () => router.push("/themes"),
+      })
+  );
+
   const transientIcon = (state: "idle" | "loading" | "success", idle: React.ReactNode) =>
     state === "loading" ? (
       <Loader2 className="animate-spin" />
@@ -263,7 +278,16 @@ export function Header() {
   const handleConfirmImport = (candidate: ConfigValues) => {
     const resultingCount = pendingImport?.analysis.summary.resultingSettingCount ?? 0;
     const skippedCount = pendingImport?.analysis.summary.skippedLineCount ?? 0;
+    const before = useConfigStore.getState().config;
     useConfigStore.getState().applyImportedCandidate(candidate);
+    if (!configValuesEqual(before, useConfigStore.getState().config)) {
+      useToastStore.getState().show(
+        `Imported ${resultingCount} ${resultingCount === 1 ? "setting" : "settings"}${
+          skippedCount > 0 ? ` · ${skippedCount} ${skippedCount === 1 ? "line" : "lines"} skipped` : ""
+        }`,
+        "success"
+      );
+    }
     setPendingImport(null);
     setImportErrorMessage("");
     setImportState("success");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { CircleCheck, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfigStore } from "@/lib/store/config-store";
 import { useToastStore } from "@/lib/store/toast-store";
@@ -27,10 +27,11 @@ export function Toaster() {
   }, [id, held, dismiss]);
 
   return (
-    // Always mounted so screen readers announce the text when it appears.
+    // Always mounted so screen readers announce the text when it appears. Below the dialog
+    // layer on purpose: a full-screen dialog on a phone must not have its buttons covered.
     <div
       role="status"
-      className="pointer-events-none fixed inset-x-0 bottom-[92px] z-[70] flex justify-center px-4 md:bottom-7"
+      className="pointer-events-none fixed inset-x-0 bottom-[92px] z-40 flex justify-center px-4 md:bottom-7"
     >
       {visible && (
         <div
@@ -41,7 +42,11 @@ export function Toaster() {
           onBlur={() => setHeld(false)}
           className="pointer-events-auto flex animate-fade-up items-center gap-2.5 rounded-[10px] border border-border bg-popover py-2 pr-2 pl-3.5 text-[13px] shadow-md"
         >
-          <RotateCcw className="size-[15px] shrink-0 text-primary" aria-hidden="true" />
+          {toast.icon === "success" ? (
+            <CircleCheck className="size-[15px] shrink-0 text-primary" aria-hidden="true" />
+          ) : (
+            <RotateCcw className="size-[15px] shrink-0 text-primary" aria-hidden="true" />
+          )}
           <span className="min-w-0">{toast.text}</span>
           <Button
             variant="secondary"

@@ -105,14 +105,14 @@ test("a user can import and export a Ghostty configuration", async ({ page }) =>
   await fileChooser.setFiles(importedFile);
 
   await expect(
-    page.getByRole("heading", { name: "Review imported configuration" })
+    page.getByRole("heading", { name: "Review import" })
   ).toBeVisible();
   await expect(page.getByText("font-size = 18")).toBeVisible();
   await expect(page.getByText("cursor-style = bar")).toBeVisible();
 
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(
-    page.getByRole("heading", { name: "Review imported configuration" })
+    page.getByRole("heading", { name: "Review import" })
   ).not.toBeVisible();
   await expect(
     page.locator("#option-font-size").getByRole("spinbutton")
@@ -127,6 +127,7 @@ test("a user can import and export a Ghostty configuration", async ({ page }) =>
 
   await expect(page.getByRole("banner").getByText("2 modified", { exact: true })).toBeVisible();
   await expect(page.getByText("Imported 2 settings.", { exact: true })).toBeAttached();
+  await expect(page.getByRole("status").filter({ hasText: "Imported 2 settings" }).getByRole("button", { name: "Undo" })).toBeVisible();
   await expect(importButton).toBeFocused();
   await expect(
     page.locator("#option-font-size").getByRole("spinbutton")
@@ -166,7 +167,7 @@ test("a user can explicitly import valid settings from a partially invalid file"
   await expect(
     page.getByRole("list", { name: "Import issues" })
   ).toContainText(
-    "Error — Line 2 · mouse-hide-while-typing: Use 1, 0, t, T, f, F, true, or false."
+    "Error · Line 2 · mouse-hide-while-typing: Use 1, 0, t, T, f, F, true, or false."
   );
   await page
     .getByRole("button", { name: "Replace with 2 settings and skip 1 line" })
@@ -217,7 +218,7 @@ test("a user can retain unverified options while unsafe names are rejected", asy
   await expect(
     page.getByRole("list", { name: "Import issues" })
   ).toContainText(
-    "Error — Line 4 · __proto__: This option name is reserved and cannot be imported safely."
+    "Error · Line 4 · __proto__: This option name is reserved and cannot be imported safely."
   );
 
   await page
@@ -260,7 +261,7 @@ test("a user can review and apply duplicate, reset, repeatable, and path semanti
   await expect(imported).toContainText("Line 2 font-size = 16");
   const fontInstructions = imported
     .getByRole("link", { name: "font-family", exact: true })
-    .locator("..");
+    .locator("xpath=ancestor::li");
   await expect(fontInstructions).toHaveText([
     /Line 4.*reset to default/,
     /Line 5.*Primary/,
@@ -400,7 +401,7 @@ test("a user can recover from a rejected config file without reloading", async (
       .filter({ hasText: "Choose a config file no larger than 1 MiB." })
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Review imported configuration" })
+    page.getByRole("heading", { name: "Review import" })
   ).not.toBeVisible();
   await expect(fontSize).toHaveValue("16");
 
@@ -414,7 +415,7 @@ test("a user can recover from a rejected config file without reloading", async (
   });
 
   await expect(
-    page.getByRole("heading", { name: "Review imported configuration" })
+    page.getByRole("heading", { name: "Review import" })
   ).toBeVisible();
   await expect(
     page
@@ -696,12 +697,13 @@ test("a user can inspect a preset, apply it, and undo it in one step", async ({ 
   await expect(comfortable.locator("pre")).toContainText("adjust-cell-height = 8%");
 
   await comfortable.getByRole("button", { name: "Apply Comfortable preset" }).click();
-  await expect(page.locator('[role="status"]').filter({ hasText: "Comfortable preset applied" })).toBeAttached();
-  await page.keyboard.press("Escape");
+  // Applying closes the dialog and says what happened.
+  await expect(page.getByRole("dialog", { name: "Presets", exact: true })).toBeHidden();
+  await expect(page.getByRole("status").filter({ hasText: /Applied Comfortable · \d+ settings replaced/ })).toBeVisible();
   await expect(fontSize).toHaveValue("15");
 
   // Applying is a single history step: one undo restores the previous config.
-  await page.getByRole("button", { name: "Undo" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Undo" }).click();
   await expect(fontSize).toHaveValue("16");
   await expect(page.getByRole("banner").getByText("1 modified", { exact: true })).toBeVisible();
 });
@@ -767,14 +769,14 @@ test("the preview renders built-in themes, following the system appearance for l
   await expect(pane.locator("canvas")).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: "Configuration Presets" }).click();
-  await page.getByRole("tab", { name: "Aesthetic" }).click();
+  await page.getByRole("button", { name: "Aesthetic", exact: true }).click();
   await page.getByRole("button", { name: "Apply Tokyo Night preset" }).click();
   await page.keyboard.press("Escape");
   await expect(terminalArea).toHaveCSS("background-color", "rgb(26, 27, 38)");
 
   // light:Rose Pine Dawn,dark:Rose Pine resolves to the light side here.
   await page.getByRole("button", { name: "Configuration Presets" }).click();
-  await page.getByRole("tab", { name: "Aesthetic" }).click();
+  await page.getByRole("button", { name: "Aesthetic", exact: true }).click();
   await page.getByRole("button", { name: "Apply Rosé Pine preset" }).click();
   await page.keyboard.press("Escape");
   await expect(terminalArea).toHaveCSS("background-color", "rgb(250, 244, 237)");
@@ -1024,7 +1026,7 @@ test("a user can undo an import replacement", async ({ page }) => {
   await page.getByRole("button", { name: "Replace with 1 setting" }).click();
   await expect(fontSize).toHaveValue("18");
 
-  await page.getByRole("button", { name: "Undo" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Undo" }).click();
   await expect(fontSize).toHaveValue("16");
 });
 
@@ -1038,7 +1040,7 @@ test("a user can dismiss the import review by keyboard or overlay without losing
 
   const importButton = page.getByRole("button", { name: "Import Config" });
   const reviewHeading = page.getByRole("heading", {
-    name: "Review imported configuration",
+    name: "Review import",
   });
   const reviewFile = {
     name: "config",
@@ -1200,4 +1202,22 @@ test("a user can retry the terminal preview after WASM loading fails", async ({
     timeout: 15_000,
   });
   await expect(page.getByText("Starting Ghostty…")).not.toBeVisible();
+});
+
+test("a user can open presets and browse themes from the search palette", async ({ page }) => {
+  await page.goto("/editor");
+  await expect(page.getByRole("heading", { name: "Fonts" })).toBeVisible();
+  await page.waitForTimeout(1500);
+
+  await page.keyboard.press("ControlOrMeta+k");
+  const search = page.getByRole("dialog", { name: "Search Settings" });
+  await expect(search.getByText("Actions")).toBeVisible();
+  await search.getByRole("option", { name: "Open presets" }).click();
+  await expect(page.getByRole("dialog", { name: "Presets", exact: true })).toBeVisible();
+  await expect(search).toBeHidden();
+  await page.keyboard.press("Escape");
+
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.getByRole("option", { name: "Browse themes" }).click();
+  await expect(page).toHaveURL(/\/themes/);
 });
