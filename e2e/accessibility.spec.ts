@@ -483,6 +483,52 @@ test("a share page with a security warning has no automatically detectable WCAG 
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
 
+test("a share page with every notice and flagged line fits a phone and meets WCAG A and AA", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "spectre-config",
+      JSON.stringify({ state: { config: {}, appliedTheme: null, targetVersion: "1.1.0" }, version: 0 })
+    );
+  });
+  const encoded = encodeConfig({
+    command: "/opt/homebrew/bin/fish --login",
+    "progress-style": true,
+    "unknown-option": "x",
+  });
+  await page.goto(`/share/custom-config?c=${encoded}`);
+
+  await expect(page.getByText("Runs a program")).toBeVisible();
+  await expect(page.getByText(/^Needs 1\./)).toBeVisible();
+  await expect(page.getByRole("note")).toHaveCount(2);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+  ).toBe(false);
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
+test("a corrupted share link explains itself and meets WCAG A and AA", async ({ page }) => {
+  await page.goto("/share/custom-config?c=not-a-real-payload");
+
+  await expect(page.getByRole("heading", { name: "Invalid share link" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Open editor" })).toBeVisible();
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
+test("an unknown page shows the 404 and meets WCAG A and AA", async ({ page }) => {
+  const response = await page.goto("/no-such-page");
+
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "Nothing at this path" })).toBeVisible();
+  await page.getByRole("link", { name: "Go home" }).click();
+  await expect(page).toHaveURL("/");
+
+  await page.goto("/no-such-page");
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
 test("keybind conflict warnings meet WCAG A and AA", async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(

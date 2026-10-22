@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { Ghost, ArrowRight, Copy, Check, Download, Loader2, AlertCircle, ShieldAlert } from "lucide-react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowRight, Check, Clock, Copy, Download, Link2, Loader2, ShieldAlert, TriangleAlert } from "lucide-react";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { UtilityActions } from "@/components/layout/UtilityActions";
+import { UtilityPage } from "@/components/layout/UtilityPage";
+import { ConfigListing, shortVersion } from "@/components/share/ConfigListing";
 import { Button } from "@/components/ui/button";
 import { getConfigFromUrl, summarizeDroppedSettings } from "@/lib/utils/url-share";
 import { exportGhosttyConfig } from "@/lib/utils/config-export";
 import { useConfigStore } from "@/lib/store/config-store";
 import { getConfigOption } from "@/lib/utils/config-options";
-import { isKnownGhosttyRelease, isOptionSupportedIn } from "@/lib/ghostty-versions";
+import { getOptionIntroducedIn, isKnownGhosttyRelease, isOptionSupportedIn } from "@/lib/ghostty-versions";
 import { findSensitiveSettings } from "@/lib/security/sensitive-options";
 
 const SENSITIVE_VALUE_PREVIEW_LENGTH = 160;
@@ -20,23 +23,39 @@ function previewValue(value: string): string {
     : value;
 }
 
+const NOTE_CLASS = "flex gap-2.5 rounded-[9px] border px-3.5 py-3 text-[13px] leading-normal";
+
+function InvalidShareLink({ corrupted }: { corrupted: boolean }) {
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <SiteHeader />
+      <UtilityPage
+        command={corrupted ? "open /share?c=…" : "open /share"}
+        output={corrupted ? "error: share data could not be decoded" : "error: no share data in this link"}
+        tone="error"
+        code="Share link"
+        title={corrupted ? "Invalid share link" : "No configuration in this link"}
+        actions={<UtilityActions />}
+      >
+        {corrupted
+          ? "This link is incomplete or was changed after it was made, so Spectre can’t read the config inside it. Ask for a fresh link, or start in the editor."
+          : "This link doesn’t have a configuration attached. Ask for a fresh link, or start in the editor."}
+      </UtilityPage>
+    </div>
+  );
+}
+
 function SharePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const loadConfig = useConfigStore((state) => state.loadConfig);
   const targetVersion = useConfigStore((state) => state.targetVersion);
 
-  const { sharedConfig, error } = useMemo(() => {
-    const urlConfig = getConfigFromUrl(searchParams);
-    if (urlConfig) {
-      return { sharedConfig: urlConfig, error: null };
-    } else if (searchParams.get("c")) {
-      return { sharedConfig: null, error: "Invalid or corrupted share link" };
-    } else {
-      return { sharedConfig: null, error: "No configuration found in URL" };
-    }
-  }, [searchParams]);
+  useEffect(() => () => clearTimeout(resetTimer.current), []);
+
+  const sharedConfig = useMemo(() => getConfigFromUrl(searchParams), [searchParams]);
 
   const configString = sharedConfig
     ? exportGhosttyConfig(sharedConfig.config, sharedConfig.theme, targetVersion)
@@ -60,6 +79,10 @@ function SharePageContent() {
       .filter((key) => getConfigOption(key) && !isOptionSupportedIn(key, targetVersion))
       .sort();
   }, [sharedConfig, targetVersion]);
+  const newerKeys = useMemo(
+    () => new Map(newerSharedOptions.map((key) => [key, getOptionIntroducedIn(key)] as const)),
+    [newerSharedOptions]
+  );
 
   // Settings that run programs or weaken protections are surfaced up front,
   // since a shared config comes from someone else.
@@ -68,11 +91,26 @@ function SharePageContent() {
     [sharedConfig]
   );
   const runsPrograms = sensitiveSettings.some((setting) => setting.reason === "runs-program");
+  const programKeys = useMemo(
+    () => new Set(sensitiveSettings.filter((setting) => setting.reason === "runs-program").map((setting) => setting.key)),
+    [sensitiveSettings]
+  );
+
+  if (!sharedConfig) {
+    return <InvalidShareLink corrupted={Boolean(searchParams.get("c"))} />;
+  }
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(configString);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    clearTimeout(resetTimer.current);
+    try {
+      await navigator.clipboard.writeText(configString);
+      setCopyState("copied");
+      resetTimer.current = setTimeout(() => setCopyState("idle"), 2000);
+    } catch {
+      // Denied permission or an insecure context: say so rather than look like nothing happened.
+      setCopyState("failed");
+      resetTimer.current = setTimeout(() => setCopyState("idle"), 8000);
+    }
   };
 
   const handleDownload = () => {
@@ -88,225 +126,132 @@ function SharePageContent() {
   };
 
   const handleOpenInEditor = () => {
-    if (sharedConfig) {
-      loadConfig(sharedConfig.config, sharedConfig.theme ?? undefined);
-    }
+    loadConfig(sharedConfig.config, sharedConfig.theme ?? undefined);
     router.push("/editor");
   };
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background">
-        <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 border-b border-border bg-background/95 backdrop-blur">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 group">
-              <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
-              <span className="font-medium">Spectre</span>
-            </Link>
-          </div>
-        </nav>
-
-        <div className="flex flex-col items-center justify-center min-h-screen px-6">
-          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
-            <AlertCircle className="h-8 w-8 text-destructive" />
-          </div>
-          <h1 className="text-2xl font-medium mb-2">Invalid Share Link</h1>
-          <p className="text-muted-foreground mb-8 text-center max-w-md">
-            {error}. The link may have been corrupted or is no longer valid.
-          </p>
-          <Button asChild>
-            <Link href="/editor">
-              Create New Config
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 border-b border-border bg-background/95 backdrop-blur">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
-            <span className="font-medium">Spectre</span>
-          </Link>
-          <Button onClick={handleOpenInEditor}>
-            Open Editor
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </div>
-      </nav>
+    <div className="flex min-h-screen flex-col bg-background">
+      <SiteHeader crumb="Shared" onOpenEditor={handleOpenInEditor} />
 
-      {/* Content */}
-      <div className="max-w-3xl mx-auto px-6 pt-24 pb-16">
-        <div className="mb-8 animate-fade-up">
-          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground mb-4">
-            <Ghost className="h-4 w-4" />
-            <span>Shared Configuration</span>
+      <main className="mx-auto flex w-full max-w-[800px] flex-1 flex-col gap-5 px-4 pt-7 pb-10 sm:px-8 md:pt-11 xl:pt-14">
+        <div>
+          <div className="flex items-center gap-[7px] text-[13px] text-muted-foreground">
+            <Link2 className="size-3.5" aria-hidden="true" />
+            Shared configuration · read-only
           </div>
-
-          <h1 className="text-3xl font-medium mb-2">
-            {sharedConfig?.theme ? (
-              <>Theme: {sharedConfig.theme}</>
-            ) : (
-              <>Custom Configuration</>
-            )}
+          <h1 className="mt-2.5 text-[26px] leading-[1.15] font-semibold tracking-[-0.025em] break-words sm:text-[32px]">
+            {sharedConfig.theme ? <>Theme: {sharedConfig.theme}</> : <>Custom Configuration</>}
           </h1>
-          <p className="text-muted-foreground">
-            {modifiedCount} setting{modifiedCount !== 1 ? "s" : ""} configured
-          </p>
-          {sensitiveSettings.length > 0 && (
-            <section
-              aria-labelledby="sensitive-settings-heading"
-              className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3"
-            >
-              <h2
-                id="sensitive-settings-heading"
-                className="flex items-center gap-2 text-sm font-medium text-destructive"
-              >
-                <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {runsPrograms
-                  ? "This config runs programs or changes security settings"
-                  : "This config changes security settings"}
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Review these values before using a config from someone else.
-              </p>
-              <ul className="mt-2 space-y-1 font-mono text-xs break-all">
-                {sensitiveSettings.flatMap((setting) =>
-                  setting.values.map((value, index) => (
-                    <li key={`${setting.key}-${index}`}>
-                      <span className="text-muted-foreground">{setting.key} = </span>
-                      <span className="text-foreground">{previewValue(value)}</span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </section>
-          )}
-          {skipped.count > 0 && (
-            <div
-              role="status"
-              className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-3"
-            >
-              <p className="text-sm font-medium text-warning-foreground">
-                {skipped.count} {skipped.count === 1 ? "setting" : "settings"} in this link {skipped.count === 1 ? "was" : "were"} invalid and skipped
-              </p>
-              <p className="mt-1 font-mono text-xs text-muted-foreground break-words">
-                {skippedDetail}
-              </p>
-            </div>
-          )}
-          {newerSharedOptions.length > 0 && (
-            <div
-              role="status"
-              className="mt-4 rounded-lg border border-warning-border bg-warning-soft p-3"
-            >
-              <p className="text-sm font-medium text-warning-foreground">
-                {newerSharedOptions.length} {newerSharedOptions.length === 1 ? "setting" : "settings"} in this shared config {newerSharedOptions.length === 1 ? "requires" : "require"} Ghostty newer than {targetVersion}
-              </p>
-              <p className="mt-1 font-mono text-xs text-muted-foreground break-words">
-                {newerSharedOptions.join(", ")}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-wrap gap-3 mb-8 animate-fade-up [animation-delay:0.1s] [animation-fill-mode:backwards]">
-          <Button onClick={handleCopy} variant="outline" className="gap-2">
-            {copied ? (
-              <>
-                <Check className="h-4 w-4 text-green-500" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy Config
-              </>
-            )}
-          </Button>
-          <Button onClick={handleDownload} variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
-            Download
-          </Button>
-          <Button onClick={handleOpenInEditor} className="gap-2">
-            Open in Editor
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Config Preview */}
-        <div className="rounded-xl border border-border overflow-hidden animate-fade-up [animation-delay:0.2s] [animation-fill-mode:backwards]">
-          <div className="px-4 py-3 bg-muted/30 border-b border-border flex items-center gap-2">
-            <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-              <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-              <div className="w-3 h-3 rounded-full bg-[#28c840]" />
-            </div>
-            <span className="flex-1 text-center text-xs text-muted-foreground font-mono">
-              ~/.config/ghostty/config
+          <div className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-sm text-muted-foreground">
+            <span>
+              {modifiedCount} {modifiedCount === 1 ? "setting" : "settings"}
+            </span>
+            <span aria-hidden="true" className="text-border-strong">·</span>
+            <span>
+              Target <span className="font-mono text-foreground">Ghostty {targetVersion}</span>
             </span>
           </div>
+        </div>
 
-          <div className="p-6 bg-card max-h-[500px] overflow-y-auto">
-            <pre className="text-sm font-mono leading-relaxed">
-              {configString.split('\n').map((line, i) => (
-                <div
-                  key={i}
-                  className={
-                    line.startsWith('#')
-                      ? "text-muted-foreground"
-                      : line.includes('=')
-                        ? "text-foreground"
-                        : ""
-                  }
-                >
-                  {line.includes('=') ? (
-                    <>
-                      <span className="text-muted-foreground">
-                        {line.split('=')[0]}
-                      </span>
-                      <span className="text-muted-foreground">=</span>
-                      <span className="text-primary">
-                        {line.split('=').slice(1).join('=')}
-                      </span>
-                    </>
-                  ) : (
-                    line || '\u00A0'
-                  )}
+        {(skipped.count > 0 || sensitiveSettings.length > 0 || newerSharedOptions.length > 0) && (
+          <div className="flex flex-col gap-2">
+            {skipped.count > 0 && (
+              <div role="note" className={`${NOTE_CLASS} border-warning-border bg-warning-soft text-warning-foreground`}>
+                <TriangleAlert className="mt-px size-4 shrink-0" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <strong className="font-semibold">
+                    {skipped.count} {skipped.count === 1 ? "setting" : "settings"} in this link {skipped.count === 1 ? "was" : "were"} invalid and skipped
+                  </strong>
+                  <div className="mt-[3px] font-mono break-words">{skippedDetail}</div>
                 </div>
-              ))}
-            </pre>
+              </div>
+            )}
+            {sensitiveSettings.length > 0 && (
+              <section
+                aria-labelledby="sensitive-settings-heading"
+                className={`${NOTE_CLASS} border-destructive-border bg-destructive-soft text-destructive-foreground`}
+              >
+                <ShieldAlert className="mt-px size-4 shrink-0" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <h2 id="sensitive-settings-heading" className="font-semibold">
+                    {runsPrograms
+                      ? "This config runs programs or changes security settings"
+                      : "This config changes security settings"}
+                  </h2>
+                  <p className="mt-[3px]">
+                    Review these values before using a config from someone else, and only use it if you trust who sent the link.
+                  </p>
+                  <ul className="mt-2 space-y-1 font-mono text-xs break-all">
+                    {sensitiveSettings.flatMap((setting) =>
+                      setting.values.map((value, index) => (
+                        <li key={`${setting.key}-${index}`}>
+                          <span className="opacity-80">{setting.key} = </span>
+                          <span>{previewValue(value)}</span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </section>
+            )}
+            {newerSharedOptions.length > 0 && (
+              <div role="note" className={`${NOTE_CLASS} border-border bg-card text-muted-foreground`}>
+                <Clock className="mt-px size-4 shrink-0 text-foreground" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <strong className="font-semibold text-foreground">
+                    {newerSharedOptions.length} {newerSharedOptions.length === 1 ? "setting" : "settings"} in this shared config {newerSharedOptions.length === 1 ? "requires" : "require"} Ghostty newer than {targetVersion}
+                  </strong>
+                  {Array.from(newerKeys, ([key, since]) => (
+                    <div key={key} className="mt-[3px]">
+                      <span className="font-mono">{key}</span> arrived in {shortVersion(since)}. Older versions report it as unknown.
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="lg" className="px-3.5 text-sm" onClick={handleCopy}>
+            {copyState === "copied" ? <Check className="size-[15px] text-accent-foreground" aria-hidden="true" /> : <Copy className="size-[15px]" aria-hidden="true" />}
+            {copyState === "copied" ? "Copied" : "Copy config"}
+          </Button>
+          <Button variant="outline" size="lg" className="px-3.5 text-sm" onClick={handleDownload}>
+            <Download className="size-[15px]" aria-hidden="true" />
+            Download
+          </Button>
+          <Button size="lg" className="px-3.5 text-sm sm:ml-auto" onClick={handleOpenInEditor}>
+            Open in editor
+            <ArrowRight className="size-[15px]" aria-hidden="true" />
+          </Button>
+        </div>
+        {/* Always mounted so screen readers announce a failure when it appears. */}
+        <div role="status" className={copyState === "failed" ? "-mt-2 text-[13px] text-destructive-foreground" : "sr-only"}>
+          {copyState === "failed" && "Couldn’t copy to the clipboard. Select the config below and copy it instead."}
+          {copyState === "copied" && "Config copied to the clipboard"}
         </div>
 
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>
-            Save this config to{" "}
-            <code className="px-1.5 py-0.5 rounded bg-muted text-foreground font-mono">
-              ~/.config/ghostty/config
-            </code>
-          </p>
-        </div>
-      </div>
+        <ConfigListing config={configString} programKeys={programKeys} newerKeys={newerKeys} />
+
+        <p className="text-[13px] text-muted-foreground">
+          Save this file as <span className="font-mono text-foreground">~/.config/ghostty/config</span>, then reload Ghostty.
+        </p>
+      </main>
     </div>
   );
 }
 
 export default function SharedConfigPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Loader2 className="size-8 animate-spin text-primary" aria-hidden="true" />
+        </div>
+      }
+    >
       <SharePageContent />
     </Suspense>
   );

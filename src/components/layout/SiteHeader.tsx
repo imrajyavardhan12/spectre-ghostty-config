@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 interface SiteHeaderProps {
   /** The page name shown after the logo, such as "Themes". */
   crumb?: string;
+  /** Replaces the plain link to the editor, for a page that must load something first. */
+  onOpenEditor?: () => void;
 }
 
 /** The slim header for the pages around the editor. */
-export function SiteHeader({ crumb }: SiteHeaderProps) {
+export function SiteHeader({ crumb, onOpenEditor }: SiteHeaderProps) {
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border bg-background">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-2.5 px-4 sm:px-8">
@@ -37,9 +39,15 @@ export function SiteHeader({ crumb }: SiteHeaderProps) {
             <Code2 className="size-[17px]" />
           </a>
         </Button>
-        <Button asChild className="bg-foreground text-background hover:bg-foreground/90">
-          <Link href="/editor">Open editor</Link>
-        </Button>
+        {onOpenEditor ? (
+          <Button onClick={onOpenEditor} className="bg-foreground text-background hover:bg-foreground/90">
+            Open editor
+          </Button>
+        ) : (
+          <Button asChild className="bg-foreground text-background hover:bg-foreground/90">
+            <Link href="/editor">Open editor</Link>
+          </Button>
+        )}
       </div>
     </header>
   );

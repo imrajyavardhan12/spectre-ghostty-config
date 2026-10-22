@@ -67,7 +67,7 @@ test("a user can edit, inspect, share, and reopen a configuration", async ({
   ).toBeVisible();
   await expect(page.locator("pre")).toContainText("font-size = 16");
 
-  await page.getByRole("button", { name: "Open Editor", exact: true }).click();
+  await page.getByRole("button", { name: "Open editor", exact: true }).click();
   await expect(page).toHaveURL(/\/editor$/);
   await expect(
     page.locator("#option-font-size").getByRole("spinbutton")
@@ -522,7 +522,7 @@ test("a share link identifies invalid settings that were skipped", async ({ page
   });
   await page.goto(`/share/custom-config?c=${encoded}`);
 
-  const notice = page.getByRole("status").filter({
+  const notice = page.getByRole("note").filter({
     hasText: "3 settings in this link were invalid and skipped",
   });
   await expect(notice).toBeVisible();
@@ -548,7 +548,7 @@ test("a share link cannot put arbitrary text in the skipped-settings notice", as
   });
   await page.goto(`/share/custom-config?c=${encoded}`);
 
-  const notice = page.getByRole("status").filter({ hasText: "invalid and skipped" });
+  const notice = page.getByRole("note").filter({ hasText: "invalid and skipped" });
   await expect(notice).toContainText("5 settings in this link were invalid and skipped");
   await expect(notice).toContainText("and 1 more; 1 unrecognized setting");
   await expect(page.getByText("Verified safe by Spectre")).toHaveCount(0);
@@ -557,7 +557,7 @@ test("a share link cannot put arbitrary text in the skipped-settings notice", as
 test("a share link uses singular wording for one skipped setting", async ({ page }) => {
   const encoded = encodeConfig({ "font-size": 16, "cursor-style": "rainbow" });
   await page.goto(`/share/custom-config?c=${encoded}`);
-  const notice = page.getByRole("status").filter({
+  const notice = page.getByRole("note").filter({
     hasText: "1 setting in this link was invalid and skipped",
   });
   await expect(notice).toBeVisible();
@@ -591,7 +591,7 @@ test("a share link with only appearance settings shows no security warning", asy
 
   await expect(page.locator("pre")).toContainText("font-size = 16");
   await expect(page.getByText("Review these values before using")).toHaveCount(0);
-  await expect(page.getByRole("status").filter({ hasText: "invalid and skipped" })).toHaveCount(0);
+  await expect(page.getByRole("note").filter({ hasText: "invalid and skipped" })).toHaveCount(0);
 });
 
 test("a user can target, hide, and still export newer options with warnings", async ({
