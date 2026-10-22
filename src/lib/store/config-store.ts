@@ -35,6 +35,8 @@ interface ConfigStore {
   setValue: (key: string, value: unknown) => void;
   resetValue: (key: string) => void;
   resetAll: () => void;
+  /** Reset several options as a single undo step. Returns false when none of them were set. */
+  resetValues: (keys: readonly string[]) => boolean;
   applyImportedCandidate: (config: ConfigValues) => void;
   loadConfig: (config: ConfigValues, themeName?: string) => void;
   setAppliedTheme: (themeName: string | null) => void;
@@ -102,6 +104,19 @@ export const useConfigStore = create<ConfigStore>()(
         set({ config: newConfig, appliedTheme: null });
       },
       
+      resetValues: (keys: readonly string[]) => {
+        const { config, appliedTheme } = get();
+        const newConfig = normalizeConfigValues(config);
+        for (const key of keys) delete newConfig[key];
+        if (!recordIfChanged(config, newConfig)) return false;
+
+        set({
+          config: newConfig,
+          appliedTheme: keys.some(isThemeConfigKey) ? null : appliedTheme,
+        });
+        return true;
+      },
+
       setAppliedTheme: (themeName: string | null) => {
         set({ appliedTheme: themeName });
       },

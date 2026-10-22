@@ -951,9 +951,45 @@ test("a user can undo and redo editor changes", async ({ page }) => {
   // Reset-all recovery.
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Reset all settings" }).click();
-  await expect(fontSize).toHaveValue("13");
-  await page.getByRole("button", { name: "Undo" }).click();
+  const confirm = page.getByRole("dialog", { name: "Reset all 1 setting?" });
+  // The confirmation lists what goes, and nothing has changed yet.
+  await expect(confirm.getByText("font-size")).toBeVisible();
   await expect(fontSize).toHaveValue("16");
+  await confirm.getByRole("button", { name: "Reset all" }).click();
+  await expect(fontSize).toHaveValue("13");
+  await page.getByRole("status").getByRole("button", { name: "Undo" }).click();
+  await expect(fontSize).toHaveValue("16");
+});
+
+test("a user can review and reset one category, and cancel leaves it alone", async ({ page }) => {
+  await page.goto("/editor");
+  const fontSize = page.locator("#option-font-size").getByRole("spinbutton");
+  await fontSize.fill("17");
+  await page.getByRole("heading", { name: "Fonts" }).click();
+
+  const chip = page.getByRole("button", { name: /Review and reset Fonts settings/ });
+  await chip.click();
+  const confirm = page.getByRole("dialog", { name: "Reset 1 Fonts setting?" });
+  await expect(confirm.getByText("font-size")).toBeVisible();
+  // Safe choice first.
+  await expect(confirm.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(confirm).toBeHidden();
+  await expect(chip).toBeFocused();
+  await expect(fontSize).toHaveValue("17");
+
+  await chip.click();
+  await page.getByRole("dialog").getByRole("button", { name: "Reset Fonts" }).click();
+  await expect(fontSize).toHaveValue("13");
+  await expect(chip).toHaveCount(0);
+  // Nothing left to focus on the chip, so focus stays on the page.
+  await expect(page.getByRole("heading", { name: "Fonts" })).toBeFocused();
+
+  const toast = page.getByRole("status").filter({ hasText: "Reset 1 setting" });
+  await expect(toast).toBeVisible();
+  await toast.getByRole("button", { name: "Undo" }).click();
+  await expect(fontSize).toHaveValue("17");
+  await expect(toast.getByRole("button", { name: "Undo" })).toHaveCount(0);
 });
 
 test("a user can undo a typing burst in a single step", async ({ page }) => {

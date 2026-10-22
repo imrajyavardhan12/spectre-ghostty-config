@@ -126,6 +126,28 @@ test("the search dialog has no automatically detectable WCAG A or AA violations"
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
 
+test("the reset confirmation and its undo toast have no automatically detectable WCAG A or AA violations", async ({
+  page,
+}) => {
+  await page.goto("/editor");
+  await page.getByRole("spinbutton", { name: "Font Size" }).fill("17");
+  await page.getByRole("heading", { name: "Fonts" }).click();
+
+  await page.getByRole("button", { name: /Review and reset Fonts settings/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Reset 1 Fonts setting?" });
+  await expect(dialog).toHaveCSS("opacity", "1");
+  // The key list scrolls, so keyboard users must be able to reach it.
+  await expect(dialog.getByRole("region", { name: "Settings that will be reset" })).toHaveAttribute(
+    "tabindex",
+    "0"
+  );
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+
+  await dialog.getByRole("button", { name: "Reset Fonts" }).click();
+  await expect(page.getByRole("status").getByRole("button", { name: "Undo" })).toBeVisible();
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
 test("the tablet header moves actions into an accessible overflow menu", async ({
   page,
 }) => {

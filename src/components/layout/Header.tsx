@@ -35,9 +35,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useConfigStore } from "@/lib/store/config-store";
+import { describeResetEntries, type ResetEntry } from "@/lib/utils/reset-scope";
+import { useToastStore } from "@/lib/store/toast-store";
 import { useCanRedo, useCanUndo, useHistoryStore } from "@/lib/store/history-store";
 import { ImportReviewDialog } from "@/components/editor/ImportReviewDialog";
 import { PresetsDialog } from "@/components/editor/PresetsDialog";
+import { ResetDialog } from "@/components/editor/ResetDialog";
 import { allOptions } from "@/data/ghostty-options";
 import { TABLET_QUERY, useMediaQuery, WIDE_QUERY } from "@/lib/hooks/use-media-query";
 import {
@@ -76,7 +79,6 @@ export function Header() {
   // Use selectors to properly subscribe to config changes
   const config = useConfigStore((state) => state.config);
   const exportConfig = useConfigStore((state) => state.exportConfig);
-  const resetAll = useConfigStore((state) => state.resetAll);
   const undo = useConfigStore((state) => state.undo);
   const redo = useConfigStore((state) => state.redo);
   const canUndo = useCanUndo();
@@ -90,6 +92,9 @@ export function Header() {
   const [pendingImport, setPendingImport] = useState<PendingImportFile | null>(null);
   const importButtonRef = useRef<HTMLButtonElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  // Taken when the dialog opens, so it still lists them while it fades out after a reset.
+  const [resetEntries, setResetEntries] = useState<ResetEntry[]>([]);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const presetsReturnRef = useRef<HTMLButtonElement | null>(null);
   // Actions that don't fit the header at this width move into the overflow menu.
@@ -221,6 +226,19 @@ export function Header() {
       // offsetParent is null while the button is display:none.
       (importButton?.offsetParent ? importButton : moreButtonRef.current)?.focus();
     }, 0);
+  };
+
+  const openReset = () => {
+    setResetEntries(describeResetEntries(config, Object.keys(config)));
+    setResetOpen(true);
+  };
+
+  const handleConfirmReset = () => {
+    const count = resetEntries.length;
+    // Reset what the dialog listed, even if the config moved while it was open.
+    const changed = useConfigStore.getState().resetValues(resetEntries.map((entry) => entry.key));
+    setResetOpen(false);
+    if (changed) useToastStore.getState().show(`Reset ${count} ${count === 1 ? "setting" : "settings"}`);
   };
 
   const openPresets = (returnFocusTo: HTMLButtonElement | null) => {
@@ -412,7 +430,7 @@ export function Header() {
                   </a>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onSelect={resetAll} disabled={modifiedCount === 0}>
+                <DropdownMenuItem variant="destructive" onSelect={openReset} disabled={modifiedCount === 0}>
                   <RotateCcw />
                   Reset all settings
                 </DropdownMenuItem>
@@ -421,6 +439,20 @@ export function Header() {
           </div>
         </div>
       </TooltipProvider>
+
+      <ResetDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        title={`Reset all ${resetEntries.length} ${resetEntries.length === 1 ? "setting" : "settings"}?`}
+        confirmLabel="Reset all"
+        entries={resetEntries}
+        onConfirm={handleConfirmReset}
+        onCloseAutoFocus={(event) => {
+          // The menu item that opened this is gone; hand focus back to the menu's button.
+          event.preventDefault();
+          moreButtonRef.current?.focus();
+        }}
+      />
 
       <PresetsDialog
         trigger={null}
