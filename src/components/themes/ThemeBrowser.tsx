@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Search, Palette, Moon, Sun, Loader2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { CloudOff, Loader2, Moon, RefreshCw, Search, SearchX, Sparkles, Sun, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ThemeCard, ThemeCardSkeleton } from "./ThemeCard";
+import { cn } from "@/lib/utils";
 import {
   Theme,
   ThemeListItem,
@@ -39,12 +38,29 @@ interface ThemeLoadTask {
   resolve: () => void;
 }
 
-export function ThemeBrowser() {
+const GRID_CLASS = "grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+
+const FILTER_LABELS: Record<FilterType, string> = {
+  all: "all themes",
+  featured: "featured themes",
+  dark: "dark themes",
+  light: "light themes",
+};
+
+interface ThemeBrowserProps {
+  /** Called after a theme is written to the config. */
+  onApplied?: (theme: Theme) => void;
+}
+
+export function ThemeBrowser({ onApplied }: ThemeBrowserProps = {}) {
   const [themeList, setThemeList] = useState<ThemeListItem[]>([]);
   const [loadedThemes, setLoadedThemes] = useState<Map<string, Theme>>(new Map());
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bumped by "Try again" to fetch the theme list once more without reloading the page.
+  const [listAttempt, setListAttempt] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<FilterType>("featured");
   const [appliedTheme, setAppliedTheme] = useState<string | null>(null);
@@ -302,17 +318,26 @@ export function ThemeBrowser() {
     }
     
     void loadThemeList();
-  }, [loadThemeBatch]);
+  }, [loadThemeBatch, listAttempt]);
+
+  const handleRetryList = () => {
+    setError(null);
+    setLoading(true);
+    setListAttempt((attempt) => attempt + 1);
+  };
+
+  // Whitespace alone is not a search.
+  const query = searchQuery.trim();
 
   // Filter and search themes
   const filteredThemes = useMemo(() => {
     let themes = Array.from(loadedThemes.values());
 
     // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (query) {
+      const lowered = query.toLowerCase();
       themes = themes.filter((t) =>
-        t.name.toLowerCase().includes(query)
+        t.name.toLowerCase().includes(lowered)
       );
     }
 
@@ -321,7 +346,7 @@ export function ThemeBrowser() {
       themes = themes.filter((t) => categorizeTheme(t) === "dark");
     } else if (filter === "light") {
       themes = themes.filter((t) => categorizeTheme(t) === "light");
-    } else if (filter === "featured" && !searchQuery) {
+    } else if (filter === "featured" && !query) {
       // Searching should cover the complete upstream list even though the
       // browser defaults to Featured before the user enters a query.
       themes = themes.filter((t) => FEATURED_THEMES.includes(t.name));
@@ -337,7 +362,7 @@ export function ThemeBrowser() {
     });
 
     return themes;
-  }, [loadedThemes, searchQuery, filter]);
+  }, [loadedThemes, query, filter]);
 
   // Auto-load all themes when a non-featured filter is selected. Switching
   // back to Featured releases filter-only work while retaining shared search
@@ -362,13 +387,13 @@ export function ThemeBrowser() {
   // priority lets the latest query jump ahead of older shared work.
   useEffect(() => {
     releaseThemeLoadSource("search");
-    if (!searchQuery) return;
+    if (!query) return;
 
     const priority = ++searchPriorityRef.current;
     const timeoutId = window.setTimeout(() => {
-      const query = searchQuery.toLowerCase();
+      const lowered = query.toLowerCase();
       const matchingNames = themeList
-        .filter((theme) => theme.name.toLowerCase().includes(query))
+        .filter((theme) => theme.name.toLowerCase().includes(lowered))
         .map((theme) => theme.name)
         .slice(0, 20);
 
@@ -376,7 +401,7 @@ export function ThemeBrowser() {
     }, SEARCH_LOAD_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [searchQuery, themeList, loadThemeBatch, releaseThemeLoadSource]);
+  }, [query, themeList, loadThemeBatch, releaseThemeLoadSource]);
 
   // Load all themes button
   const handleLoadAll = async () => {
@@ -407,105 +432,137 @@ export function ThemeBrowser() {
     // Pass theme name to store for export comment
     loadConfig(newConfig, theme.name);
     setAppliedTheme(theme.name);
+    onApplied?.(theme);
   };
 
   const filterButtons: { value: FilterType; label: string; icon?: React.ReactNode }[] = [
     { value: "all", label: "All" },
-    { value: "featured", label: "Featured", icon: <Palette className="h-3.5 w-3.5" /> },
-    { value: "dark", label: "Dark", icon: <Moon className="h-3.5 w-3.5" /> },
-    { value: "light", label: "Light", icon: <Sun className="h-3.5 w-3.5" /> },
+    { value: "featured", label: "Featured", icon: <Sparkles className="size-3.5" aria-hidden="true" /> },
+    { value: "dark", label: "Dark", icon: <Moon className="size-3.5" aria-hidden="true" /> },
+    { value: "light", label: "Light", icon: <Sun className="size-3.5" aria-hidden="true" /> },
   ];
+
+  const hasThemes = themeList.length > 0;
+  const allLoaded = hasThemes && loadedThemes.size >= themeList.length;
+  const canLoadMore = hasThemes && !allLoaded;
+  const loadAllButton = (variant: "link" | "primary") => (
+    <Button
+      variant={variant === "link" ? "ghost" : "default"}
+      size="sm"
+      onClick={handleLoadAll}
+      disabled={loadingMore}
+      className={cn(variant === "link" && "h-7 px-2 text-primary hover:bg-accent hover:text-primary")}
+    >
+      {loadingMore ? (
+        <>
+          <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+          Loading...
+        </>
+      ) : (
+        "Load all themes"
+      )}
+    </Button>
+  );
+
 
   if (error) {
     return (
       <div
         role="alert"
-        className="flex flex-col items-center justify-center py-16 text-center"
+        className="mt-8 flex flex-col items-center gap-2.5 rounded-xl border border-border bg-card px-6 py-16 text-center"
       >
-        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-          <Palette className="h-8 w-8 text-destructive" />
-        </div>
-        <p className="text-lg font-medium mb-2">Failed to load themes</p>
-        <p className="text-sm text-muted-foreground mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>Try Again</Button>
+        <span className="grid size-10 place-items-center rounded-[10px] bg-destructive-soft text-destructive-foreground">
+          <CloudOff className="size-5" aria-hidden="true" />
+        </span>
+        <p className="text-[15px] font-semibold">Failed to load themes</p>
+        <p className="max-w-[360px] text-[13px] leading-normal text-muted-foreground">
+          The theme list couldn&apos;t be fetched. Check your connection and try again. Your editor
+          settings aren&apos;t affected.
+        </p>
+        <p className="max-w-[360px] font-mono text-xs break-words text-subtle-foreground">{error}</p>
+        <Button onClick={handleRetryList} className="mt-1.5">
+          <RefreshCw className="size-3.5" aria-hidden="true" />
+          Try again
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Search and filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <label htmlFor="theme-search" className="sr-only">
-            Search themes
-          </label>
-          <Search
-            aria-hidden="true"
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-          />
-          <Input
-            id="theme-search"
+      <div className="mt-7 flex flex-wrap items-center gap-2.5">
+        <div className="flex h-10 min-w-0 flex-[1_1_260px] items-center gap-2 rounded-[9px] border border-input bg-field px-3 focus-within:ring-2 focus-within:ring-ring">
+          <Search className="size-4 shrink-0 text-subtle-foreground" aria-hidden="true" />
+          <input
+            ref={searchInputRef}
             type="search"
-            placeholder="Search themes..."
+            aria-label="Search themes"
+            placeholder="Search themes"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="h-full min-w-0 flex-1 appearance-none bg-transparent text-sm outline-none placeholder:text-subtle-foreground [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => {
+                setSearchQuery("");
+                searchInputRef.current?.focus();
+              }}
+              className="grid size-7 shrink-0 place-items-center rounded-md text-subtle-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
+          )}
         </div>
-        
+
         <div
-          className="grid grid-cols-2 gap-2 sm:flex"
+          className="flex gap-0.5 overflow-x-auto rounded-[9px] bg-muted p-[3px] max-sm:w-full"
           role="group"
           aria-label="Filter themes"
         >
           {filterButtons.map((btn) => (
-            <Button
+            <button
               key={btn.value}
-              variant={filter === btn.value ? "default" : "outline"}
-              size="sm"
+              type="button"
               onClick={() => setFilter(btn.value)}
               aria-pressed={filter === btn.value}
-              className="gap-1.5"
+              className={cn(
+                "flex h-[34px] flex-none items-center gap-1.5 rounded-[7px] px-3 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring max-sm:flex-1 max-sm:justify-center max-sm:px-2",
+                filter === btn.value
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
             >
               {btn.icon}
               {btn.label}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
 
       {/* Stats */}
+      {/* Always mounted so screen readers announce the count when it appears. */}
       <div
-        className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground"
+        className={cn(
+          "flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground",
+          !loading && hasThemes && "mt-[18px]"
+        )}
         aria-live="polite"
       >
-        <span>
-          {loadedThemes.size} of {themeList.length} themes loaded
-        </span>
-        {loadedThemes.size < themeList.length && (
-          <Button
-            variant="link"
-            size="sm"
-            onClick={handleLoadAll}
-            disabled={loadingMore}
-            className="h-auto p-0"
-          >
-            {loadingMore ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                Loading...
-              </>
-            ) : (
-              "Load all themes"
-            )}
-          </Button>
-        )}
-        {appliedTheme && (
-          <Badge variant="secondary" className="gap-1">
-            <Palette className="h-3 w-3" />
-            {appliedTheme}
-          </Badge>
+        {!loading && hasThemes && (
+          <>
+            <span>
+              {allLoaded
+                ? themeList.length === 1
+                  ? "1 theme loaded"
+                  : `All ${themeList.length} themes loaded`
+                : `${loadedThemes.size} of ${themeList.length} themes loaded`}
+            </span>
+            {canLoadMore && loadAllButton("link")}
+          </>
         )}
       </div>
 
@@ -513,17 +570,17 @@ export function ThemeBrowser() {
         <div
           role="status"
           aria-live="polite"
-          className="flex flex-wrap items-center gap-2 text-sm text-destructive"
+          className="mt-2 flex flex-wrap items-center gap-x-3 text-[13px] text-destructive-foreground"
         >
           <span>
-            {failedThemeNames.size} {failedThemeNames.size === 1 ? "theme" : "themes"}{" "}
-            failed to load.
+            {failedThemeNames.size} {failedThemeNames.size === 1 ? "theme" : "themes"} failed to
+            load.
           </span>
           <Button
-            variant="link"
+            variant="ghost"
             size="sm"
             onClick={handleRetryFailedThemes}
-            className="h-auto p-0 text-destructive"
+            className="h-7 px-2 text-destructive-foreground hover:bg-destructive-soft hover:text-destructive-foreground"
           >
             Retry failed {failedThemeNames.size === 1 ? "theme" : "themes"}
           </Button>
@@ -533,7 +590,7 @@ export function ThemeBrowser() {
       {/* Theme grid */}
       {loading ? (
         <div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          className={cn(GRID_CLASS, "mt-3.5 max-sm:[&>*:nth-child(n+5)]:hidden")}
           aria-busy="true"
           aria-label="Loading themes"
         >
@@ -544,11 +601,7 @@ export function ThemeBrowser() {
             ))}
         </div>
       ) : filteredThemes.length > 0 ? (
-        <div
-          id="theme-results"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-          aria-busy={loadingMore}
-        >
+        <div id="theme-results" className={cn(GRID_CLASS, "mt-3.5")} aria-busy={loadingMore}>
           {filteredThemes.map((theme) => (
             <ThemeCard
               key={theme.name}
@@ -559,14 +612,32 @@ export function ThemeBrowser() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-            <Search className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <p className="text-lg font-medium mb-2">No themes found</p>
-          <p className="text-sm text-muted-foreground">
-            Try a different search term or filter
+        <div className="mt-8 flex flex-col items-center gap-2.5 rounded-xl border border-dashed border-border-strong px-6 py-16 text-center">
+          <SearchX className="size-[22px] text-subtle-foreground" aria-hidden="true" />
+          <p className="text-[15px] font-medium">No themes found</p>
+          <p className="max-w-[340px] text-[13px] leading-normal text-muted-foreground">
+            {query
+              ? `Nothing matches “${query}” in ${FILTER_LABELS[filter]}.`
+              : `No ${FILTER_LABELS[filter]} are loaded.`}
+            {canLoadMore &&
+              ` Only ${loadedThemes.size} ${loadedThemes.size === 1 ? "theme is" : "themes are"} loaded. Loading all may find it.`}
           </p>
+          {(canLoadMore || query) && (
+            <div className="mt-1.5 flex gap-2">
+              {canLoadMore && loadAllButton("primary")}
+              {query && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchQuery("");
+                    searchInputRef.current?.focus();
+                  }}
+                >
+                  Clear search
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -579,7 +650,7 @@ export function ThemeBrowser() {
         >
           <Loader2
             aria-hidden="true"
-            className="h-6 w-6 animate-spin text-muted-foreground"
+            className="size-6 animate-spin text-muted-foreground motion-reduce:animate-none"
           />
         </div>
       )}

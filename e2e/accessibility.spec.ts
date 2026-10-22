@@ -186,6 +186,46 @@ test("the theme browser has no automatically detectable WCAG A or AA violations"
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
 
+test("an applied theme shows the next steps, and its preview returns focus to the opener", async ({
+  page,
+}) => {
+  await mockThemeService(page);
+  await page.goto("/themes");
+  await page.getByRole("button", { name: "Apply Dracula theme" }).click();
+
+  const bar = page.getByRole("status").filter({ hasText: "Dracula applied" });
+  await expect(bar).toBeVisible();
+  await expect(page.getByRole("button", { name: "Applied Dracula theme" })).toBeVisible();
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+
+  const viewConfig = bar.getByRole("button", { name: "View config" });
+  await viewConfig.click();
+  const sheet = page.getByRole("dialog", { name: "Preview and generated config" });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText("background = #282a36")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await expect(viewConfig).toBeFocused();
+
+  await bar.getByRole("link", { name: /Open editor/ }).click();
+  await expect(page).toHaveURL(/\/editor/);
+});
+
+test("the applied theme bar on a phone keeps only the editor link", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockThemeService(page);
+  await page.goto("/themes");
+  await page.getByRole("button", { name: "Apply Dracula theme" }).click();
+
+  const bar = page.getByRole("status").filter({ hasText: "Dracula applied" });
+  await expect(bar.getByRole("link", { name: /Open editor/ })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Preview" })).toBeHidden();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+  ).toBe(false);
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
 async function openImportReview(page: Page, buffer: Buffer) {
   await page.goto("/editor");
   await expect(page.getByRole("heading", { name: "Fonts" })).toBeVisible();

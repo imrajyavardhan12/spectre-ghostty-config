@@ -52,8 +52,8 @@ test("a user can retry after the remote theme service fails", async ({ page }) =
       })
   );
 
-  await page.getByRole("button", { name: "Try Again" }).click();
+  await page.getByRole("button", { name: "Try again" }).click();
 
   await expect(page.getByRole("heading", { name: "Dracula" })).toBeVisible();
-  await expect(page.getByText("1 of 1 themes loaded")).toBeVisible();
+  await expect(page.getByText("1 theme loaded")).toBeVisible();
 });

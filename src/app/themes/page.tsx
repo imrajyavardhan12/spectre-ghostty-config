@@ -1,121 +1,67 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { Ghost, Palette, ArrowRight, Code2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useRef, useState } from "react";
+import { SiteHeader } from "@/components/layout/SiteHeader";
 import { ThemeBrowser } from "@/components/themes";
-import { ConfigOutput } from "@/components/editor/ConfigOutput";
-import { FloatingActions } from "@/components/editor/FloatingActions";
-import { GhosttyPreview, PreviewToggleButton } from "@/components/preview";
+import { ThemeAppliedBar } from "@/components/themes/ThemeAppliedBar";
+import { PreviewSheet } from "@/components/editor/PreviewSheet";
+import type { PreviewPaneTab } from "@/components/editor/PreviewPane";
+import type { Theme } from "@/lib/utils/themes";
 
 export default function ThemesPage() {
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [appliedTheme, setAppliedTheme] = useState<Theme | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [paneTab, setPaneTab] = useState<PreviewPaneTab>("preview");
+  const openerRef = useRef<HTMLElement | null>(null);
+
+  const openPane = (tab: PreviewPaneTab, opener: HTMLElement) => {
+    // Safari does not focus a button on click, so the clicked element is the reliable target.
+    openerRef.current = opener;
+    setPaneTab(tab);
+    setSheetOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header - consistent with editor */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link
-              href="/"
-              aria-label="Spectre home"
-              className="flex items-center gap-2 group"
-            >
-              <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
-              <span className="hidden font-medium sm:inline">Spectre</span>
-            </Link>
-            <span className="hidden text-muted-foreground/50 sm:inline">/</span>
-            <div className="flex items-center gap-2">
-              <Palette className="h-4 w-4 text-primary" />
-              <span className="font-medium">Themes</span>
-            </div>
-          </div>
+      <SiteHeader crumb="Themes" />
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              asChild
-              className="hidden h-9 w-9 sm:inline-flex"
-            >
-              <a
-                href="https://github.com/imrajyavardhan12/spectre-ghostty-config"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="View Spectre on GitHub"
-              >
-                <Code2 className="h-4 w-4" />
-              </a>
-            </Button>
-            <Button asChild>
-              <Link href="/editor">
-                Open Editor
-                <ArrowRight className="hidden h-4 w-4 sm:inline sm:ml-2" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* Leaves room under the footer for the applied bar. */}
+      <main
+        className={`mx-auto w-full max-w-[1200px] px-4 pt-7 sm:px-8 md:pt-11 xl:pt-14 ${appliedTheme ? "pb-28" : "pb-10"}`}
+      >
+        <h1 className="text-[26px] leading-[1.15] font-semibold tracking-[-0.025em] sm:text-[32px]">Themes</h1>
+        <p className="mt-2 max-w-[560px] text-[15px] leading-[1.55] text-pretty text-muted-foreground">
+          Hundreds of color schemes from the iTerm2 Color Schemes collection. Apply one, then keep
+          customizing in the editor.
+        </p>
 
-      {/* Main content - consistent padding */}
-      <main className="container mx-auto px-4 sm:px-6 pt-8 pb-24">
-        {/* Page header */}
-        <div className="mb-8 animate-fade-up">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
-              <Palette className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Theme Browser</h1>
-              <p className="text-muted-foreground">
-                Hundreds of color themes from iTerm2 Color Schemes
-              </p>
-            </div>
-          </div>
-          
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Apply a theme to add its colors to your configuration, then keep
-            customizing in the editor.
-          </p>
-        </div>
+        <ThemeBrowser onApplied={setAppliedTheme} />
 
-        {/* Theme browser */}
-        <ThemeBrowser />
-
-        {/* Attribution */}
-        <div className="mt-12 pt-8 border-t border-border">
-          <p className="text-sm text-muted-foreground">
-            Themes sourced from{" "}
-            <a
-              href="https://github.com/mbadolato/iTerm2-Color-Schemes"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline hover:no-underline"
-            >
-              iTerm2-Color-Schemes
-            </a>
-            . Thank you to all contributors!
-          </p>
+        <div className="mt-12 border-t border-border pt-5 text-[13px] text-muted-foreground">
+          Themes from{" "}
+          <a
+            href="https://github.com/mbadolato/iTerm2-Color-Schemes"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline hover:text-primary-hover"
+          >
+            iTerm2-Color-Schemes
+          </a>
+          . Thanks to everyone who contributes to it.
         </div>
       </main>
 
-      {/* Ghostty Terminal Preview */}
-      <GhosttyPreview
-        isOpen={previewOpen}
-        onToggle={() => setPreviewOpen(false)}
-      />
+      <ThemeAppliedBar theme={appliedTheme} onOpenPane={openPane} />
 
-      {/* Floating buttons */}
-      <FloatingActions
-        preview={
-          <PreviewToggleButton
-            isOpen={previewOpen}
-            onToggle={() => setPreviewOpen(!previewOpen)}
-          />
-        }
-        config={<ConfigOutput />}
+      <PreviewSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        tab={paneTab}
+        onTabChange={setPaneTab}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          openerRef.current?.focus();
+        }}
       />
     </div>
   );

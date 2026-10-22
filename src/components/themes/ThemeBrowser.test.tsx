@@ -2,7 +2,7 @@
 
 import { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeBrowser } from './ThemeBrowser';
 
 const { fetchThemeListMock, fetchThemeMock } = vi.hoisted(() => ({
@@ -20,8 +20,16 @@ vi.mock('@/lib/utils/themes', () => ({
 }));
 
 vi.mock('./ThemeCard', () => ({
-  ThemeCard: ({ theme }: { theme: { name: string } }) => (
-    <button type="button">{theme.name}</button>
+  ThemeCard: ({
+    theme,
+    onApply,
+  }: {
+    theme: { name: string };
+    onApply: (theme: { name: string }) => void;
+  }) => (
+    <button type="button" onClick={() => onApply(theme)}>
+      {theme.name}
+    </button>
   ),
   ThemeCardSkeleton: () => <div data-testid="theme-skeleton" />,
 }));
@@ -94,7 +102,7 @@ describe('ThemeBrowser loading lifecycle', () => {
       requestedNames.slice(6).forEach((name) => resolvers.get(name)?.());
     });
 
-    await waitFor(() => expect(screen.getByText('11 of 11 themes loaded')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('All 11 themes loaded')).toBeInTheDocument());
     expect(requestedNames).toHaveLength(new Set(requestedNames).size);
     expect(requestedNames).toEqual(names);
   });
@@ -244,7 +252,7 @@ describe('ThemeBrowser loading lifecycle', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('1 of 1 themes loaded')).toBeInTheDocument();
+      expect(screen.getByText('1 theme loaded')).toBeInTheDocument();
       expect(screen.queryByText('1 theme failed to load.')).not.toBeInTheDocument();
     });
     expect(fetchThemeMock).toHaveBeenCalledTimes(2);
@@ -276,12 +284,90 @@ describe('ThemeBrowser loading lifecycle', () => {
       </StrictMode>
     );
 
-    await waitFor(() => expect(screen.getByText('1 of 1 themes loaded')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 theme loaded')).toBeInTheDocument());
     expect(fetchThemeListMock).toHaveBeenCalledTimes(2);
     const firstSignal = fetchThemeListMock.mock.calls[0][0].signal as AbortSignal;
     const currentSignal = fetchThemeListMock.mock.calls[1][0].signal as AbortSignal;
     expect(firstSignal.aborted).toBe(true);
     expect(currentSignal.aborted).toBe(false);
     expect(fetchThemeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches the theme list from Try again without reloading the page', async () => {
+    fetchThemeListMock
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(createThemeList(['Featured']));
+    fetchThemeMock.mockResolvedValue(createTheme('Featured'));
+
+    render(<ThemeBrowser />);
+    expect(await screen.findByText('Failed to load themes')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByRole('button', { name: 'Featured' })).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load themes')).not.toBeInTheDocument();
+    expect(fetchThemeListMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('explains an empty search, offers to load every theme, and clears the search', async () => {
+    fetchThemeListMock.mockResolvedValue(createThemeList(['Featured', 'Other']));
+    fetchThemeMock.mockImplementation((name: string) => Promise.resolve(createTheme(name)));
+
+    render(<ThemeBrowser />);
+    await waitFor(() => expect(screen.getByText('1 of 2 themes loaded')).toBeInTheDocument());
+
+    const search = screen.getByRole('searchbox', { name: 'Search themes' });
+    fireEvent.change(search, { target: { value: 'zzz' } });
+
+    expect(await screen.findByText('No themes found')).toBeInTheDocument();
+    expect(screen.getByText(/Nothing matches “zzz” in featured themes\./)).toBeInTheDocument();
+    expect(screen.getByText(/Only 1 theme is loaded\./)).toBeInTheDocument();
+    // The status line and the empty state each offer it.
+    expect(screen.getAllByRole('button', { name: 'Load all themes' })).toHaveLength(2);
+
+    // The field has its own clear control; the empty state's button comes last.
+    const clearButtons = screen.getAllByRole('button', { name: 'Clear search' });
+    expect(clearButtons).toHaveLength(2);
+    fireEvent.click(clearButtons[1]);
+    expect(search).toHaveValue('');
+    await waitFor(() => expect(screen.queryByText('No themes found')).not.toBeInTheDocument());
+    expect(within(document.getElementById('theme-results')!).getByRole('button', { name: 'Featured' })).toBeInTheDocument();
+  });
+
+  it('reports the applied theme to the page', async () => {
+    const onApplied = vi.fn();
+    fetchThemeListMock.mockResolvedValue(createThemeList(['Featured']));
+    fetchThemeMock.mockResolvedValue(createTheme('Featured'));
+
+    render(<ThemeBrowser onApplied={onApplied} />);
+    await waitFor(() => expect(document.getElementById('theme-results')).not.toBeNull());
+    fireEvent.click(within(document.getElementById('theme-results')!).getByRole('button', { name: 'Featured' }));
+
+    expect(onApplied).toHaveBeenCalledWith(expect.objectContaining({ name: 'Featured' }));
+  });
+
+  it('treats a whitespace-only search as no search', async () => {
+    fetchThemeListMock.mockResolvedValue(createThemeList(['Featured']));
+    fetchThemeMock.mockResolvedValue(createTheme('Featured'));
+
+    render(<ThemeBrowser />);
+    await waitFor(() => expect(document.getElementById('theme-results')).not.toBeNull());
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search themes' }), {
+      target: { value: '   ' },
+    });
+
+    expect(within(document.getElementById('theme-results')!).getByRole('button', { name: 'Featured' })).toBeInTheDocument();
+    expect(screen.queryByText('No themes found')).not.toBeInTheDocument();
+  });
+
+  it('offers no way to load more when the list is empty', async () => {
+    fetchThemeListMock.mockResolvedValue([]);
+
+    render(<ThemeBrowser />);
+
+    expect(await screen.findByText('No themes found')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load all themes' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/themes loaded/)).not.toBeInTheDocument();
   });
 });
