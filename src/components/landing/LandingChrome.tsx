@@ -9,30 +9,26 @@ const COFFEE_URL = "https://www.buymeacoffee.com/rvs12";
 
 export function LandingNav() {
   return (
-    <nav className="fixed top-0 right-0 left-0 z-50 px-6 py-4 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between">
-        <Link href="/" className="group flex items-center gap-2">
-          <Ghost className="h-6 w-6 text-primary transition-transform duration-150 group-hover:rotate-12" />
-          <span className="font-medium">Spectre</span>
-        </Link>
-        <div className="flex items-center gap-5 text-sm text-muted-foreground">
-          <Link href="/themes" className="transition-colors hover:text-foreground">
-            Themes
-          </Link>
-          <a
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View Spectre on GitHub"
-            className="transition-colors hover:text-foreground"
-          >
-            <Code2 className="h-5 w-5" />
-          </a>
-          <Button asChild size="sm" className="rounded-full">
-            <Link href="/editor">Open editor</Link>
-          </Button>
-        </div>
-      </div>
+    <nav className="mx-auto flex h-16 max-w-[1200px] items-center gap-1 px-5 sm:px-8">
+      <Link
+        href="/"
+        className="mr-auto flex items-center gap-[9px] rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
+        <Ghost className="size-5 text-primary" aria-hidden="true" />
+        <span className="text-[15px] font-semibold tracking-[-0.01em]">Spectre</span>
+      </Link>
+      <Button asChild variant="ghost" className="hidden h-9 px-3 text-sm sm:inline-flex">
+        <Link href="/themes">Themes</Link>
+      </Button>
+      <Button asChild variant="ghost" className="hidden h-9 gap-[7px] px-3 text-sm sm:inline-flex">
+        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+          <Code2 className="size-[15px]" aria-hidden="true" />
+          GitHub
+        </a>
+      </Button>
+      <Button asChild className="ml-2 h-9 bg-foreground px-3.5 text-sm text-background hover:bg-foreground/90">
+        <Link href="/editor">Open editor</Link>
+      </Button>
     </nav>
   );
 }
@@ -81,14 +77,10 @@ export function LandingFooter() {
 
 export function OpenEditorButton() {
   return (
-    <Button
-      asChild
-      size="lg"
-      className="group h-12 rounded-full px-6 transition-transform duration-200 hover:-translate-y-0.5"
-    >
+    <Button asChild size="lg" className="group h-11 gap-2 rounded-[10px] px-[18px] text-[15px]">
       <Link href="/editor">
         Open the editor
-        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+        <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
       </Link>
     </Button>
   );

@@ -205,6 +205,13 @@
   }
 }
 
+@keyframes intro-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
 @keyframes fade-down {
   from {
     opacity: 0;
@@ -322,6 +329,11 @@
   animation: fade-down 0.4s ease-out forwards;
 }
 
+/* The landing intro: a short rise with an ease-out-expo curve. Set animation-delay and -duration inline. */
+.animate-intro {
+  animation: intro-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .animate-scale-in {
   animation: scale-in 0.3s ease-out forwards;
 }
@@ -364,6 +376,7 @@
   .animate-fade-in,
   .animate-fade-up,
   .animate-fade-down,
+  .animate-intro,
   .animate-scale-in,
   .animate-slide-in-right,
   .animate-slide-in-left,
@@ -548,6 +561,12 @@
   /* Smooth page transitions */
   main {
     animation: fade-in 0.3s ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    main {
+      animation: none;
+    }
   }
   
   /* Better text rendering */
