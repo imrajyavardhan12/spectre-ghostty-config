@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { StoreProvider } from "@/components/providers/StoreProvider";
+import { Toaster } from "@/components/providers/Toaster";
 import "./globals.css";
 
 const inter = Inter({
@@ -47,7 +48,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`} suppressHydrationWarning>
-        <StoreProvider>{children}</StoreProvider>
+        <StoreProvider>
+          {children}
+          <Toaster />
+        </StoreProvider>
         <SpeedInsights />
         <Analytics />
       </body>

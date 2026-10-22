@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Info } from "lucide-react";
+import { ChevronDown, Info } from "lucide-react";
+import { ResetDialog } from "@/components/editor/ResetDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingRenderer } from "@/components/settings";
 import { getOptionsByCategory } from "@/data/ghostty-options";
 import { groupOptions, type OptionGroup } from "@/data/option-groups";
 import { splitOptionsBySupport } from "@/lib/ghostty-versions";
 import { useConfigStore } from "@/lib/store/config-store";
+import { useToastStore } from "@/lib/store/toast-store";
+import { categoryResetKeys, describeResetEntries, type ResetEntry } from "@/lib/utils/reset-scope";
 import { categories } from "@/data/categories";
 import { Category } from "@/lib/schema/types";
 import { cn } from "@/lib/utils";
@@ -45,12 +48,31 @@ function CategoryPage({ category, highlightedOption }: ConfigPanelProps) {
   const hiddenCount = hideUnsupported ? unsupported.length : 0;
   const categoryInfo = categories.find((c) => c.id === category);
   const groups = groupOptions(category, options);
-  const modifiedCount = options.filter((option) => option.id in config).length;
+  const resetKeys = categoryResetKeys(category, config, { targetVersion, hideUnsupported });
+  const modifiedCount = resetKeys.length;
+  const resetValues = useConfigStore((state) => state.resetValues);
+  const [resetOpen, setResetOpen] = useState(false);
+  // Taken when the dialog opens, so it still lists them while it fades out after a reset.
+  const [resetEntries, setResetEntries] = useState<ResetEntry[]>([]);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const chipRef = useRef<HTMLButtonElement>(null);
+  const resetConfirmedRef = useRef(false);
+
+  const handleConfirmReset = () => {
+    // Reset what the dialog listed, even if the config moved while it was open.
+    const changed = resetValues(resetEntries.map((entry) => entry.key));
+    resetConfirmedRef.current = changed;
+    setResetOpen(false);
+    if (changed) {
+      const count = resetEntries.length;
+      useToastStore.getState().show(`Reset ${count} ${count === 1 ? "setting" : "settings"}`);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-3xl px-6 pt-8 pb-10 md:pb-32">
       <header className="mb-6">
-        <h1 className="text-h1">{categoryInfo?.name}</h1>
+        <h1 ref={headingRef} tabIndex={-1} className="text-h1 outline-none">{categoryInfo?.name}</h1>
         {categoryInfo?.description && (
           <p className="mt-1 text-sm text-muted-foreground">{categoryInfo.description}</p>
         )}
@@ -59,14 +81,41 @@ function CategoryPage({ category, highlightedOption }: ConfigPanelProps) {
           {modifiedCount > 0 && (
             <>
               <span aria-hidden="true">·</span>
-              <span className="inline-flex items-center gap-1.5 font-medium text-accent-foreground">
+              <button
+                ref={chipRef}
+                type="button"
+                onClick={() => {
+                  resetConfirmedRef.current = false;
+                  setResetEntries(describeResetEntries(config, resetKeys));
+                  setResetOpen(true);
+                }}
+                aria-label={`${modifiedCount} modified. Review and reset ${categoryInfo?.name} settings`}
+                title="Review and reset this category"
+                className="-ml-1 inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-accent-foreground transition-colors outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
                 {modifiedCount} modified
-              </span>
+                <ChevronDown className="size-[13px]" aria-hidden="true" />
+              </button>
             </>
           )}
         </p>
       </header>
+
+      <ResetDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        title={`Reset ${resetEntries.length} ${categoryInfo?.name} ${resetEntries.length === 1 ? "setting" : "settings"}?`}
+        confirmLabel={`Reset ${categoryInfo?.name}`}
+        entries={resetEntries}
+        onConfirm={handleConfirmReset}
+        onCloseAutoFocus={(event) => {
+          // Not opened through a Radix trigger, so return focus by hand. The chip is
+          // gone once everything is reset; focus the page heading instead.
+          event.preventDefault();
+          (resetConfirmedRef.current ? headingRef : chipRef).current?.focus();
+        }}
+      />
 
       {/* The preview renders with browser fonts, so say so once, quietly. */}
       {category === "fonts" && (

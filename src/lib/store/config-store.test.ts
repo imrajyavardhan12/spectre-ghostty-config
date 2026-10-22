@@ -958,3 +958,67 @@ unknown-option = true
 function useStoreState() {
   return useConfigStore.getState();
 }
+
+describe('resetValues', () => {
+  beforeEach(() => {
+    act(() => {
+      useConfigStore.getState().resetAll();
+      useHistoryStore.getState().clear();
+    });
+  });
+
+  it('removes only the given keys as one undo step', () => {
+    act(() => {
+      useConfigStore.getState().setValue('font-size', 16);
+      useConfigStore.getState().setValue('cursor-style', 'bar');
+      useConfigStore.getState().setValue('window-padding-x', 12);
+      useHistoryStore.getState().clear();
+      useConfigStore.getState().resetValues(['font-size', 'cursor-style']);
+    });
+
+    expect(useConfigStore.getState().config).toEqual({ 'window-padding-x': 12 });
+    expect(useHistoryStore.getState().past).toHaveLength(1);
+
+    act(() => {
+      useConfigStore.getState().undo();
+    });
+    expect(useConfigStore.getState().config).toMatchObject({
+      'font-size': 16,
+      'cursor-style': 'bar',
+      'window-padding-x': 12,
+    });
+  });
+
+  it('records nothing when none of the keys are set', () => {
+    act(() => {
+      useConfigStore.getState().setValue('font-size', 16);
+      useHistoryStore.getState().clear();
+      useConfigStore.getState().resetValues(['cursor-style']);
+    });
+
+    expect(useHistoryStore.getState().past).toHaveLength(0);
+    expect(useConfigStore.getState().config).toEqual({ 'font-size': 16 });
+  });
+
+  it('forgets the applied theme when a theme key is reset', () => {
+    act(() => {
+      useConfigStore.getState().loadConfig({ theme: 'Rose Pine', 'font-size': 16 }, 'Rose Pine');
+      useConfigStore.getState().resetValues(['theme']);
+    });
+
+    expect(useConfigStore.getState().appliedTheme).toBeNull();
+    expect(useConfigStore.getState().config).toEqual({ 'font-size': 16 });
+  });
+});
+
+describe('resetValues result', () => {
+  it('reports whether anything was reset', () => {
+    act(() => {
+      useConfigStore.getState().resetAll();
+      useConfigStore.getState().setValue('font-size', 16);
+    });
+
+    expect(useConfigStore.getState().resetValues(['cursor-style'])).toBe(false);
+    expect(useConfigStore.getState().resetValues(['font-size'])).toBe(true);
+  });
+});
