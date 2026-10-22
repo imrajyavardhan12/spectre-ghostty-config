@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Command as CommandPrimitive } from "cmdk";
-import { Search, SearchX, X } from "lucide-react";
+import { Download, FileUp, Layers, Palette, Search, SearchX, X } from "lucide-react";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/ui/kbd";
 import { allOptions } from "@/data/ghostty-options";
 import { categories } from "@/data/categories";
@@ -14,12 +15,23 @@ import { ConfigOption, Platform } from "@/lib/schema/types";
 import { useConfigStore } from "@/lib/store/config-store";
 import { isOptionSupportedIn } from "@/lib/ghostty-versions";
 import { searchOptions } from "@/lib/utils/option-search";
+import { runEditorAction, type EditorAction } from "@/lib/editor-actions";
 
 const PLATFORM_LABEL: Record<Platform, string> = {
   macos: "macOS",
   linux: "Linux",
   windows: "Windows",
 };
+
+const ACTIONS: Array<{ id: EditorAction; label: string; icon: typeof Download }> = [
+  { id: "export", label: "Export config", icon: Download },
+  { id: "import", label: "Import config…", icon: FileUp },
+  { id: "presets", label: "Open presets", icon: Layers },
+  { id: "themes", label: "Browse themes", icon: Palette },
+];
+
+const GROUP_CLASS =
+  "p-0 [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:tracking-[.06em] [&_[cmdk-group-heading]]:text-subtle-foreground [&_[cmdk-group-heading]]:uppercase";
 
 interface CommandSearchProps {
   onSelectOption: (option: ConfigOption) => void;
@@ -29,6 +41,7 @@ export function CommandSearch({ onSelectOption }: CommandSearchProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const ranActionRef = useRef(false);
   const targetVersion = useConfigStore((state) => state.targetVersion);
   const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
 
@@ -52,6 +65,19 @@ export function CommandSearch({ onSelectOption }: CommandSearchProps) {
     if (!next) setQuery("");
   }, []);
 
+  const handleSelectAction = useCallback((action: EditorAction) => {
+    // Presets opens a dialog and Themes leaves the page: focus belongs there, not back here.
+    ranActionRef.current = action === "presets" || action === "themes";
+    changeOpen(false);
+    if (action === "presets") {
+      // After the palette has closed, so the dialog doesn't fight it for focus.
+      setTimeout(() => runEditorAction(action), 0);
+    } else {
+      // Import opens the file picker, which browsers allow only from inside the click.
+      runEditorAction(action);
+    }
+  }, [changeOpen]);
+
   const handleSelectOption = useCallback((option: ConfigOption) => {
     changeOpen(false);
     onSelectOption(option);
@@ -67,6 +93,13 @@ export function CommandSearch({ onSelectOption }: CommandSearchProps) {
   );
   const { results, total } = useMemo(() => searchOptions(visibleOptions, query), [visibleOptions, query]);
   const hasQuery = query.trim() !== "";
+  const visibleActions = useMemo(() => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    return ACTIONS.filter(({ id, label }) =>
+      words.every((word) => label.toLowerCase().includes(word) || id.includes(word))
+    );
+  }, [query]);
+  const hasAnything = results.length > 0 || visibleActions.length > 0;
   const countLabel = total > results.length ? `${results.length} of ${total}` : `${total}`;
   // Spoken for screen readers; the list and the empty state are what sighted users see.
   const announcement = !hasQuery
@@ -79,6 +112,13 @@ export function CommandSearch({ onSelectOption }: CommandSearchProps) {
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent
         showCloseButton={false}
+        onOpenAutoFocus={() => {
+          ranActionRef.current = false;
+        }}
+        onCloseAutoFocus={(event) => {
+          // The action took focus elsewhere (a dialog, the file picker, another page).
+          if (ranActionRef.current) event.preventDefault();
+        }}
         className="gap-0 overflow-hidden bg-popover p-0 sm:max-w-[620px] md:top-[88px] md:translate-y-0 max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none"
       >
         <DialogTitle className="sr-only">Search Settings</DialogTitle>
@@ -100,7 +140,7 @@ export function CommandSearch({ onSelectOption }: CommandSearchProps) {
               ref={inputRef}
               value={query}
               onValueChange={setQuery}
-              placeholder="Search options or keys"
+              placeholder="Search options, keys, or actions"
               autoFocus
               spellCheck={false}
               className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-foreground outline-hidden placeholder:text-subtle-foreground"
@@ -122,11 +162,11 @@ export function CommandSearch({ onSelectOption }: CommandSearchProps) {
           </div>
 
           {/* Always present, so the input's aria-controls has a target; hidden when empty. */}
-          <CommandList hidden={results.length === 0} className="max-h-none min-h-0 flex-1 p-1.5">
+          <CommandList hidden={!hasAnything} className="max-h-none min-h-0 flex-1 p-1.5">
             {results.length > 0 && (
               <CommandGroup
                 heading={hasQuery ? `Options · ${countLabel}` : "Suggested"}
-                className="p-0 [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:tracking-[.06em] [&_[cmdk-group-heading]]:text-subtle-foreground [&_[cmdk-group-heading]]:uppercase"
+                className={GROUP_CLASS}
               >
                 {results.map((option) => (
                   <ResultRow
@@ -138,8 +178,23 @@ export function CommandSearch({ onSelectOption }: CommandSearchProps) {
                 ))}
               </CommandGroup>
             )}
+            {visibleActions.length > 0 && (
+              <CommandGroup heading="Actions" className={cn(GROUP_CLASS, "mt-1.5")}>
+                {visibleActions.map(({ id, label, icon: Icon }) => (
+                  <CommandItem
+                    key={id}
+                    value={`action-${id}`}
+                    onSelect={() => handleSelectAction(id)}
+                    className="h-10 gap-3 rounded-[7px] px-2.5 data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+                  >
+                    <Icon className="size-[15px] text-muted-foreground" aria-hidden="true" />
+                    {label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
           </CommandList>
-          {results.length === 0 && (
+          {!hasAnything && (
             // Outside the list: this is a message, not a result.
             <div className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto px-6 py-12 text-center">
               <SearchX className="size-[22px] text-subtle-foreground" aria-hidden="true" />

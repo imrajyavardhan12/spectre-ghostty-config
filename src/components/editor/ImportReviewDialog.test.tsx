@@ -33,11 +33,15 @@ cursor-style = bar
     );
 
     expect(
-      screen.getByRole('heading', { name: 'Review imported configuration' })
+      screen.getByRole('heading', { name: 'Review import' })
     ).toBeInTheDocument();
     expect(
       screen.getByText(/2 current settings will be replaced\./)
     ).toBeInTheDocument();
+    // The dialog announces what it will replace, not only that nothing changes yet.
+    expect(screen.getByRole('dialog', { name: 'Review import' })).toHaveAccessibleDescription(
+      /Nothing changes until you confirm\..*2 current settings will be replaced/
+    );
     expectImportedInstruction('font-size', 'font-size = 16');
     expectImportedInstruction('font-family', 'font-family = JetBrains Mono');
     expectImportedInstruction('cursor-style', 'cursor-style = bar');
@@ -309,7 +313,7 @@ mouse-hide-while-typing = maybe
     );
 
     expectImportIssue(
-      'Warning — Line 1 · cursor-opacity: Ghostty will clamp values above 1 down to 1.'
+      'Warning · Line 1 · cursor-opacity: Ghostty will clamp values above 1 down to 1.'
     );
     expect(
       screen.getByRole('button', { name: 'Replace with 1 setting' })

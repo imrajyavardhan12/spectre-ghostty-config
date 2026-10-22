@@ -2,6 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { CommandSearch } from './CommandSearch';
 import { useConfigStore } from '@/lib/store/config-store';
+import { registerEditorActions } from '@/lib/editor-actions';
 
 function openSearch() {
   fireEvent.keyDown(document, { key: 'k', metaKey: true });
@@ -124,5 +125,41 @@ describe('CommandSearch', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Search' }), { target: { value: 'background-image' } });
 
     expect(screen.getByText(/^No options match/)).toBeTruthy();
+  });
+
+  it('offers the file, presets and themes actions until something is typed', () => {
+    render(<CommandSearch onSelectOption={vi.fn()} />);
+    openSearch();
+
+    for (const name of ['Export config', 'Import config…', 'Open presets', 'Browse themes']) {
+      expect(screen.getByRole('option', { name })).toBeTruthy();
+    }
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Search' }), { target: { value: 'cursor' } });
+    expect(screen.queryByRole('option', { name: 'Export config' })).toBeNull();
+  });
+
+  it('closes, then runs the chosen action', async () => {
+    const presets = vi.fn();
+    const unregister = registerEditorActions({ presets });
+    render(<CommandSearch onSelectOption={vi.fn()} />);
+    openSearch();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Open presets' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Search Settings' })).toBeNull();
+    await vi.waitFor(() => expect(presets).toHaveBeenCalledTimes(1));
+    unregister();
+  });
+
+  it('finds actions by what you type, even when no option matches', () => {
+    render(<CommandSearch onSelectOption={vi.fn()} />);
+    openSearch();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Search' }), { target: { value: 'preset' } });
+
+    expect(screen.getByRole('option', { name: 'Open presets' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: 'Browse themes' })).toBeNull();
+    expect(screen.queryByText(/No options match/)).toBeNull();
   });
 });
