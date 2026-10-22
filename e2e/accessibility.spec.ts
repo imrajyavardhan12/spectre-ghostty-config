@@ -81,6 +81,42 @@ test("the landing page has no automatically detectable WCAG A or AA violations",
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });
 
+test("the landing page fits a phone and meets WCAG A and AA", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: /configure ghostty without the docs/i })
+  ).toBeVisible();
+
+  // The page clips sideways overflow, so scrollWidth can't see it: measure the content itself.
+  const overflowing = await page.evaluate(() =>
+    [...document.querySelectorAll("header *, main *")]
+      .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
+      .map((el) => `${el.tagName}.${String(el.className).slice(0, 50)}`)
+  );
+  expect(overflowing).toEqual([]);
+  expect(await findAccessibilityViolations(page)).toEqual([]);
+});
+
+test("the landing mock's theme dots are keyboard reachable and change the sample theme", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  const dawn = page.getByRole("button", { name: "Rose Pine Dawn" });
+  await dawn.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(dawn).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Tokyo Night" })).toHaveAttribute(
+    "aria-pressed",
+    "false"
+  );
+  await expect(page.getByText("theme = Rose Pine Dawn")).toBeAttached();
+});
+
 test("the landing page runs no animations when the user prefers reduced motion", async ({
   page,
 }) => {

@@ -1,6 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+/** Follows the user's reduced-motion preference, including a change while the page is open. */
+export function useReducedMotion(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const query = window.matchMedia(REDUCED_MOTION_QUERY);
+      query.addEventListener("change", onChange);
+      return () => query.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false
+  );
+}
 
 /** Becomes true the first time the element is mostly on screen. */
 export function useInView<T extends Element>(threshold = 0.25) {
@@ -70,19 +85,29 @@ export function TypeLines({ lines }: { lines: React.ReactNode[] }) {
   );
 }
 
-/** Tilts toward the pointer with a soft glare. Mouse only, and skipped under reduced motion. */
-export function Tilt({ children, max = 4 }: { children: React.ReactNode; max?: number }) {
+/**
+ * Tilts toward the pointer (up to 3° on X and 5° on Y) with a soft glare. Mouse only, wide screens
+ * only, and skipped under reduced motion.
+ */
+export function Tilt({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  const onMove = (event: React.MouseEvent<HTMLDivElement>) => {
+  const onMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const el = ref.current;
-    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (
+      !el ||
+      event.pointerType !== "mouse" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      !window.matchMedia("(min-width: 640px)").matches
+    ) {
+      return;
+    }
     const rect = el.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width - 0.5;
-    const y = (event.clientY - rect.top) / rect.height - 0.5;
-    el.style.transform = `rotateX(${-y * max * 2}deg) rotateY(${x * max * 2}deg) scale(1.01)`;
-    el.style.setProperty("--gx", `${(x + 0.5) * 100}%`);
-    el.style.setProperty("--gy", `${(y + 0.5) * 100}%`);
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    el.style.transform = `rotateX(${(0.5 - y) * 6}deg) rotateY(${(x - 0.5) * 10}deg)`;
+    el.style.setProperty("--gx", `${x * 100}%`);
+    el.style.setProperty("--gy", `${y * 100}%`);
     el.dataset.hover = "1";
   };
 
@@ -94,20 +119,21 @@ export function Tilt({ children, max = 4 }: { children: React.ReactNode; max?: n
   };
 
   return (
-    <div style={{ perspective: "1200px" }}>
+    <div style={{ perspective: "1800px" }}>
       <div
         ref={ref}
-        onMouseMove={onMove}
-        onMouseLeave={onLeave}
-        className="group/tilt relative transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] data-[hover]:duration-100 data-[hover]:ease-out"
+        onPointerMove={onMove}
+        onPointerLeave={onLeave}
+        className="group/tilt relative rounded-[14px] transition-transform duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform data-[hover]:duration-[120ms] data-[hover]:ease-out"
         style={{ transformStyle: "preserve-3d" }}
       >
         {children}
         <div
-          className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-data-[hover]/tilt:opacity-100"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-[14px] opacity-0 transition-opacity duration-300 group-data-[hover]/tilt:opacity-100"
           style={{
             background:
-              "radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,0.09), transparent 60%)",
+              "radial-gradient(600px circle at var(--gx, 50%) var(--gy, 0%), rgba(255,255,255,0.07), transparent 60%)",
           }}
         />
       </div>
