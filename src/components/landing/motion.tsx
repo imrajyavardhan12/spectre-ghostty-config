@@ -51,12 +51,12 @@ export function Reveal({
   delay?: number;
   className?: string;
 }) {
-  const [ref, inView] = useInView<HTMLDivElement>(0.15);
+  const [ref, inView] = useInView<HTMLDivElement>(0.12);
   return (
     <div
       ref={ref}
       style={{ transitionDelay: `${delay}ms` }}
-      className={`transition-all duration-700 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${inView ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"} ${className}`}
+      className={`transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${inView ? "translate-y-0 opacity-100" : "translate-y-5 opacity-0"} ${className}`}
     >
       {children}
     </div>

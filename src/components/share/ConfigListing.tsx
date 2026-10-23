@@ -1,4 +1,5 @@
 import { Clock, FileCode2, ShieldAlert } from "lucide-react";
+import { shortGhosttyVersion } from "@/lib/ghostty-versions";
 
 interface ConfigListingProps {
   config: string;
@@ -6,11 +7,6 @@ interface ConfigListingProps {
   programKeys: ReadonlySet<string>;
   /** Keys newer than the viewer's target, with the release that added each. */
   newerKeys: ReadonlyMap<string, string>;
-}
-
-/** "1.3.0" reads as "1.3"; a patch release keeps its number. */
-export function shortVersion(version: string): string {
-  return version.replace(/\.0$/, "");
 }
 
 /** The config as numbered lines, with a flag on any line that needs a second look. */
@@ -64,7 +60,7 @@ export function ConfigListing({ config, programKeys, newerKeys }: ConfigListingP
                     {since && (
                       <span className="inline-flex items-center gap-1.5 rounded-[5px] bg-muted px-[7px] py-0.5 text-[11px] font-medium text-muted-foreground">
                         <Clock className="size-[11px]" aria-hidden="true" />
-                        Needs {shortVersion(since)}
+                        Needs {shortGhosttyVersion(since)}
                       </span>
                     )}
                   </span>

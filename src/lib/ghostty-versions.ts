@@ -30,6 +30,11 @@ export function isKnownGhosttyRelease(version: string): version is GhosttyReleas
   return (GHOSTTY_RELEASES as readonly string[]).includes(version);
 }
 
+/** "1.3.0" reads as "1.3"; a patch release keeps its number. */
+export function shortGhosttyVersion(version: string): string {
+  return version.replace(/\.0$/, "");
+}
+
 /** Numeric major.minor.patch comparison: negative when a < b, positive when a > b. */
 export function compareGhosttyVersions(a: string, b: string): number {
   const pa = a.split(".").map(Number);
