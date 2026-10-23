@@ -99,12 +99,12 @@ describe('GhosttyPreview lifecycle', () => {
     );
 
     const { rerender } = render(
-      <GhosttyPreview isOpen onToggle={vi.fn()} />
+      <GhosttyPreview isOpen />
     );
     await waitFor(() => expect(mocks.initGhosttyMock).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('status')).toHaveTextContent('Starting Ghostty…');
 
-    rerender(<GhosttyPreview isOpen={false} onToggle={vi.fn()} />);
+    rerender(<GhosttyPreview isOpen={false} />);
 
     await act(async () => {
       resolveInitialization();
@@ -112,22 +112,22 @@ describe('GhosttyPreview lifecycle', () => {
 
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(0));
 
-    rerender(<GhosttyPreview isOpen onToggle={vi.fn()} />);
+    rerender(<GhosttyPreview isOpen />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
     expect(mocks.terminalInstances[0].open).toHaveBeenCalledTimes(1);
   });
 
   it('disposes the active terminal before creating a new one on reopen', async () => {
     const { rerender } = render(
-      <GhosttyPreview isOpen onToggle={vi.fn()} />
+      <GhosttyPreview isOpen />
     );
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
 
-    rerender(<GhosttyPreview isOpen={false} onToggle={vi.fn()} />);
+    rerender(<GhosttyPreview isOpen={false} />);
     expect(mocks.terminalInstances[0].dispose).toHaveBeenCalledTimes(1);
     expect(mocks.fitAddonInstances[0].dispose).toHaveBeenCalledTimes(1);
 
-    rerender(<GhosttyPreview isOpen onToggle={vi.fn()} />);
+    rerender(<GhosttyPreview isOpen />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(2));
     expect(mocks.terminalInstances[1].open).toHaveBeenCalledTimes(1);
   });
@@ -138,7 +138,7 @@ describe('GhosttyPreview lifecycle', () => {
       useConfigStore.getState().setValue('background-opacity', 0.5);
     });
 
-    render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
+    render(<GhosttyPreview isOpen />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
 
     const previewWindow = screen
@@ -148,20 +148,6 @@ describe('GhosttyPreview lifecycle', () => {
       backgroundColor: '#123456',
       opacity: '0.5',
     });
-  });
-
-  it('updates the minimize toggle name to match its current action', async () => {
-    render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
-    await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
-
-    const minimizeToggle = screen.getAllByRole('button', {
-      name: 'Minimize preview',
-    })[0];
-    fireEvent.click(minimizeToggle);
-    expect(minimizeToggle).toHaveAccessibleName('Restore preview');
-
-    fireEvent.click(minimizeToggle);
-    expect(minimizeToggle).toHaveAccessibleName('Minimize preview');
   });
 
   it('lets a newer config creation supersede an in-flight request', async () => {
@@ -175,7 +161,7 @@ describe('GhosttyPreview lifecycle', () => {
       )
       .mockResolvedValueOnce(undefined);
 
-    render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
+    render(<GhosttyPreview isOpen />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
 
     act(() => {
@@ -207,7 +193,7 @@ describe('GhosttyPreview lifecycle', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mocks.failNextOpen = true;
 
-    render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
+    render(<GhosttyPreview isOpen />);
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent("Preview couldn't start");
@@ -232,7 +218,7 @@ describe('GhosttyPreview focus', () => {
     render(
       <>
         <input aria-label="font style" />
-        <GhosttyPreview isOpen docked onToggle={vi.fn()} />
+        <GhosttyPreview isOpen />
       </>
     );
     const field = screen.getByLabelText('font style');
@@ -249,7 +235,7 @@ describe('GhosttyPreview focus', () => {
   });
 });
 
-describe('GhosttyPreview docked pane', () => {
+describe('GhosttyPreview pane', () => {
   beforeEach(() => {
     mocks.initGhosttyMock.mockReset();
     mocks.initGhosttyMock.mockResolvedValue(undefined);
@@ -267,7 +253,7 @@ describe('GhosttyPreview docked pane', () => {
   });
 
   it('says it is loading, then live, and shows the terminal grid', async () => {
-    render(<GhosttyPreview isOpen docked onToggle={vi.fn()} />);
+    render(<GhosttyPreview isOpen />);
     expect(screen.getByText('Loading preview')).toBeTruthy();
 
     expect(await screen.findByText('Live — updates as you edit')).toBeTruthy();
@@ -280,7 +266,7 @@ describe('GhosttyPreview docked pane', () => {
     mocks.failNextOpen = true;
     const onViewConfig = vi.fn();
 
-    render(<GhosttyPreview isOpen docked onToggle={vi.fn()} onViewConfig={onViewConfig} />);
+    render(<GhosttyPreview isOpen onViewConfig={onViewConfig} />);
 
     const alert = await screen.findByRole('alert');
     expect(alert.className).toContain('bg-card');
@@ -292,7 +278,7 @@ describe('GhosttyPreview docked pane', () => {
 
   it('drops the grid size when the preview stops being live', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    render(<GhosttyPreview isOpen docked onToggle={vi.fn()} />);
+    render(<GhosttyPreview isOpen />);
     await screen.findByText('92×34');
 
     mocks.initGhosttyMock.mockRejectedValueOnce(new Error('engine gone'));
@@ -305,14 +291,14 @@ describe('GhosttyPreview docked pane', () => {
     expect(screen.queryByText('92×34')).toBeNull();
   });
 
-  it('leaves out the status line and the config shortcut when floating', async () => {
+  it('offers no View config button when the caller gave no way to open it', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mocks.failNextOpen = true;
 
-    render(<GhosttyPreview isOpen onToggle={vi.fn()} />);
+    render(<GhosttyPreview isOpen />);
 
     await screen.findByRole('alert');
-    expect(screen.queryByText('libghostty · wasm')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'View config' })).toBeNull();
   });
 });

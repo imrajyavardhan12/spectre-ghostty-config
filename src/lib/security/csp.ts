@@ -37,11 +37,10 @@
  *   - style-src 'self' 'unsafe-inline':
  *     - 'unsafe-inline' is required for Tailwind's emitted styles and
  *       shadcn/ui's Radix primitives that set inline styles.
- *   - img-src 'self' data: https://cdn.buymeacoffee.com:
+ *   - img-src 'self' data:
  *     - `data:` is required for the Ghostty preview's binary image data
  *       and for several SVG icons.
- *     - The only external image Spectre loads is the Buy Me a Coffee
- *       button, so the allowlist is explicit rather than `https:`.
+ *     - Spectre loads no external images, so no remote host is allowed.
  *   - font-src 'self' data::
  *     - `next/font/google` self-hosts Inter at build time, so Google
  *       Fonts domains are NOT required.
@@ -76,11 +75,7 @@ export function buildCsp(isDev: boolean): string {
       "blob:",
     ],
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": [
-      "'self'",
-      "data:",
-      "https://cdn.buymeacoffee.com",
-    ],
+    "img-src": ["'self'", "data:"],
     "font-src": ["'self'", "data:"],
     "connect-src": [
       "'self'",

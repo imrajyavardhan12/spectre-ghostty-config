@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Minimize2, Maximize2, Loader2, MonitorX, RefreshCw, Monitor } from "lucide-react";
+import { Loader2, MonitorX, RefreshCw, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfigStore } from "@/lib/store/config-store";
 import { initGhostty } from "@/lib/ghostty/init";
@@ -19,9 +19,6 @@ import type { ITerminalAddon, Terminal as GhosttyTerminal } from "ghostty-web";
 
 interface GhosttyPreviewProps {
   isOpen: boolean;
-  onToggle: () => void;
-  /** Fill the parent (the editor's preview pane) instead of floating over the page. */
-  docked?: boolean;
   /** Offered beside Retry when the preview can't start, so the config is one click away. */
   onViewConfig?: () => void;
 }
@@ -31,8 +28,7 @@ type FitAddonLike = ITerminalAddon & { fit: () => void };
 
 const DEBOUNCE_MS = 300;
 
-export function GhosttyPreview({ isOpen, onToggle, docked = false, onViewConfig }: GhosttyPreviewProps) {
-  const [isMinimized, setIsMinimized] = useState(false);
+export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [clientOS] = useState<ClientOS>(() => detectClientOS());
@@ -294,22 +290,15 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false, onViewConfig 
   }, [isOpen, disposeTerminal]);
 
   // Refit whenever the terminal's box changes size: window resizes, and the
-  // docked pane opening, collapsing, or changing width.
+  // pane opening, collapsing, or changing width.
   useEffect(() => {
     const container = containerRef.current;
-    if (!isOpen || isMinimized || loadingState !== "ready" || !container) return;
+    if (!isOpen || loadingState !== "ready" || !container) return;
 
     const observer = new ResizeObserver(() => fitAndMeasure(fitAddonRef.current));
     observer.observe(container);
     return () => observer.disconnect();
-  }, [isOpen, isMinimized, loadingState, fitAndMeasure]);
-
-  // Re-fit terminal when unminimizing
-  useEffect(() => {
-    if (!isMinimized && loadingState === "ready" && fitAddonRef.current) {
-      setTimeout(() => fitAndMeasure(fitAddonRef.current), 50);
-    }
-  }, [isMinimized, loadingState, fitAndMeasure]);
+  }, [isOpen, loadingState, fitAndMeasure]);
 
   if (!isOpen) return null;
 
@@ -319,23 +308,9 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false, onViewConfig 
   const isGtkDecoration = clientOS === "linux";
 
   return (
-    <div
-      className={cn(
-        docked
-          ? "flex h-full w-full flex-col gap-2.5"
-          : "fixed z-50 transition-all duration-300 ease-out",
-        !docked &&
-          (isMinimized
-            ? "bottom-6 right-6 w-auto"
-            : "bottom-6 right-6 w-[800px] max-w-[calc(100vw-3rem)]")
-      )}
-    >
+    <div className="flex h-full w-full flex-col gap-2.5">
       <div
-        className={cn(
-          "rounded-xl border border-border overflow-hidden transition-all duration-300",
-          docked ? "flex min-h-0 flex-1 flex-col" : "shadow-2xl",
-          isMinimized && "w-auto"
-        )}
+        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border transition-all duration-300"
         style={{
           backgroundColor: background,
           opacity: backgroundOpacity,
@@ -346,129 +321,34 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false, onViewConfig 
           className="flex items-center justify-between px-3 py-2.5 border-b border-white/10"
           style={{ backgroundColor: `${background}dd` }}
         >
-          {docked ? (
-            <div className="flex w-full items-center gap-2">
-              {!isGtkDecoration && (
-                <div className="flex gap-1.5" aria-hidden="true">
-                  {[0, 1, 2].map((dot) => (
-                    <span
-                      key={dot}
-                      className="size-[9px] rounded-full"
-                      style={{ backgroundColor: foreground, opacity: 0.25 }}
-                    />
-                  ))}
-                </div>
-              )}
-              <span className={cn("text-xs", !isGtkDecoration && "ml-1 opacity-60")} style={{ color: foreground }}>
-                Ghostty Preview
+          <div className="flex w-full items-center gap-2">
+            {!isGtkDecoration && (
+              <div className="flex gap-1.5" aria-hidden="true">
+                {[0, 1, 2].map((dot) => (
+                  <span
+                    key={dot}
+                    className="size-[9px] rounded-full"
+                    style={{ backgroundColor: foreground, opacity: 0.25 }}
+                  />
+                ))}
+              </div>
+            )}
+            <span className={cn("text-xs", !isGtkDecoration && "ml-1 opacity-60")} style={{ color: foreground }}>
+              Ghostty Preview
+            </span>
+            <span className="flex-1" />
+            {gridSize && (
+              <span className="font-mono text-[11px] opacity-60" style={{ color: foreground }}>
+                {gridSize.cols}×{gridSize.rows}
               </span>
-              <span className="flex-1" />
-              {gridSize && (
-                <span className="font-mono text-[11px] opacity-60" style={{ color: foreground }}>
-                  {gridSize.cols}×{gridSize.rows}
-                </span>
-              )}
-            </div>
-          ) : isGtkDecoration ? (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium" style={{ color: foreground }}>
-                  Ghostty Preview
-                  {loadingState === "loading" && " (Loading...)"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  aria-label={isMinimized ? "Restore preview" : "Minimize preview"}
-                  onClick={() => setIsMinimized(!isMinimized)}
-                  className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
-                >
-                  <Minimize2 className="h-3.5 w-3.5" style={{ color: foreground }} />
-                </button>
-                <button
-                  aria-label="Restore preview"
-                  onClick={() => setIsMinimized(false)}
-                  className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
-                >
-                  <Maximize2 className="h-3.5 w-3.5" style={{ color: foreground }} />
-                </button>
-                <button
-                  aria-label="Close preview"
-                  onClick={onToggle}
-                  className="h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
-                >
-                  <span className="text-sm" style={{ color: foreground }}>
-                    ×
-                  </span>
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-2 group/buttons">
-                  <button
-                    aria-label="Close preview"
-                    onClick={onToggle}
-                    className="w-3.5 h-3.5 rounded-full bg-[#ff5f57] hover:bg-[#ff5f57]/80 transition-colors flex items-center justify-center"
-                  >
-                    <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">
-                      ×
-                    </span>
-                  </button>
-                  <button
-                    aria-label={isMinimized ? "Restore preview" : "Minimize preview"}
-                    onClick={() => setIsMinimized(!isMinimized)}
-                    className="w-3.5 h-3.5 rounded-full bg-[#febc2e] hover:bg-[#febc2e]/80 transition-colors flex items-center justify-center"
-                  >
-                    <span
-                      className="opacity-0 group-hover/buttons:opacity-100 text-[10px] font-bold text-black/60 transition-opacity leading-none"
-                      style={{ marginTop: "-1px" }}
-                    >
-                      −
-                    </span>
-                  </button>
-                  <button
-                    aria-label="Restore preview"
-                    onClick={() => setIsMinimized(false)}
-                    className="w-3.5 h-3.5 rounded-full bg-[#28c840] hover:bg-[#28c840]/80 transition-colors flex items-center justify-center"
-                  >
-                    <span className="opacity-0 group-hover/buttons:opacity-100 text-[8px] font-bold text-black/60 transition-opacity">
-                      +
-                    </span>
-                  </button>
-                </div>
-                <span className="text-xs opacity-60 ml-2" style={{ color: foreground }}>
-                  Ghostty Preview
-                  {loadingState === "loading" && " (Loading...)"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 hover:bg-white/10"
-                  onClick={() => setIsMinimized(!isMinimized)}
-                  aria-label={isMinimized ? "Restore preview" : "Minimize preview"}
-                >
-                  {isMinimized ? (
-                    <Maximize2 className="h-3 w-3" style={{ color: foreground }} />
-                  ) : (
-                    <Minimize2 className="h-3 w-3" style={{ color: foreground }} />
-                  )}
-                </Button>
-              </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Terminal content */}
         <div
-          className={cn("relative", docked && "min-h-0 flex-1", isMinimized && "hidden")}
-          style={{
-            height: docked ? undefined : "550px",
-            backgroundColor: background,
-          }}
+          className="relative min-h-0 flex-1"
+          style={{ backgroundColor: background }}
         >
           {loadingState === "ready" && previewTheme.status === "unavailable" && (
             <p
@@ -551,43 +431,30 @@ export function GhosttyPreview({ isOpen, onToggle, docked = false, onViewConfig 
         </div>
       </div>
 
-      {docked && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-1.5 rounded-full",
-              loadingState === "ready" ? "bg-success" : loadingState === "error" ? "bg-destructive" : "bg-warning"
-            )}
-          />
-          {loadingState === "ready"
-            ? "Live — updates as you edit"
-            : loadingState === "error"
-              ? "Preview unavailable"
-              : "Loading preview"}
-          <span className="flex-1" />
-          <span className="font-mono text-subtle-foreground">libghostty · wasm</span>
-        </div>
-      )}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "size-1.5 rounded-full",
+            loadingState === "ready" ? "bg-success" : loadingState === "error" ? "bg-destructive" : "bg-warning"
+          )}
+        />
+        {loadingState === "ready"
+          ? "Live — updates as you edit"
+          : loadingState === "error"
+            ? "Preview unavailable"
+            : "Loading preview"}
+        <span className="flex-1" />
+        <span className="font-mono text-subtle-foreground">libghostty · wasm</span>
+      </div>
     </div>
   );
 }
 
-// Button that toggles the preview; it sits in the floating pill with the config button.
-export function PreviewToggleButton({
-  isOpen,
-  onToggle,
-}: {
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
+// Opens the preview pane; it sits in the floating pill with the config button.
+export function PreviewToggleButton({ onOpen }: { onOpen: () => void }) {
   return (
-    <Button
-      onClick={onToggle}
-      aria-label={isOpen ? "Close Preview" : "Open Preview"}
-      variant="ghost"
-      className={cn("h-9 gap-2 px-3.5", isOpen && "bg-accent text-accent-foreground hover:bg-accent")}
-    >
+    <Button onClick={onOpen} aria-label="Open Preview" variant="ghost" className="h-9 gap-2 px-3.5">
       <Monitor className="size-4" />
       <span className="hidden sm:inline">Preview</span>
     </Button>
