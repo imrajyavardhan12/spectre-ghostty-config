@@ -28,8 +28,9 @@ describe("buildCsp", () => {
     expect(connectSrc).toContain("https://raw.githubusercontent.com");
 
     const imgSrc = parsed["img-src"].join(" ");
-    expect(imgSrc).toContain("https://cdn.buymeacoffee.com");
     expect(imgSrc).toContain("data:");
+    // No remote host: every image Spectre shows ships with it or is inlined.
+    expect(imgSrc).not.toMatch(/https?:/);
   });
 
   it("sets upgrade-insecure-requests in production", () => {

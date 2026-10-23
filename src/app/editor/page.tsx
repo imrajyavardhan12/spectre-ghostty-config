@@ -106,7 +106,7 @@ export default function EditorPage() {
             {!docked && (
               <FloatingActions
                 className="max-md:hidden"
-                preview={<PreviewToggleButton isOpen={false} onToggle={() => openPane("preview")} />}
+                preview={<PreviewToggleButton onOpen={() => openPane("preview")} />}
                 config={<ConfigOutput onOpen={() => openPane("config")} />}
               />
             )}
