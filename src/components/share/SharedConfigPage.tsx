@@ -6,13 +6,18 @@ import { ArrowRight, Check, Clock, Copy, Download, Link2, Loader2, ShieldAlert, 
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { UtilityActions } from "@/components/layout/UtilityActions";
 import { UtilityPage } from "@/components/layout/UtilityPage";
-import { ConfigListing, shortVersion } from "@/components/share/ConfigListing";
+import { ConfigListing } from "@/components/share/ConfigListing";
 import { Button } from "@/components/ui/button";
 import { getConfigFromUrl, summarizeDroppedSettings } from "@/lib/utils/url-share";
 import { exportGhosttyConfig } from "@/lib/utils/config-export";
 import { useConfigStore } from "@/lib/store/config-store";
 import { getConfigOption } from "@/lib/utils/config-options";
-import { getOptionIntroducedIn, isKnownGhosttyRelease, isOptionSupportedIn } from "@/lib/ghostty-versions";
+import {
+  getOptionIntroducedIn,
+  isKnownGhosttyRelease,
+  isOptionSupportedIn,
+  shortGhosttyVersion,
+} from "@/lib/ghostty-versions";
 import { findSensitiveSettings } from "@/lib/security/sensitive-options";
 
 const SENSITIVE_VALUE_PREVIEW_LENGTH = 160;
@@ -204,7 +209,7 @@ function SharePageContent() {
                   </strong>
                   {Array.from(newerKeys, ([key, since]) => (
                     <div key={key} className="mt-[3px]">
-                      <span className="font-mono">{key}</span> arrived in {shortVersion(since)}. Older versions report it as unknown.
+                      <span className="font-mono">{key}</span> arrived in {shortGhosttyVersion(since)}. Older versions report it as unknown.
                     </div>
                   ))}
                 </div>

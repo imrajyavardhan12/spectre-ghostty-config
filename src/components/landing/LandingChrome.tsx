@@ -1,8 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Code2, Ghost } from "lucide-react";
+import { ArrowRight, Code2, Coffee, Ghost } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { presets } from "@/data/presets";
 import { SPECTRE_VERSION } from "@/lib/version";
+import { Reveal } from "./motion";
 
 const GITHUB_URL = "https://github.com/imrajyavardhan12/spectre-ghostty-config";
 const COFFEE_URL = "https://www.buymeacoffee.com/rvs12";
@@ -33,17 +34,48 @@ export function LandingNav() {
   );
 }
 
+const NUMBER_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
+
+/** The last nudge: the presets to start from, then the editor. */
+export function ClosingCta() {
+  const count = NUMBER_WORDS[presets.length] ?? String(presets.length);
+  return (
+    <Reveal className="border-t border-border">
+      <div className="mx-auto flex max-w-[1200px] flex-col items-center gap-[22px] px-5 py-[72px] text-center md:px-8 md:py-28">
+        <Ghost className="size-7 text-primary" strokeWidth={1.5} aria-hidden="true" />
+        <h2 className="text-[32px] leading-[1.1] font-semibold tracking-[-0.03em] text-balance md:text-[40px] lg:text-5xl">
+          {count} presets to start from,
+          <br />
+          <span className="text-muted-foreground">or start blank.</span>
+        </h2>
+        <ul role="list" className="flex max-w-[560px] flex-wrap justify-center gap-1.5">
+          {presets.map((preset) => (
+            <li
+              key={preset.id}
+              className="inline-flex h-7 items-center rounded-full border border-border px-[11px] text-[13px] text-muted-foreground"
+            >
+              {preset.name}
+            </li>
+          ))}
+        </ul>
+        <OpenEditorButton />
+      </div>
+    </Reveal>
+  );
+}
+
 export function LandingFooter() {
   return (
-    <footer className="border-t border-border px-6 py-8">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
-        <div className="flex items-center gap-2">
-          <Ghost className="h-4 w-4" />
-          <span>Spectre v{SPECTRE_VERSION}</span>
-          <span className="opacity-50">·</span>
+    <footer className="border-t border-border">
+      <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-6 gap-y-3.5 px-5 pt-6 pb-7 text-[13px] text-muted-foreground sm:px-8">
+        <div className="mr-auto flex items-center gap-2">
+          <Ghost className="size-[15px] text-subtle-foreground" aria-hidden="true" />
+          <span className="text-foreground">Spectre</span>
+          <span className="font-mono text-xs">v{SPECTRE_VERSION}</span>
+          <span aria-hidden="true">·</span>
           <span>MIT License</span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-5">
           <a
             href="https://ghostty.org/docs/config"
             target="_blank"
@@ -60,15 +92,12 @@ export function LandingFooter() {
           >
             Source
           </a>
-          <a href={COFFEE_URL} target="_blank" rel="noopener noreferrer">
-            <Image
-              src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
-              alt="Buy Me A Coffee"
-              width={96}
-              height={27}
-              unoptimized
-            />
-          </a>
+          <Button asChild variant="outline" className="h-[30px] gap-1.5 rounded-[7px] px-2.5 text-xs">
+            <a href={COFFEE_URL} target="_blank" rel="noopener noreferrer">
+              <Coffee className="size-[13px]" aria-hidden="true" />
+              Buy me a coffee
+            </a>
+          </Button>
         </div>
       </div>
     </footer>

@@ -117,6 +117,22 @@ test("the landing mock's theme dots are keyboard reachable and change the sample
   await expect(page.getByText("theme = Rose Pine Dawn")).toBeAttached();
 });
 
+test("the landing feature demos respond to the keyboard", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  const larger = page.getByRole("button", { name: "Larger" });
+  await larger.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("status", { name: "Font size" })).toHaveText("15");
+
+  const latest = page.getByRole("radio", { name: "Ghostty 1.3" });
+  await latest.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("radio", { name: "Ghostty 1.2" })).toBeChecked();
+  await expect(page.getByText("Options newer than Ghostty 1.2 are hidden.")).toBeVisible();
+});
+
 test("the landing page runs no animations when the user prefers reduced motion", async ({
   page,
 }) => {
