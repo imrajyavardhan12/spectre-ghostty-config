@@ -11,6 +11,35 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+### Changed
+
+- Redesigned the whole app around a new set of design tokens and JetBrains Mono. Config lines, keys and font inputs now render in mono (the mono font variable pointed at a font that was never loaded, so they fell back to Inter). Buttons, inputs, switches, selects and badges follow the new component sheet, with a 2 px focus ring.
+- Editor: a labeled header with a search field, modified count, undo and redo, Presets, Themes, Import and Export, and an overflow menu (docs, source, reset all). Tablets move Presets, Themes and Import into the menu, and phones get icon-only controls. The sidebar stays pinned with its own scroll, plus the version card.
+- Options are grouped. Long categories show a jump bar with one chip per group (with a change dot), the highlighted chip follows as you scroll, and each group is a card of rows.
+- Rows put the control beside the label when there is room and show the default after the description. Enums with 2 to 4 short choices are a segmented control, switches say On or Off, number inputs get −/+ steppers, and the reset button is visible whenever an option is modified instead of only on hover.
+- The `theme` option has a searchable list of Ghostty's built-in themes, a typed custom value (`light:Dracula,dark:Nord`) and a link to the themes page. The custom macOS app icon builder now sits inside the App Icon row instead of a nested sheet.
+- Color inputs open a picker (native color input, presets, Use default) beside a text field and keep what you type while it is valid. Suggestion chips are pills that show which are chosen, and validation errors say the value is not applied until fixed.
+- The preview pane has Preview and Config tabs with Copy, Download and Share in the header, a config view with line numbers, the terminal's real grid size in the title bar, and a status line (Live, Loading, Unavailable). Loading and failure states are drawn on the app surface rather than the terminal colors, and a failure offers Retry and View config.
+- The Preview and Config buttons are one floating pill. Phones get a bottom bar (Preview, Config, Export) that opens the pane in a bottom sheet, and tablets open it as a side drawer. The floating, minimizable preview window is gone.
+- Search is a command palette (⌘K or Ctrl+K). Every word must match, exact key and name matches rank first, an empty query suggests options, and picking a result switches category, scrolls to the row and highlights it. It also runs Export, Import, Open presets and Browse themes. It is full screen on phones.
+- Presets open in a centered dialog with search and All, Starter, Workflow and Aesthetic filters instead of a side sheet. Import review shows summary chips and red, amber and grey issue callouts.
+- The themes page, share page, 404 and error pages share a new header and a terminal-style layout. Shared configs show numbered lines with "Runs a program" and "Needs 1.x" chips on the affected lines. The error page offers Try again and, when an error ID exists, a prefilled GitHub report link.
+- The landing page is redesigned: a two-column hero with a mock of the editor that cycles five sample themes (pausing on hover, focus and reduced motion), four feature rows with small interactive demos (font size, keybind conflicts, version targeting, undo and share), a closing call to action listing the real presets, and a one-row footer with a styled Buy me a coffee button.
+- The Content-Security-Policy no longer allows remote images (`img-src` is `'self' data:`), since the footer image that needed `cdn.buymeacoffee.com` is gone.
+
+### Added
+
+- Reset all asks for confirmation and lists every setting it will remove. The "N modified" chip in a category header resets just that category. Both show an Undo toast.
+- Undo toasts for resets, imports ("Imported N settings · M lines skipped") and applied presets.
+
+### Fixed
+
+- The modified count and reset buttons now show on a first visit. Before, the first change threw while merging the empty saved state, so they only appeared after a reload.
+- Suggestion chips on single-value options no longer build comma lists (`background-blur` could become `20,false`). Only the six flag-list options accept several chips, and removing the last flag chip resets the option.
+- The global fade-in on `<main>` now stops under `prefers-reduced-motion`.
+- "Try again" on the themes page re-fetches the theme list instead of reloading the page, and a whitespace-only search no longer counts as a search.
+- Copy config on a shared link reports a clipboard failure instead of failing silently.
+
 ## [0.5.0] - 2026-10-16
 
 ### Changed
