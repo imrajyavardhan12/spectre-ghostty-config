@@ -11,6 +11,8 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+## [0.6.0] - 2026-10-25
+
 ### Changed
 
 - Redesigned the whole app around a new set of design tokens and JetBrains Mono. Config lines, keys and font inputs now render in mono (the mono font variable pointed at a font that was never loaded, so they fell back to Inter). Buttons, inputs, switches, selects and badges follow the new component sheet, with a 2 px focus ring.
