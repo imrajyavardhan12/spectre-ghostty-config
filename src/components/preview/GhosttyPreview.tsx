@@ -10,7 +10,7 @@ import {
   mapConfigToTheme,
   getDefaultTheme,
 } from "@/lib/ghostty/config-mapper";
-import { generateDemoContent } from "@/lib/ghostty/demo-content";
+import { generateDemoContent, isCompactDemoWidth } from "@/lib/ghostty/demo-content";
 import { mergePreviewTheme } from "@/lib/ghostty/preview-theme";
 import { usePreviewTheme } from "./use-preview-theme";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,8 @@ interface GhosttyPreviewProps {
 type LoadingState = "idle" | "loading" | "ready" | "error";
 type FitAddonLike = ITerminalAddon & { fit: () => void };
 
+// ghostty-web ignores fit() for 50 ms after a resize; wait a little longer before the last one.
+const FIT_SETTLE_MS = 60;
 const DEBOUNCE_MS = 300;
 
 export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
@@ -58,6 +60,8 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
   const appliedThemeRef = useRef(appliedTheme);
   const lastCreatedConfigRef = useRef<typeof config | null>(null);
   const lastCreatedThemeRef = useRef<string | null>(null);
+  // Which sample layout is on screen, so a resize across the width threshold can swap it.
+  const writtenCompactRef = useRef<boolean | null>(null);
   configRef.current = config;
   appliedThemeRef.current = appliedTheme;
 
@@ -75,7 +79,8 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
       if (terminalRef.current !== term || fitAddonRef.current !== fitAddon) return;
 
       term.write("\x1bc");
-      term.write(generateDemoContent(appliedThemeRef.current, clientOS));
+      term.write(generateDemoContent(appliedThemeRef.current, clientOS, term.cols));
+      writtenCompactRef.current = isCompactDemoWidth(term.cols);
 
       if (fitTimerRef.current) {
         clearTimeout(fitTimerRef.current);
@@ -94,6 +99,7 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
       clearTimeout(fitTimerRef.current);
       fitTimerRef.current = null;
     }
+    writtenCompactRef.current = null;
     if (terminalRef.current) {
       terminalRef.current.dispose();
       terminalRef.current = null;
@@ -295,10 +301,31 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
     const container = containerRef.current;
     if (!isOpen || loadingState !== "ready" || !container) return;
 
-    const observer = new ResizeObserver(() => fitAndMeasure(fitAddonRef.current));
+    const refit = () => {
+      const fitAddon = fitAddonRef.current;
+      fitAndMeasure(fitAddon);
+      // The sample is laid out for the width it was written at. Rewrite it when
+      // a resize crosses the narrow/wide threshold.
+      const term = terminalRef.current;
+      const written = writtenCompactRef.current;
+      if (term && fitAddon && written !== null && isCompactDemoWidth(term.cols) !== written) {
+        writeContent(term, fitAddon);
+      }
+    };
+    // ghostty-web's fit() does nothing for 50 ms after a resize, so a resize that
+    // lands inside that window would never be applied. Refit once more after it.
+    let trailingRefit: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(() => {
+      refit();
+      clearTimeout(trailingRefit);
+      trailingRefit = setTimeout(refit, FIT_SETTLE_MS);
+    });
     observer.observe(container);
-    return () => observer.disconnect();
-  }, [isOpen, loadingState, fitAndMeasure]);
+    return () => {
+      clearTimeout(trailingRefit);
+      observer.disconnect();
+    };
+  }, [isOpen, loadingState, fitAndMeasure, writeContent]);
 
   if (!isOpen) return null;
 

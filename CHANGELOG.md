@@ -11,6 +11,11 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+### Fixed
+
+- The terminal preview no longer wraps its sample on narrow phones. Below 41 columns (a 360 px phone is 37) it shows a compact layout with the logo above the title, and it switches layouts if the pane is resized across that width.
+- The search palette footer says how many of Ghostty's options can be searched ("200 of 202 options") instead of a count that disagreed with the header.
+
 ## [0.6.0] - 2026-10-25
 
 ### Changed
