@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   fitAddonInstances: [] as MockFitAddonInstance[],
   failNextOpen: false,
   focusCalls: 0,
+  cols: 92,
 }));
 
 vi.mock('@/lib/ghostty/init', () => ({
@@ -47,7 +48,7 @@ vi.mock('ghostty-web', () => {
     }
     write = vi.fn();
     dispose = vi.fn();
-    cols = 92;
+    cols = mocks.cols;
     rows = 34;
 
     constructor(options: Record<string, unknown>) {
@@ -289,6 +290,105 @@ describe('GhosttyPreview pane', () => {
 
     await screen.findByRole('alert', {}, { timeout: 2000 });
     expect(screen.queryByText('92×34')).toBeNull();
+  });
+
+  it('writes the compact sample when the terminal is narrower than the wide one', async () => {
+    mocks.cols = 37;
+    try {
+      render(<GhosttyPreview isOpen />);
+      await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
+      const terminal = mocks.terminalInstances[0];
+      await waitFor(() => expect(terminal.write).toHaveBeenCalledTimes(2));
+
+      const sample = String(terminal.write.mock.calls[1][0]);
+      // The title sits under the logo instead of beside it.
+      expect(sample).toMatch(/\r\n {2}\x1b\[2mPowered by libghostty WASM/);
+    } finally {
+      mocks.cols = 92;
+    }
+  });
+
+  it('swaps the sample when a resize crosses the narrow/wide threshold', async () => {
+    const callbacks = new Set<() => void>();
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      private callback: () => void;
+      constructor(callback: () => void) {
+        this.callback = callback;
+        callbacks.add(callback);
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {
+        callbacks.delete(this.callback);
+      }
+    } as unknown as typeof ResizeObserver;
+    const resize = () => act(() => [...callbacks].forEach((callback) => callback()));
+    try {
+      render(<GhosttyPreview isOpen />);
+      await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
+      const terminal = mocks.terminalInstances[0] as MockTerminalInstance & { cols: number };
+      await waitFor(() => expect(terminal.write).toHaveBeenCalledTimes(2));
+      const wideSample = String(terminal.write.mock.calls[1][0]);
+
+      // The pane narrows, as when a phone rotates.
+      terminal.cols = 37;
+      resize();
+      expect(terminal.write).toHaveBeenCalledTimes(4);
+      const compactSample = String(terminal.write.mock.calls[3][0]);
+      expect(compactSample).not.toBe(wideSample);
+
+      // Staying narrow does not redraw.
+      resize();
+      expect(terminal.write).toHaveBeenCalledTimes(4);
+
+      // And it widens again.
+      terminal.cols = 92;
+      resize();
+      expect(terminal.write).toHaveBeenCalledTimes(6);
+      expect(String(terminal.write.mock.calls[5][0])).toBe(wideSample);
+    } finally {
+      globalThis.ResizeObserver = original;
+    }
+  });
+
+  it('refits once more after a resize, in case the first fit was skipped', async () => {
+    const callbacks = new Set<() => void>();
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      private callback: () => void;
+      constructor(callback: () => void) {
+        this.callback = callback;
+        callbacks.add(callback);
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {
+        callbacks.delete(this.callback);
+      }
+    } as unknown as typeof ResizeObserver;
+    try {
+      render(<GhosttyPreview isOpen />);
+      await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
+      const terminal = mocks.terminalInstances[0] as MockTerminalInstance & { cols: number };
+      const fitAddon = mocks.fitAddonInstances[0];
+      await waitFor(() => expect(terminal.write).toHaveBeenCalledTimes(2));
+      fitAddon.fit.mockClear();
+
+      // ghostty-web skips fit() just after a resize, so the width has not changed yet.
+      act(() => [...callbacks].forEach((callback) => callback()));
+      expect(fitAddon.fit).toHaveBeenCalledTimes(1);
+      expect(terminal.write).toHaveBeenCalledTimes(2);
+
+      // By the time the trailing refit runs, the fit has applied.
+      fitAddon.fit.mockImplementation(() => {
+        terminal.cols = 37;
+      });
+      await waitFor(() => expect(terminal.write).toHaveBeenCalledTimes(4));
+      expect(fitAddon.fit.mock.calls.length).toBeGreaterThanOrEqual(2);
+    } finally {
+      globalThis.ResizeObserver = original;
+    }
   });
 
   it('offers no View config button when the caller gave no way to open it', async () => {

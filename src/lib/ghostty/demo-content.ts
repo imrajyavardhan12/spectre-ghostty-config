@@ -28,9 +28,24 @@ const FG_BRIGHT_MAGENTA = `${CSI}95m`;
 const FG_BRIGHT_CYAN = `${CSI}96m`;
 const FG_BRIGHT_WHITE = `${CSI}97m`;
 
-export function generateDemoContent(themeName?: string | null, os?: string): string {
+/** Cut a name that would wrap, ending it with an ellipsis. */
+function fitName(name: string, room: number): string {
+  const width = Math.max(room, 4);
+  return name.length > width ? `${name.slice(0, width - 1)}…` : name;
+}
+
+// The side-by-side layout is 41 columns wide. Narrower terminals (phones) get the compact one.
+export const WIDE_DEMO_COLS = 41;
+
+export function isCompactDemoWidth(cols: number): boolean {
+  return cols < WIDE_DEMO_COLS;
+}
+
+export function generateDemoContent(themeName?: string | null, os?: string, cols?: number): string {
   const lines: string[] = [];
   const osLabel = os === "linux" ? "Linux" : os === "windows" ? "Windows" : "macOS";
+
+  if (cols !== undefined && isCompactDemoWidth(cols)) return generateCompactDemoContent(themeName, osLabel, cols);
 
   lines.push(`${CSI}2J${CSI}H`);
 
@@ -42,7 +57,9 @@ export function generateDemoContent(themeName?: string | null, os?: string): str
   lines.push(`               ${FG_BLUE}Terminal:${RESET} Ghostty`);
   
   if (themeName) {
-    lines.push(`               ${FG_BLUE}Theme:${RESET} ${FG_GREEN}${themeName}${RESET}`);
+    // 22 columns of indent and label come before the name.
+    const shownTheme = cols === undefined ? themeName : fitName(themeName, cols - 22);
+    lines.push(`               ${FG_BLUE}Theme:${RESET} ${FG_GREEN}${shownTheme}${RESET}`);
   } else {
     lines.push(`               ${FG_BLUE}Theme:${RESET} ${FG_YELLOW}Custom${RESET}`);
   }
@@ -56,7 +73,6 @@ export function generateDemoContent(themeName?: string | null, os?: string): str
   lines.push("");
 
   lines.push(`  ${BOLD}${FG_WHITE}Text Styles${RESET}`);
-  // Lines stay under ~44 columns so the demo fits a docked pane without wrapping.
   lines.push(`  ${RESET}Normal${RESET}  ${BOLD}Bold${RESET}  ${DIM}Dim${RESET}  ${ITALIC}Italic${RESET}`);
   lines.push(`  ${UNDERLINE}Underline${RESET}  ${STRIKETHROUGH}Strike${RESET}  ${INVERSE}Inverse${RESET}`);
   lines.push("");
@@ -73,6 +89,59 @@ export function generateDemoContent(themeName?: string | null, os?: string): str
   lines.push(`      ${FG_RED}modified:${RESET}   src/config.ts`);
   lines.push("");
   lines.push(`  ${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$ `);
+
+  return lines.join("\r\n");
+}
+
+/** The same sample stacked in one column. Every line is at most 28 columns, except a long theme name, which is cut to fit. */
+function generateCompactDemoContent(themeName: string | null | undefined, osLabel: string, cols: number): string {
+  const lines: string[] = [];
+  const shownTheme = themeName ? fitName(themeName, cols - "  Theme: ".length) : themeName;
+  const prompt = `${FG_GREEN}user${RESET}@${FG_BLUE}ghostty${RESET}:${FG_CYAN}~${RESET}$`;
+
+  lines.push(`${CSI}2J${CSI}H`);
+
+  lines.push(`${BOLD}${FG_MAGENTA}    ▄▄▄▄▄${RESET}`);
+  lines.push(`${BOLD}${FG_MAGENTA}   ▐█   ▀█▌${RESET}`);
+  lines.push(`${BOLD}${FG_MAGENTA}   ▐█▄▄▄█▌${RESET}`);
+  lines.push(`${BOLD}${FG_MAGENTA}   ▐█   █▌${RESET}`);
+  lines.push(`${BOLD}${FG_MAGENTA}    ▀▀▀▀▀${RESET}`);
+  lines.push("");
+  lines.push(`  ${BOLD}${FG_CYAN}Ghostty Terminal Preview${RESET}`);
+  lines.push(`  ${DIM}Powered by libghostty WASM${RESET}`);
+  lines.push(`  ${DIM}${"─".repeat(24)}${RESET}`);
+  lines.push(`  ${FG_BLUE}OS:${RESET} ${osLabel}`);
+  lines.push(`  ${FG_BLUE}Terminal:${RESET} Ghostty`);
+  lines.push(
+    shownTheme
+      ? `  ${FG_BLUE}Theme:${RESET} ${FG_GREEN}${shownTheme}${RESET}`
+      : `  ${FG_BLUE}Theme:${RESET} ${FG_YELLOW}Custom${RESET}`
+  );
+  lines.push(`  ${FG_BLUE}Shell:${RESET} zsh 5.9`);
+  lines.push("");
+
+  lines.push(`  ${BOLD}${FG_WHITE}Color Palette${RESET}`);
+  lines.push(`  ${FG_BLACK}███${FG_RED}███${FG_GREEN}███${FG_YELLOW}███${FG_BLUE}███${FG_MAGENTA}███${FG_CYAN}███${FG_WHITE}███${RESET}`);
+  lines.push(`  ${FG_BRIGHT_BLACK}███${FG_BRIGHT_RED}███${FG_BRIGHT_GREEN}███${FG_BRIGHT_YELLOW}███${FG_BRIGHT_BLUE}███${FG_BRIGHT_MAGENTA}███${FG_BRIGHT_CYAN}███${FG_BRIGHT_WHITE}███${RESET}`);
+  lines.push("");
+
+  lines.push(`  ${BOLD}${FG_WHITE}Text Styles${RESET}`);
+  lines.push(`  ${RESET}Normal${RESET}  ${BOLD}Bold${RESET}  ${DIM}Dim${RESET}  ${ITALIC}Italic${RESET}`);
+  lines.push(`  ${UNDERLINE}Underline${RESET}  ${STRIKETHROUGH}Strike${RESET}  ${INVERSE}Inverse${RESET}`);
+  lines.push("");
+
+  lines.push(`  ${BOLD}${FG_WHITE}Sample Terminal Session${RESET}`);
+  lines.push(`  ${prompt} ${FG_YELLOW}echo${RESET} ${FG_GREEN}"Hi"${RESET}`);
+  lines.push(`  Hi`);
+  lines.push(`  ${prompt} ${FG_YELLOW}ls${RESET}`);
+  lines.push(`  ${FG_BLUE}Documents${RESET}  ${FG_BLUE}Downloads${RESET}`);
+  lines.push(`  ${FG_GREEN}script.sh${RESET} ${FG_WHITE}config${RESET} ${FG_MAGENTA}image.png${RESET}`);
+  lines.push(`  ${prompt} ${FG_YELLOW}git${RESET} status`);
+  lines.push(`  ${FG_GREEN}On branch main${RESET}`);
+  lines.push(`  ${FG_RED}Changes not staged:${RESET}`);
+  lines.push(`    ${FG_RED}modified:${RESET} src/config.ts`);
+  lines.push("");
+  lines.push(`  ${prompt} `);
 
   return lines.join("\r\n");
 }
