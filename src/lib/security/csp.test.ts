@@ -58,6 +58,14 @@ describe("buildCsp", () => {
     expect(dev["connect-src"]).toContain("http://localhost:*");
   });
 
+  it("allows Vercel's debug scripts only in development", () => {
+    const prod = parseCsp(buildCsp(false));
+    const dev = parseCsp(buildCsp(true));
+
+    expect(dev["script-src"]).toContain("https://va.vercel-scripts.com");
+    expect(buildCsp(false)).not.toMatch(/vercel-scripts/);
+  });
+
   it("does not require the Google Fonts hosts (next/font self-hosts)", () => {
     const parsed = parseCsp(buildCsp(false));
     const fontSrc = parsed["font-src"].join(" ");

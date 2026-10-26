@@ -34,6 +34,9 @@
  *       helpers via blob URLs.
  *     - Vercel Analytics + Speed Insights ship tiny inline scripts that
  *       phone home; we allow only the official Vercel domains.
+ *     - In development only, the debug builds of those scripts load from
+ *       https://va.vercel-scripts.com, so the `isDev` branch below allows it.
+ *       Production loads them same-origin from /_vercel/.
  *   - style-src 'self' 'unsafe-inline':
  *     - 'unsafe-inline' is required for Tailwind's emitted styles and
  *       shadcn/ui's Radix primitives that set inline styles.
@@ -98,9 +101,13 @@ export function buildCsp(isDev: boolean): string {
     //   - 'unsafe-eval' for webpack/turbopack HMR
     //   - ws: / wss: for the HMR WebSocket
     //   - http: localhost and 127.0.0.1 (Next.js dev server)
+    //   - va.vercel-scripts.com: Vercel Analytics and Speed Insights load their
+    //     debug scripts from there in development. In production they load
+    //     same-origin /_vercel/ scripts, which 'self' already covers.
     directives["script-src"] = [
       ...directives["script-src"],
       "'unsafe-eval'",
+      "https://va.vercel-scripts.com",
     ];
     directives["connect-src"] = [
       ...directives["connect-src"],
