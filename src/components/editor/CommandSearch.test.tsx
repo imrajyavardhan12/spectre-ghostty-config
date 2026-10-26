@@ -3,6 +3,8 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { CommandSearch } from './CommandSearch';
 import { useConfigStore } from '@/lib/store/config-store';
 import { registerEditorActions } from '@/lib/editor-actions';
+import { allOptions } from '@/data/ghostty-options';
+import { GHOSTTY_COMPATIBILITY_VERSION } from '@/lib/compatibility';
 
 function openSearch() {
   fireEvent.keyDown(document, { key: 'k', metaKey: true });
@@ -24,6 +26,9 @@ describe('CommandSearch', () => {
   beforeEach(() => {
     act(() => {
       useConfigStore.getState().resetAll();
+      // resetAll leaves the target version and the hide toggle alone.
+      useConfigStore.getState().setTargetVersion(GHOSTTY_COMPATIBILITY_VERSION);
+      useConfigStore.getState().setHideUnsupported(false);
     });
   });
 
@@ -125,6 +130,29 @@ describe('CommandSearch', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Search' }), { target: { value: 'background-image' } });
 
     expect(screen.getByText(/^No options match/)).toBeTruthy();
+  });
+
+  it('says how many of all the options can be searched', () => {
+    render(<CommandSearch onSelectOption={vi.fn()} />);
+    openSearch();
+
+    const searchable = allOptions.filter((opt) => !opt.hidden).length;
+    expect(searchable).toBeLessThan(allOptions.length);
+    expect(screen.getByText(new RegExp(`^${searchable} of ${allOptions.length} options`))).toBeTruthy();
+  });
+
+  it('counts fewer options while newer-than-target ones are hidden', () => {
+    act(() => {
+      useConfigStore.getState().setTargetVersion('1.1.0');
+      useConfigStore.getState().setHideUnsupported(true);
+    });
+    render(<CommandSearch onSelectOption={vi.fn()} />);
+    openSearch();
+
+    const searchable = allOptions.filter((opt) => !opt.hidden).length;
+    const footer = screen.getByText(/ of \d+ options/).textContent ?? '';
+    const shown = Number(/^(\d+) of/.exec(footer)?.[1]);
+    expect(shown).toBeLessThan(searchable);
   });
 
   it('offers the file, presets and themes actions until something is typed', () => {
