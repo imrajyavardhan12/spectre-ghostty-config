@@ -59,7 +59,6 @@ describe("buildCsp", () => {
   });
 
   it("allows Vercel's debug scripts only in development", () => {
-    const prod = parseCsp(buildCsp(false));
     const dev = parseCsp(buildCsp(true));
 
     expect(dev["script-src"]).toContain("https://va.vercel-scripts.com");

@@ -92,6 +92,11 @@ export function CommandSearch({ onSelectOption }: CommandSearchProps) {
     [hideUnsupported, targetVersion]
   );
   const { results, total } = useMemo(() => searchOptions(visibleOptions, query), [visibleOptions, query]);
+  // The header says how many options Ghostty has, so say how many of them can be searched.
+  const optionCountLabel =
+    visibleOptions.length < allOptions.length
+      ? `${visibleOptions.length} of ${allOptions.length} options`
+      : `${visibleOptions.length} options`;
   const hasQuery = query.trim() !== "";
   const visibleActions = useMemo(() => {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -223,7 +228,7 @@ export function CommandSearch({ onSelectOption }: CommandSearchProps) {
             </span>
             <span className="flex-1" />
             <span>
-              {visibleOptions.length} options · {categories.length} categories
+              {optionCountLabel} · {categories.length} categories
             </span>
           </div>
         </Command>
