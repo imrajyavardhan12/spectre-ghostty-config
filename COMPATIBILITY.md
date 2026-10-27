@@ -6,7 +6,7 @@ Spectre treats Ghostty—not Spectre's UI, preview, or local schema—as the fin
 
 | Spectre release line | Verified Ghostty stable release | Public config option IDs | Last verified |
 | --- | --- | ---: | --- |
-| `0.6.x` | [`1.3.1`](https://ghostty.org/docs/install/release-notes/1-3-1) | 202 | 2026-10-25 |
+| `0.6.x` | [`1.3.1`](https://ghostty.org/docs/install/release-notes/1-3-1) | 202 | 2026-10-27 |
 
 The machine-readable source for this row is [`compatibility.json`](compatibility.json). The stable schema is pinned to Ghostty's immutable [`v1.3.1` Config.zig snapshot](https://github.com/ghostty-org/ghostty/blob/v1.3.1/src/config/Config.zig). Spectre's 202 local option IDs match both that stable source snapshot and the current [official configuration reference](https://ghostty.org/docs/config/reference).
 
