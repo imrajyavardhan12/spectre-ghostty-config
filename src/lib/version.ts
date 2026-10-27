@@ -1,1 +1,1 @@
-export const SPECTRE_VERSION = "0.6.0";
+export const SPECTRE_VERSION = "0.6.1";
