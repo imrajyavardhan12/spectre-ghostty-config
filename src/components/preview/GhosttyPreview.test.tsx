@@ -1,5 +1,6 @@
 'use client';
 
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useConfigStore } from '@/lib/store/config-store';
@@ -91,7 +92,7 @@ describe('GhosttyPreview lifecycle', () => {
     vi.restoreAllMocks();
   });
 
-  it('does not attach a terminal when initialization finishes after close', async () => {
+  it('does not attach a terminal when initialization finishes after unmount', async () => {
     let resolveInitialization!: () => void;
     mocks.initGhosttyMock.mockImplementationOnce(
       () => new Promise<void>((resolve) => {
@@ -99,13 +100,11 @@ describe('GhosttyPreview lifecycle', () => {
       })
     );
 
-    const { rerender } = render(
-      <GhosttyPreview isOpen />
-    );
+    const { unmount } = render(<GhosttyPreview />);
     await waitFor(() => expect(mocks.initGhosttyMock).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('status')).toHaveTextContent('Starting Ghostty…');
 
-    rerender(<GhosttyPreview isOpen={false} />);
+    unmount();
 
     await act(async () => {
       resolveInitialization();
@@ -113,24 +112,41 @@ describe('GhosttyPreview lifecycle', () => {
 
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(0));
 
-    rerender(<GhosttyPreview isOpen />);
+    render(<GhosttyPreview />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
     expect(mocks.terminalInstances[0].open).toHaveBeenCalledTimes(1);
   });
 
-  it('disposes the active terminal before creating a new one on reopen', async () => {
-    const { rerender } = render(
-      <GhosttyPreview isOpen />
-    );
+  it('disposes the active terminal on unmount and creates a new one when remounted', async () => {
+    const { unmount } = render(<GhosttyPreview />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
 
-    rerender(<GhosttyPreview isOpen={false} />);
+    unmount();
     expect(mocks.terminalInstances[0].dispose).toHaveBeenCalledTimes(1);
     expect(mocks.fitAddonInstances[0].dispose).toHaveBeenCalledTimes(1);
 
-    rerender(<GhosttyPreview isOpen />);
+    render(<GhosttyPreview />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(2));
     expect(mocks.terminalInstances[1].open).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps one live terminal under StrictMode and disposes it on unmount', async () => {
+    // Dev renders run effects, their cleanups, then the effects again.
+    const { unmount } = render(
+      <StrictMode>
+        <GhosttyPreview />
+      </StrictMode>
+    );
+    const live = () => mocks.terminalInstances.filter((term) => term.dispose.mock.calls.length === 0);
+    await waitFor(() => expect(live()).toHaveLength(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    expect(live()).toHaveLength(1);
+
+    unmount();
+
+    expect(live()).toHaveLength(0);
   });
 
   it('applies configured background color and opacity to the preview window', async () => {
@@ -139,7 +155,7 @@ describe('GhosttyPreview lifecycle', () => {
       useConfigStore.getState().setValue('background-opacity', 0.5);
     });
 
-    render(<GhosttyPreview isOpen />);
+    render(<GhosttyPreview />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
 
     const previewWindow = screen
@@ -162,7 +178,7 @@ describe('GhosttyPreview lifecycle', () => {
       )
       .mockResolvedValueOnce(undefined);
 
-    render(<GhosttyPreview isOpen />);
+    render(<GhosttyPreview />);
     await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
 
     act(() => {
@@ -194,7 +210,7 @@ describe('GhosttyPreview lifecycle', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mocks.failNextOpen = true;
 
-    render(<GhosttyPreview isOpen />);
+    render(<GhosttyPreview />);
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent("Preview couldn't start");
@@ -219,7 +235,7 @@ describe('GhosttyPreview focus', () => {
     render(
       <>
         <input aria-label="font style" />
-        <GhosttyPreview isOpen />
+        <GhosttyPreview />
       </>
     );
     const field = screen.getByLabelText('font style');
@@ -254,7 +270,7 @@ describe('GhosttyPreview pane', () => {
   });
 
   it('says it is loading, then live, and shows the terminal grid', async () => {
-    render(<GhosttyPreview isOpen />);
+    render(<GhosttyPreview />);
     expect(screen.getByText('Loading preview')).toBeTruthy();
 
     expect(await screen.findByText('Live — updates as you edit')).toBeTruthy();
@@ -267,7 +283,7 @@ describe('GhosttyPreview pane', () => {
     mocks.failNextOpen = true;
     const onViewConfig = vi.fn();
 
-    render(<GhosttyPreview isOpen onViewConfig={onViewConfig} />);
+    render(<GhosttyPreview onViewConfig={onViewConfig} />);
 
     const alert = await screen.findByRole('alert');
     expect(alert.className).toContain('bg-card');
@@ -279,7 +295,7 @@ describe('GhosttyPreview pane', () => {
 
   it('drops the grid size when the preview stops being live', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    render(<GhosttyPreview isOpen />);
+    render(<GhosttyPreview />);
     await screen.findByText('92×34');
 
     mocks.initGhosttyMock.mockRejectedValueOnce(new Error('engine gone'));
@@ -295,7 +311,7 @@ describe('GhosttyPreview pane', () => {
   it('writes the compact sample when the terminal is narrower than the wide one', async () => {
     mocks.cols = 37;
     try {
-      render(<GhosttyPreview isOpen />);
+      render(<GhosttyPreview />);
       await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
       const terminal = mocks.terminalInstances[0];
       await waitFor(() => expect(terminal.write).toHaveBeenCalledTimes(2));
@@ -325,7 +341,7 @@ describe('GhosttyPreview pane', () => {
     } as unknown as typeof ResizeObserver;
     const resize = () => act(() => [...callbacks].forEach((callback) => callback()));
     try {
-      render(<GhosttyPreview isOpen />);
+      render(<GhosttyPreview />);
       await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
       const terminal = mocks.terminalInstances[0] as MockTerminalInstance & { cols: number };
       await waitFor(() => expect(terminal.write).toHaveBeenCalledTimes(2));
@@ -368,7 +384,7 @@ describe('GhosttyPreview pane', () => {
       }
     } as unknown as typeof ResizeObserver;
     try {
-      render(<GhosttyPreview isOpen />);
+      render(<GhosttyPreview />);
       await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
       const terminal = mocks.terminalInstances[0] as MockTerminalInstance & { cols: number };
       const fitAddon = mocks.fitAddonInstances[0];
@@ -395,7 +411,7 @@ describe('GhosttyPreview pane', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mocks.failNextOpen = true;
 
-    render(<GhosttyPreview isOpen />);
+    render(<GhosttyPreview />);
 
     await screen.findByRole('alert');
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();

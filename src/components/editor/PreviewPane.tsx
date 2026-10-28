@@ -90,7 +90,7 @@ export function PreviewPaneBody({ tab, onTabChange, onCollapse, inSheet = false 
         className={cn("min-h-0 flex-1", tab === "preview" ? "p-3.5" : "flex flex-col")}
       >
         {tab === "preview" ? (
-          <GhosttyPreview isOpen onViewConfig={() => onTabChange("config")} />
+          <GhosttyPreview onViewConfig={() => onTabChange("config")} />
         ) : (
           <ConfigFileContent showActions={false} />
         )}
