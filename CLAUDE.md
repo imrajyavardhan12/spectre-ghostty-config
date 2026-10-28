@@ -8,7 +8,8 @@ How to contribute (sources to check, advancing the stable target, presets, PR wo
 
 ```bash
 bun run typecheck && bun run lint && bun run test -- --run   # every change, ~10 s
-bun run test:e2e                     # Playwright (starts its own server on :3100); `bunx playwright install chromium` once
+bun run test:e2e                     # Playwright on :3100: `next dev` locally (reuses a running one), `next start` in CI; `bunx playwright install chromium` once
+bun run build                        # CI runs this too
 bun run schema:check                 # options vs Ghostty's reference (needs network)
 bun run keybinds:defaults --check    # generated default keybinds match the pinned Ghostty
 bun run themes:builtin --check       # generated built-in theme names match the pinned Ghostty
@@ -28,6 +29,12 @@ Plain `bun run test` starts watch mode; pass `-- --run` for a single run.
 - Generated files (`src/data/ghostty-default-keybinds.ts`, `src/data/ghostty-builtin-themes.ts`): regenerate,
   never hand-edit.
 - Bug fix: add the test that fails without the fix. Tests sit next to the code (`*.test.ts(x)`).
+
+## Releasing
+
+A release is its own PR, `chore: release vX.Y.Z` (see #205 for a patch, #200 for a minor): version in
+`package.json` and `src/lib/version.ts`, the compatibility files, and `CHANGELOG.md`. Run `bun run schema:check`
+first. Tagging, the GitHub Release and the deploy come after the merge and are the maintainer's call.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
