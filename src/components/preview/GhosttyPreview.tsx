@@ -18,7 +18,6 @@ import { detectClientOS, type ClientOS } from "@/lib/platform";
 import type { ITerminalAddon, Terminal as GhosttyTerminal } from "ghostty-web";
 
 interface GhosttyPreviewProps {
-  isOpen: boolean;
   /** Offered beside Retry when the preview can't start, so the config is one click away. */
   onViewConfig?: () => void;
 }
@@ -30,7 +29,7 @@ type FitAddonLike = ITerminalAddon & { fit: () => void };
 const FIT_SETTLE_MS = 60;
 const DEBOUNCE_MS = 300;
 
-export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
+export function GhosttyPreview({ onViewConfig }: GhosttyPreviewProps) {
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [clientOS] = useState<ClientOS>(() => detectClientOS());
@@ -115,12 +114,11 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
   }, []);
 
   const createTerminal = useCallback(async (showLoading = true) => {
-    if (!containerRef.current || !isOpen) return;
+    if (!containerRef.current) return;
 
     const requestId = ++creationRequestRef.current;
     const isCurrentRequest = () =>
       requestId === creationRequestRef.current &&
-      isOpen &&
       containerRef.current !== null;
 
     if (showLoading) {
@@ -148,7 +146,7 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
       if (!isCurrentRequest()) return;
 
       // Dispose existing terminal first. A request id prevents an older
-      // in-flight initialization from attaching itself after a close or a
+      // in-flight initialization from attaching itself after an unmount or a
       // newer config change.
       disposeTerminal();
 
@@ -201,7 +199,7 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
 
       setLoadingState("ready");
     } catch (err) {
-      // A stale request may have been invalidated by closing the preview or
+      // A stale request may have been invalidated by unmounting the preview or
       // starting another initialization. It must not overwrite the current
       // UI state, but any locally-created resources still need cleanup.
       if (!isCurrentRequest()) {
@@ -215,22 +213,21 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
       setError(err instanceof Error ? err.message : "Failed to load preview");
       setLoadingState("error");
     }
-  }, [disposeTerminal, fitAndMeasure, isOpen, writeContent]);
+  }, [disposeTerminal, fitAndMeasure, writeContent]);
 
-  // Initial terminal creation when preview opens
+  // Initial terminal creation when the preview mounts
   useEffect(() => {
-    if (isOpen && loadingState === "idle") {
+    if (loadingState === "idle") {
       createTerminal(true);
     }
-  }, [isOpen, loadingState, createTerminal]);
+  }, [loadingState, createTerminal]);
 
   // Debounced recreation when config changes (after initial load)
   useEffect(() => {
-    // Skip if not open or not yet initialized. Comparing against the last
+    // Skip if not yet initialized. Comparing against the last
     // successful creation also avoids recreating the terminal merely because
     // the initial loading state changed to ready.
     if (
-      !isOpen ||
       !isInitializedRef.current ||
       loadingState !== "ready" ||
       (lastCreatedConfigRef.current === configRef.current &&
@@ -263,9 +260,11 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [config, appliedTheme, isOpen, loadingState, createTerminal]);
+  }, [config, appliedTheme, loadingState, createTerminal]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount. Invalidate pending initialization before disposing,
+  // otherwise a late WASM import could attach a terminal to a container that
+  // is no longer mounted.
   useEffect(() => {
     return () => {
       creationRequestRef.current += 1;
@@ -276,30 +275,11 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
     };
   }, [disposeTerminal]);
 
-  // Reset terminal when closing so it reinitializes on reopen. Invalidate
-  // pending initialization before disposing, otherwise a late WASM import
-  // could attach a terminal to a container that is no longer mounted.
-  useEffect(() => {
-    if (!isOpen) {
-      creationRequestRef.current += 1;
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      disposeTerminal();
-      setLoadingState("idle");
-      setGridSize(null);
-      isInitializedRef.current = false;
-      configVersionRef.current = 0;
-      lastCreatedConfigRef.current = null;
-      lastCreatedThemeRef.current = null;
-    }
-  }, [isOpen, disposeTerminal]);
-
   // Refit whenever the terminal's box changes size: window resizes, and the
   // pane opening, collapsing, or changing width.
   useEffect(() => {
     const container = containerRef.current;
-    if (!isOpen || loadingState !== "ready" || !container) return;
+    if (loadingState !== "ready" || !container) return;
 
     const refit = () => {
       const fitAddon = fitAddonRef.current;
@@ -325,9 +305,7 @@ export function GhosttyPreview({ isOpen, onViewConfig }: GhosttyPreviewProps) {
       clearTimeout(trailingRefit);
       observer.disconnect();
     };
-  }, [isOpen, loadingState, fitAndMeasure, writeContent]);
-
-  if (!isOpen) return null;
+  }, [loadingState, fitAndMeasure, writeContent]);
 
   const background = (config["background"] as string) || "#1a1b26";
   const foreground = (config["foreground"] as string) || "#c0caf5";
