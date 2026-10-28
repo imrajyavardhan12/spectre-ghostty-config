@@ -32,9 +32,14 @@ Plain `bun run test` starts watch mode; pass `-- --run` for a single run.
 
 ## Releasing
 
-A release is its own PR, `chore: release vX.Y.Z` (see #205 for a patch, #200 for a minor): version in
-`package.json` and `src/lib/version.ts`, the compatibility files, and `CHANGELOG.md`. Run `bun run schema:check`
+The checklist is `docs/RELEASE.md`. A release is its own PR, `chore: release vX.Y.Z` (see #205 for a patch, #200 for
+a minor), and also changes the placeholder in `.github/ISSUE_TEMPLATE/bug_report.yml`. Run `bun run schema:check`
 first. Tagging, the GitHub Release and the deploy come after the merge and are the maintainer's call.
+
+## Review
+
+`REVIEW.md` says what failure looks like here. The `spectre-reviewer` agent (`.claude/agents/`) applies it with fresh
+context; give it the change's purpose, the guarantees it must keep, and the round number.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
