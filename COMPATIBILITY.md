@@ -6,7 +6,7 @@ Spectre treats Ghostty—not Spectre's UI, preview, or local schema—as the fin
 
 | Spectre release line | Verified Ghostty stable release | Public config option IDs | Last verified |
 | --- | --- | ---: | --- |
-| `0.6.x` | [`1.4.0`](https://ghostty.org/docs/install/release-notes/1-4-0) | 213 | 2026-10-28 |
+| `0.7.x` | [`1.4.0`](https://ghostty.org/docs/install/release-notes/1-4-0) | 213 | 2026-10-29 |
 
 The machine-readable source for this row is [`compatibility.json`](compatibility.json). The stable schema is pinned to Ghostty's immutable [`v1.4.0` Config.zig snapshot](https://github.com/ghostty-org/ghostty/blob/v1.4.0/src/config/Config.zig). Spectre's 213 local option IDs match that stable source snapshot. The [official configuration reference](https://ghostty.org/docs/config/reference) still listed the 1.3.1 set on the verification date, so the tagged source is the authority for this release.
 
@@ -46,7 +46,7 @@ Always validate a final exported config with the Ghostty version and platform wh
 
 ### Ghostty 1.4.0
 
-This is the verified stable target for Spectre `0.6.x`. Option IDs are checked against the immutable release source. Ghostty 1.4.0 adds 11 options and renames one, and it changes how three existing settings behave. Spectre handles them like this:
+This is the verified stable target for Spectre `0.7.x`. Option IDs are checked against the immutable release source. Ghostty 1.4.0 adds 11 options and renames one, and it changes how three existing settings behave. Spectre handles them like this:
 
 - **`scrollback-limit` is now `scrollback-limit-bytes`.** Ghostty still accepts the old key. Imports, share links and saved settings are read as the new key, and an export for a target before 1.4 writes the old key. The default rose from 10 MB to 50 MB, so a value equal to 50 MB is kept and exported rather than dropped as unmodified (a 1.3 target would otherwise get 10 MB).
 - **`copy-on-select`** takes `none`, `primary`, `clipboard` and `both`. `true` and `false` are still accepted but superseded, and `clipboard` no longer also fills the selection clipboard. Ghostty's default is `primary` on Linux and `none` elsewhere (it was `true` on macOS and Linux in 1.3), so Spectre's default is "Ghostty default", which exports nothing, and every explicit choice is exported.
