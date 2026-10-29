@@ -11,6 +11,8 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+## [0.7.0] - 2026-10-29
+
 ### Added
 
 - Ghostty 1.4.0 is the new stable target, with all 213 of its options. New: `scrollback-limit-lines`, `scrollback-compression`, `vt-window-resize-allowed`, `vt-xt-checksum-report`, `vt-xt-checksum-extension`, `link-osc8`, `middle-click-action`, `clipboard-write-limit-bytes`, `drag-handle`, `gtk-tabs-inverted` and `gtk-horizontal-tab-scroll`. The keybind actions `move_tab_to_new_window`, `prompt_window_title`, `set_window_title` and `open_config:new_window` are recognized.
@@ -25,6 +27,7 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 - `window-padding-balance` is a choice of Off, On and Equal instead of a switch. Saved settings and older share links that hold a boolean keep working.
 - The default keybind notes follow Ghostty 1.4.0: on Linux `ctrl+shift+page_up` and `ctrl+shift+page_down` move the tab and `jump_to_prompt` is on `ctrl+shift+arrow_up` and `ctrl+shift+arrow_down`.
 - Turning on `vt-window-resize-allowed` or `vt-xt-checksum-report` is flagged in the import review and on shared links, as other settings that weaken what a program can do are.
+- Settings whose choice labels didn't fit a segmented control (Extend Always, After First, When Unfocused, Background, Transparent, Auto Download, Raised Border) are shown as a select instead of being cut off.
 - The Developer preset no longer sets a 50 MB scrollback, which is now Ghostty's default, and Server & Logs sets `scrollback-limit-bytes`.
 
 ## [0.6.1] - 2026-10-27
