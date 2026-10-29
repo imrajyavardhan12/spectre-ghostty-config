@@ -462,3 +462,25 @@ describe('keybind case sensitivity (Ghostty Trigger.parse)', () => {
     expect(validateKeybind(keybind)).toEqual({ valid: true, errors: [], warnings: [] });
   });
 });
+
+describe('Ghostty 1.4.0 actions', () => {
+  it.each([
+    'move_tab_to_new_window',
+    'prompt_window_title',
+    'set_window_title:Build logs',
+    'set_window_title:',
+    'open_config',
+    'open_config:os_open',
+    'open_config:new_window',
+  ])('accepts %s', (action) => {
+    expect(validateAction(action).valid).toBe(true);
+  });
+
+  it('rejects a parameter open_config does not take', () => {
+    expect(validateAction('open_config:somewhere').valid).toBe(false);
+  });
+
+  it('rejects a parameter on an action that takes none', () => {
+    expect(validateAction('move_tab_to_new_window:1').valid).toBe(false);
+  });
+});

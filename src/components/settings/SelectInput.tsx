@@ -12,6 +12,7 @@ import { SettingWrapper } from "./SettingWrapper";
 import { fitsSegmentedControl } from "@/lib/utils/segmented";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { EnumOption } from "@/lib/schema/types";
+import { getVisibleChoices } from "@/lib/ghostty-versions";
 
 interface SelectInputProps {
   option: EnumOption;
@@ -31,8 +32,11 @@ function fromUiValue(v: string) {
 
 export function SelectInput({ option }: SelectInputProps) {
   const { getValue, setValue, resetValue } = useConfigStore();
+  const targetVersion = useConfigStore((state) => state.targetVersion);
+  const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
   const value = getValue(option.id) as string;
   const modified = useIsModified(option.id);
+  const choices = getVisibleChoices(option, targetVersion, hideUnsupported, value ?? option.default);
 
   return (
     <SettingWrapper
@@ -46,12 +50,12 @@ export function SelectInput({ option }: SelectInputProps) {
       sinceVersion={option.sinceVersion}
       platform={option.platform}
     >
-      {fitsSegmentedControl(option.options.map((opt) => opt.label)) ? (
+      {fitsSegmentedControl(choices.map((opt) => opt.label)) ? (
         <SegmentedControl
           aria-labelledby={`${option.id}-label`}
           value={value ?? option.default}
           onValueChange={(v) => setValue(option.id, v)}
-          options={option.options}
+          options={choices}
         />
       ) : (
         <Select
@@ -62,7 +66,7 @@ export function SelectInput({ option }: SelectInputProps) {
             <SelectValue placeholder="Select an option" />
           </SelectTrigger>
           <SelectContent>
-            {option.options.map((opt) => (
+            {choices.map((opt) => (
               <SelectItem key={opt.value} value={toUiValue(opt.value)}>
                 {opt.label}
               </SelectItem>

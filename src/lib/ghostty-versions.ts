@@ -1,30 +1,14 @@
-import type { ConfigOption } from "@/lib/schema/types";
+import type { ConfigOption, EnumChoice, EnumOption } from "@/lib/schema/types";
+import { GHOSTTY_BUILTIN_THEMES_ADDED_IN } from "@/data/ghostty-builtin-themes";
+import { resolvePreviewThemeName } from "@/lib/ghostty/preview-theme";
 import { getConfigOption } from "@/lib/utils/config-options";
 
 /** Baseline Ghostty release: options without sinceVersion metadata date to 1.0. */
 export const GHOSTTY_BASELINE_VERSION = "1.0.0";
 
-/**
- * Ghostty stable releases that may appear as option availability or as the
- * editor target version. Source-audited in scripts/audit-ghostty-version-availability.ts.
- * When Ghostty ships a new stable release, append it here.
- */
-export const GHOSTTY_RELEASES = [
-  "1.0.0",
-  "1.0.1",
-  "1.1.0",
-  "1.1.1",
-  "1.1.2",
-  "1.1.3",
-  "1.2.0",
-  "1.2.1",
-  "1.2.2",
-  "1.2.3",
-  "1.3.0",
-  "1.3.1",
-] as const;
+import { GHOSTTY_RELEASES, type GhosttyRelease } from "@/lib/ghostty-releases";
 
-export type GhosttyRelease = (typeof GHOSTTY_RELEASES)[number];
+export { GHOSTTY_RELEASES, type GhosttyRelease };
 
 export function isKnownGhosttyRelease(version: string): version is GhosttyRelease {
   return (GHOSTTY_RELEASES as readonly string[]).includes(version);
@@ -75,4 +59,65 @@ export function splitOptionsBySupport(options: ConfigOption[], targetVersion: st
     (isOptionSupportedIn(option.id, targetVersion) ? supported : unsupported).push(option);
   }
   return { supported, unsupported };
+}
+
+/**
+ * The key to write for an option in a config meant for `targetVersion`.
+ * Releases before a rename only know the old key, so `scrollback-limit-bytes`
+ * is written as `scrollback-limit` for a 1.3 target.
+ */
+export function getOptionKeyForTarget(optionId: string, targetVersion: string): string {
+  const renamed = getConfigOption(optionId)?.renamed;
+  return renamed && compareGhosttyVersions(targetVersion, renamed.in) < 0 ? renamed.from : optionId;
+}
+
+/** Release that introduced an enum value, or undefined when it has been there all along. */
+export function getChoiceIntroducedIn(optionId: string, value: unknown): string | undefined {
+  const option = getConfigOption(optionId);
+  if (option?.type !== "enum") return undefined;
+  return option.options.find((choice) => choice.value === value)?.sinceVersion;
+}
+
+/** Whether the enum value exists in the target. Unknown options and values count as supported. */
+export function isChoiceSupportedIn(optionId: string, value: unknown, targetVersion: string): boolean {
+  const since = getChoiceIntroducedIn(optionId, value);
+  return since === undefined || compareGhosttyVersions(targetVersion, since) >= 0;
+}
+
+/**
+ * The choices to offer for an enum option on this target. Values newer than the
+ * target are labelled with the release that adds them, or left out when newer
+ * options are hidden. Values the target has already superseded are left out too,
+ * except for the one currently selected, so a saved config never shows a blank.
+ */
+export function getVisibleChoices(
+  option: EnumOption,
+  targetVersion: string,
+  hideUnsupported: boolean,
+  currentValue: unknown
+): EnumChoice[] {
+  const choices: EnumChoice[] = [];
+  for (const choice of option.options) {
+    if (choice.value !== currentValue) {
+      if (choice.deprecatedIn && compareGhosttyVersions(targetVersion, choice.deprecatedIn) >= 0) continue;
+      if (choice.sinceVersion && compareGhosttyVersions(targetVersion, choice.sinceVersion) < 0 && hideUnsupported) continue;
+    }
+    const newer = choice.sinceVersion && compareGhosttyVersions(targetVersion, choice.sinceVersion) < 0;
+    choices.push(newer ? { ...choice, label: `${choice.label} (${shortGhosttyVersion(choice.sinceVersion!)}+)` } : choice);
+  }
+  return choices;
+}
+
+/** Release that added a built-in theme; undefined when it is older than the one the list tracks. */
+export function getThemeIntroducedIn(name: string): string | undefined {
+  return Object.hasOwn(GHOSTTY_BUILTIN_THEMES_ADDED_IN, name) ? GHOSTTY_BUILTIN_THEMES_ADDED_IN[name] : undefined;
+}
+
+/** Whether every built-in theme named by a `theme` value exists in the target. File paths and custom names count as supported. */
+export function isThemeValueSupportedIn(value: unknown, targetVersion: string): boolean {
+  return [true, false].every((prefersDark) => {
+    const name = resolvePreviewThemeName(value, prefersDark);
+    const since = name === null ? undefined : getThemeIntroducedIn(name);
+    return since === undefined || compareGhosttyVersions(targetVersion, since) >= 0;
+  });
 }

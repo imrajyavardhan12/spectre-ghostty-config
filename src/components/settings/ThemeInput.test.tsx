@@ -4,6 +4,8 @@ import { ThemeInput } from './ThemeInput';
 import { getOptionById } from '@/data/ghostty-options';
 import { useConfigStore } from '@/lib/store/config-store';
 import type { StringOption } from '@/lib/schema/types';
+import { GHOSTTY_BUILTIN_THEMES_ADDED_IN } from '@/data/ghostty-builtin-themes';
+import { GHOSTTY_COMPATIBILITY_VERSION } from '@/lib/compatibility';
 
 const option = getOptionById('theme') as StringOption;
 
@@ -20,6 +22,9 @@ describe('ThemeInput', () => {
   beforeEach(() => {
     act(() => {
       useConfigStore.getState().resetAll();
+      // resetAll leaves the target version and the hide toggle alone.
+      useConfigStore.getState().setTargetVersion(GHOSTTY_COMPATIBILITY_VERSION);
+      useConfigStore.getState().setHideUnsupported(false);
     });
   });
 
@@ -76,5 +81,31 @@ describe('ThemeInput', () => {
     fireEvent.click(screen.getByRole('option', { name: /Use light:Dracula,dark:Nord/ }));
 
     expect(useConfigStore.getState().config.theme).toBe('light:Dracula,dark:Nord');
+  });
+
+  it('flags themes a newer Ghostty added when an older release is targeted, and leaves them out when hiding', () => {
+    const added = Object.keys(GHOSTTY_BUILTIN_THEMES_ADDED_IN)[0];
+    act(() => {
+      useConfigStore.getState().setTargetVersion('1.3.1');
+    });
+    render(<ThemeInput option={option} />);
+
+    openList();
+    expect(screen.getByRole('option', { name: new RegExp(`^${added}`) }).textContent).toContain('Needs 1.4');
+    expect(screen.getByRole('option', { name: 'Dracula' }).textContent).not.toContain('Needs');
+
+    act(() => {
+      useConfigStore.getState().setHideUnsupported(true);
+    });
+    expect(screen.queryByRole('option', { name: new RegExp(`^${added}`) })).toBeNull();
+    expect(screen.getByRole('option', { name: 'Dracula' })).toBeTruthy();
+  });
+
+  it('shows no version flag on the stable target', () => {
+    const added = Object.keys(GHOSTTY_BUILTIN_THEMES_ADDED_IN)[0];
+    render(<ThemeInput option={option} />);
+
+    openList();
+    expect(screen.getByRole('option', { name: new RegExp(`^${added}`) }).textContent).not.toContain('Needs');
   });
 });

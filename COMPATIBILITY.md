@@ -6,9 +6,9 @@ Spectre treats Ghostty—not Spectre's UI, preview, or local schema—as the fin
 
 | Spectre release line | Verified Ghostty stable release | Public config option IDs | Last verified |
 | --- | --- | ---: | --- |
-| `0.6.x` | [`1.3.1`](https://ghostty.org/docs/install/release-notes/1-3-1) | 202 | 2026-10-27 |
+| `0.6.x` | [`1.4.0`](https://ghostty.org/docs/install/release-notes/1-4-0) | 213 | 2026-10-28 |
 
-The machine-readable source for this row is [`compatibility.json`](compatibility.json). The stable schema is pinned to Ghostty's immutable [`v1.3.1` Config.zig snapshot](https://github.com/ghostty-org/ghostty/blob/v1.3.1/src/config/Config.zig). Spectre's 202 local option IDs match both that stable source snapshot and the current [official configuration reference](https://ghostty.org/docs/config/reference).
+The machine-readable source for this row is [`compatibility.json`](compatibility.json). The stable schema is pinned to Ghostty's immutable [`v1.4.0` Config.zig snapshot](https://github.com/ghostty-org/ghostty/blob/v1.4.0/src/config/Config.zig). Spectre's 213 local option IDs match that stable source snapshot. The [official configuration reference](https://ghostty.org/docs/config/reference) still listed the 1.3.1 set on the verification date, so the tagged source is the authority for this release.
 
 **This is a stable target, not a blanket minimum-version claim.** A config using only older options may work with an older Ghostty release. The editor's Ghostty version selector (persisted, defaulting to the stable target above) marks options newer than the selected release, can hide them from navigation and search, and exports and shared links warn about them explicitly instead of failing silently.
 
@@ -44,9 +44,23 @@ Always validate a final exported config with the Ghostty version and platform wh
 
 ## Version behavior
 
+### Ghostty 1.4.0
+
+This is the verified stable target for Spectre `0.6.x`. Option IDs are checked against the immutable release source. Ghostty 1.4.0 adds 11 options and renames one, and it changes how three existing settings behave. Spectre handles them like this:
+
+- **`scrollback-limit` is now `scrollback-limit-bytes`.** Ghostty still accepts the old key. Imports, share links and saved settings are read as the new key, and an export for a target before 1.4 writes the old key. The default rose from 10 MB to 50 MB, so a value equal to 50 MB is kept and exported rather than dropped as unmodified (a 1.3 target would otherwise get 10 MB).
+- **`copy-on-select`** takes `none`, `primary`, `clipboard` and `both`. `true` and `false` are still accepted but superseded, and `clipboard` no longer also fills the selection clipboard. Ghostty's default is `primary` on Linux and `none` elsewhere (it was `true` on macOS and Linux in 1.3), so Spectre's default is "Ghostty default", which exports nothing, and every explicit choice is exported.
+- **`window-padding-balance`** is now an enum (`false`, `true`, `equal`); `equal` needs 1.4. Saved settings and older share links that hold a boolean are read as the matching value.
+- **Values newer than the target** are labelled with their release in the editor, left out when newer options are hidden, and named in the export warning, the same as newer options.
+- **Default keybinds** are regenerated from v1.4.0. On Linux, `ctrl+shift+page_up` and `ctrl+shift+page_down` now move the tab, and `jump_to_prompt` moved to `ctrl+shift+arrow_up` and `ctrl+shift+arrow_down`. Keybind actions `move_tab_to_new_window`, `prompt_window_title`, `set_window_title` and `open_config:new_window` are recognized.
+- **Built-in themes** gain 356 names; for an older target they are marked "Needs 1.4", and the export warning names any in use.
+- **`vt-window-resize-allowed` and `vt-xt-checksum-report`** are treated as sensitive when turned on, because they let a program move the window or read the screen back.
+
+Known limits: default values and default keybind notes describe 1.4.0 even when an older target is selected. Spectre cannot represent the word `unlimited` for the two byte limits; an import says so instead of calling it a bad number. Color values follow the 1.3 grammar, so the forms 1.4.0 added (`rgb:`, `rgbi:` and 9 or 12 digit hex) are rejected on import. `command-palette-entry = clear` and `~` expansion in `theme` paths are new in 1.4.0 and are not flagged for an older target, and a share link's banner counts newer options but not newer values.
+
 ### Ghostty 1.3.1
 
-This is the verified stable target for Spectre `0.6.x`. Option IDs are checked against the immutable release source and the live official reference. Ghostty 1.3.1 introduced [`progress-style`](https://ghostty.org/docs/install/release-notes/1-3-1), which Spectre marks at the patch-level version where it first appears.
+Ghostty 1.3.1 introduced [`progress-style`](https://ghostty.org/docs/install/release-notes/1-3-1), which Spectre marks at the patch-level version where it first appears.
 
 ### Older Ghostty releases
 

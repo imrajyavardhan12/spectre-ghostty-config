@@ -24,6 +24,9 @@ const WEAKENING_VALUES: Record<string, (value: unknown) => boolean> = {
   "clipboard-read": (value) => value === "allow",
   "clipboard-write": (value) => value === "allow",
   "clipboard-paste-protection": (value) => value === false,
+  // Off by default because a program can move your window or read the screen back.
+  "vt-window-resize-allowed": (value) => value === true,
+  "vt-xt-checksum-report": (value) => value === true,
 };
 
 function toDisplayValues(value: unknown): string[] {

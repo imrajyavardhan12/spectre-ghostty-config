@@ -364,3 +364,21 @@ export function extractActionDefaultParams(bindingSource: string): Record<string
   }
   return params;
 }
+
+/**
+ * Config.zig may spell an action's parameter as `.default` (`open_config = .default`),
+ * which means the value its type declares as the default. Spell that value out so it
+ * matches what an omitted parameter normalizes to.
+ */
+export function resolveDefaultActionParams(
+  bindings: readonly GhosttyDefaultKeybind[],
+  defaultParams: Readonly<Record<string, string>>
+): GhosttyDefaultKeybind[] {
+  return bindings.map((binding) => {
+    const colon = binding.action.indexOf(":");
+    if (colon === -1 || binding.action.slice(colon + 1) !== "default") return binding;
+    const name = binding.action.slice(0, colon);
+    const value = defaultParams[name];
+    return value === undefined ? binding : { ...binding, action: `${name}:${value}` };
+  });
+}

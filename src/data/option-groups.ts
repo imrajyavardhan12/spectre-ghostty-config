@@ -177,6 +177,7 @@ export const OPTION_GROUPS: Record<Category, readonly OptionGroupDefinition[]> =
         "unfocused-split-fill",
         "split-divider-color",
         "split-preserve-zoom",
+        "drag-handle",
       ],
     },
     {
@@ -223,6 +224,7 @@ export const OPTION_GROUPS: Record<Category, readonly OptionGroupDefinition[]> =
         "mouse-scroll-multiplier",
         "scroll-to-bottom",
         "right-click-action",
+        "middle-click-action",
         "focus-follows-mouse",
         "click-repeat-interval",
       ],
@@ -235,6 +237,7 @@ export const OPTION_GROUPS: Record<Category, readonly OptionGroupDefinition[]> =
       optionIds: [
         "clipboard-read",
         "clipboard-write",
+        "clipboard-write-limit-bytes",
         "copy-on-select",
         "clipboard-trim-trailing-spaces",
         "clipboard-paste-protection",
@@ -298,6 +301,7 @@ export const OPTION_GROUPS: Record<Category, readonly OptionGroupDefinition[]> =
       name: "Links & command palette",
       optionIds: [
         "link-url",
+        "link-osc8",
         "link-previews",
         "link",
         "command-palette-entry",
@@ -416,6 +420,8 @@ export const OPTION_GROUPS: Record<Category, readonly OptionGroupDefinition[]> =
         "gtk-toolbar-style",
         "gtk-tabs-location",
         "gtk-wide-tabs",
+        "gtk-tabs-inverted",
+        "gtk-horizontal-tab-scroll",
         "gtk-custom-css",
       ],
     },
@@ -453,8 +459,19 @@ export const OPTION_GROUPS: Record<Category, readonly OptionGroupDefinition[]> =
       id: "limits",
       name: "Limits",
       optionIds: [
-        "scrollback-limit",
+        "scrollback-limit-bytes",
+        "scrollback-limit-lines",
+        "scrollback-compression",
         "image-storage-limit",
+      ],
+    },
+    {
+      id: "terminal-reports",
+      name: "Terminal reports",
+      optionIds: [
+        "vt-window-resize-allowed",
+        "vt-xt-checksum-report",
+        "vt-xt-checksum-extension",
       ],
     },
     {

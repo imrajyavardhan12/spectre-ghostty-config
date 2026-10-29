@@ -16,4 +16,13 @@ describe("fitsSegmentedControl", () => {
     expect(fitsSegmentedControl(["Block", "Bar", "Underline", "Hollow Block"])).toBe(false);
     expect(fitsSegmentedControl(["Short", "A very long label"])).toBe(false);
   });
+
+  it("allows shorter labels as choices are added, because segments share the width", () => {
+    expect(fitsSegmentedControl(["Allow", "Deny", "Ask a person every time"])).toBe(false);
+    expect(fitsSegmentedControl(["Off", "Check Only", "Auto"])).toBe(true);
+    expect(fitsSegmentedControl(["Off", "Check Only", "Auto Download"])).toBe(false);
+    expect(fitsSegmentedControl(["None", "Primary", "Clipboard", "Both"])).toBe(false);
+    expect(fitsSegmentedControl(["None", "Primary", "Select", "Both"])).toBe(true);
+    expect(fitsSegmentedControl(["Background", "Extend"])).toBe(true);
+  });
 });

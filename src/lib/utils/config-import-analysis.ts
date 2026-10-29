@@ -7,6 +7,7 @@ import {
   getConfigOption,
   isPathOption,
   isRepeatableOption,
+  resolveRenamedKey,
 } from "@/lib/utils/config-options";
 import {
   createConfigValues,
@@ -39,6 +40,7 @@ export type ImportDiagnosticCode =
   | "malformed-line"
   | "invalid-boolean"
   | "invalid-number"
+  | "invalid-limit"
   | "unsupported-number-form"
   | "unsupported-number-range"
   | "number-out-of-range"
@@ -157,6 +159,9 @@ function appendValue(
 
 const TRUE_BOOLEAN_TOKENS = new Set(["1", "t", "T", "true"]);
 const FALSE_BOOLEAN_TOKENS = new Set(["0", "f", "F", "false"]);
+// Ghostty's Limit type also takes the word `unlimited`.
+const UNLIMITED_NUMBER_OPTIONS = new Set(["scrollback-limit-bytes", "clipboard-write-limit-bytes"]);
+
 const FLOAT_PATTERN = /^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$/;
 const INTEGER_PATTERN = /^(?:0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+|[0-9]+)$/;
 
@@ -288,7 +293,9 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
       return;
     }
 
-    const key = trimmed.slice(0, equalsIndex).trim();
+    // Ghostty still reads a renamed key, so a config written for an older
+    // release is read as the option's current id.
+    const key = resolveRenamedKey(trimmed.slice(0, equalsIndex).trim());
     const rawValue = trimmed.slice(equalsIndex + 1).trim();
 
     if (key === "") {
@@ -436,6 +443,13 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
           }
           return;
         }
+        if (value === "unlimited" && UNLIMITED_NUMBER_OPTIONS.has(key)) {
+          rejectValue(
+            "unsupported-number-form",
+            "This value is valid in Ghostty, but Spectre cannot yet represent an unlimited number."
+          );
+          return;
+        }
         const parsed = parseNumber(option, value);
         if (parsed.status === "invalid") {
           rejectValue("invalid-number", "Enter a valid Ghostty number.");
@@ -553,6 +567,11 @@ export function analyzeGhosttyConfig(configString: string): ImportAnalysis {
         if (option.repeatable) {
           appendValue(candidateConfig, key, value, false);
         } else {
+          const validation = validateConfigValue(option, value);
+          if (!validation.valid) {
+            rejectValue("invalid-limit", validation.errors.join(" "));
+            return;
+          }
           candidateConfig[key] = value;
         }
         break;

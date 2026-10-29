@@ -17,7 +17,7 @@ Presets live in [`src/data/presets.ts`](../src/data/presets.ts). The rules below
 
 - **Have a point of view.** A preset should solve one clear need (reading comfort, screen sharing, log work, a theme) in a handful of settings. If a setting doesn't serve that need, leave it out.
 - **Explain it in the description.** Say what the user will notice, not the option names. "Selections copy to the system clipboard" beats "copy-on-select = clipboard".
-- **Be careful with resource settings.** `scrollback-limit` is per terminal surface and held in memory, so large values multiply with every split and tab.
+- **Be careful with resource settings.** `scrollback-limit-bytes` is per terminal surface and held in memory, so large values multiply with every split and tab.
 - **Cite the reference.** In your pull request, link the reference section for each option you set and say why its value was chosen.
 
 ## Proposing a preset

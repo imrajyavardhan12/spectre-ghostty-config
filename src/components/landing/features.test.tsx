@@ -42,8 +42,8 @@ describe('FontSizeDemo', () => {
 describe('VersionTargeting', () => {
   it('hides the newer option and says so when an older version is picked', () => {
     render(<VersionTargeting />);
-    expect(screen.getByRole('radio', { name: 'Ghostty 1.3' })).toBeChecked();
-    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual(['1.0.1', '1.1.3', '1.2.3', '1.3.1']);
+    expect(screen.getByRole('radio', { name: 'Ghostty 1.4' })).toBeChecked();
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual(['1.0.1', '1.1.3', '1.2.3', '1.3.1', '1.4.0']);
     expect(screen.getByText('Key remap').closest('[data-hidden]')).toHaveAttribute('data-hidden', 'false');
     expect(screen.getByRole('status', { name: 'Version support' })).toHaveTextContent('Every option is shown.');
 
@@ -52,7 +52,7 @@ describe('VersionTargeting', () => {
     expect(screen.getByRole('status', { name: 'Version support' })).toHaveTextContent('Options newer than Ghostty 1.2 are hidden.');
     expect(screen.getByText('Key remap').closest('[data-hidden]')).toHaveAttribute('data-hidden', 'true');
 
-    fireEvent.click(screen.getByRole('radio', { name: 'Ghostty 1.3' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Ghostty 1.4' }));
     expect(screen.getByRole('status', { name: 'Version support' })).toHaveTextContent('Every option is shown.');
   });
 });

@@ -621,18 +621,18 @@ font-size = invalid`);
   it('uses upstream numeric kinds and rejects partial or unsafe numbers', () => {
     expect(analyzeGhosttyConfig('font-size = 1.5e1').candidateConfig['font-size']).toBe(15);
     expect(
-      analyzeGhosttyConfig('scrollback-limit = 0x10').candidateConfig[
-        'scrollback-limit'
+      analyzeGhosttyConfig('scrollback-limit-bytes = 0x10').candidateConfig[
+        'scrollback-limit-bytes'
       ]
     ).toBe(16);
     expect(
-      analyzeGhosttyConfig('scrollback-limit = 0o10').candidateConfig[
-        'scrollback-limit'
+      analyzeGhosttyConfig('scrollback-limit-bytes = 0o10').candidateConfig[
+        'scrollback-limit-bytes'
       ]
     ).toBe(8);
     expect(
-      analyzeGhosttyConfig('scrollback-limit = 0b10').candidateConfig[
-        'scrollback-limit'
+      analyzeGhosttyConfig('scrollback-limit-bytes = 0b10').candidateConfig[
+        'scrollback-limit-bytes'
       ]
     ).toBe(2);
     expect(
@@ -652,12 +652,12 @@ font-size = invalid`);
     ).toBe(4294967295);
     expect(
       analyzeGhosttyConfig(
-        'scrollback-limit = 9007199254740991'
-      ).candidateConfig['scrollback-limit']
+        'scrollback-limit-bytes = 9007199254740991'
+      ).candidateConfig['scrollback-limit-bytes']
     ).toBe(Number.MAX_SAFE_INTEGER);
 
     for (const source of [
-      'scrollback-limit = -1',
+      'scrollback-limit-bytes = -1',
       'font-thicken-strength = 256',
       'window-position-x = 40000',
       'image-storage-limit = 4294967296',
@@ -672,7 +672,7 @@ font-size = invalid`);
     }
 
     const unsafeInteger = analyzeGhosttyConfig(
-      'scrollback-limit = 9007199254740992'
+      'scrollback-limit-bytes = 9007199254740992'
     );
     expect(unsafeInteger.candidateConfig).toEqual({});
     expect(unsafeInteger.diagnostics[0]).toMatchObject({

@@ -279,6 +279,12 @@ export const KEYBIND_ACTIONS: KeybindAction[] = [
     paramDesc: "Offset (e.g., 1 or -1)"
   },
   {
+    action: "move_tab_to_new_window",
+    description: "Move the current tab to a new window (1.4.0+)",
+    category: "tab",
+    hasParam: false
+  },
+  {
     action: "toggle_tab_overview",
     description: "Toggle the tab overview (Linux with libadwaita 1.4+)",
     category: "tab",
@@ -413,13 +419,31 @@ export const KEYBIND_ACTIONS: KeybindAction[] = [
     hasParam: false,
     platform: "linux"
   },
+  {
+    action: "prompt_window_title",
+    description: "Change the window title via popup prompt; it overrides the terminal's title (Linux, 1.4.0+)",
+    category: "window",
+    hasParam: false,
+    platform: "linux"
+  },
+  {
+    action: "set_window_title",
+    description: "Set the title of the focused window; an empty title clears the override (Linux, 1.4.0+)",
+    category: "window",
+    hasParam: true,
+    paramRequired: false,
+    paramDesc: "Window title",
+    platform: "linux"
+  },
 
   // === System ===
   {
     action: "open_config",
-    description: "Open the config file in the default OS editor",
+    description: "Open the config file in the default OS editor. With new_window (GTK, 1.4.0+), edit it in $VISUAL or $EDITOR in a new Ghostty window.",
     category: "system",
-    hasParam: false
+    hasParam: true,
+    paramRequired: false,
+    paramOptions: ["os_open", "new_window"]
   },
   {
     action: "reload_config",
@@ -911,6 +935,7 @@ const EMPTY_PARAMETER_ACTIONS = new Set([
   "search",
   "set_surface_title",
   "set_tab_title",
+  "set_window_title",
   "text",
 ]);
 

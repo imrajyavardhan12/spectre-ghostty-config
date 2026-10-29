@@ -86,7 +86,7 @@ body:
     attributes:
       label: Ghostty version
       description: Required when the problem involves imported, exported, or native Ghostty behavior.
-      placeholder: 1.3.1
+      placeholder: 1.4.0
 
   - type: textarea
     id: evidence

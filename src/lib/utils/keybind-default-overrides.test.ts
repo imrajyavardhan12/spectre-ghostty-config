@@ -28,7 +28,7 @@ describe("describeDefaultKeybindOverrides", () => {
 
   it("counts only the defaults a clear actually removes", () => {
     expect(describeDefaultKeybindOverrides(["clear"])).toEqual(
-      new Map([[0, ["Removes Ghostty's default keybinds (93 on macOS, 72 on Linux)."]]])
+      new Map([[0, ["Removes Ghostty's default keybinds (93 on macOS, 74 on Linux)."]]])
     );
     // The unbind already removed one Linux default; the sequence row is
     // itself cleared, so its default is attributed to the clear.
@@ -37,7 +37,7 @@ describe("describeDefaultKeybindOverrides", () => {
     ).toEqual(
       new Map([
         [1, ["Removes Ghostty default ctrl+shift+w → close_tab:this (Linux)."]],
-        [2, ["Removes Ghostty's default keybinds (93 on macOS, 71 on Linux)."]],
+        [2, ["Removes Ghostty's default keybinds (93 on macOS, 73 on Linux)."]],
       ])
     );
   });
