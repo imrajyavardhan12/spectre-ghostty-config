@@ -214,8 +214,34 @@ function validateNumberValue(option: ConfigOption, value: unknown): ConfigValida
   return valid(numericValue, warnings);
 }
 
+// Options typed as Ghostty's `Limit`: the exact word `unlimited`, or what Zig's
+// `parseInt(usize, input, 0)` accepts: an optional sign (a minus only on zero), a decimal, 0x, 0o
+// or 0b number with underscores between digits, and no surrounding whitespace.
+const LIMIT_STRING_OPTIONS = new Set(["scrollback-limit-lines"]);
+const LIMIT_PATTERN =
+  /^[+-]?(?:0[xX][0-9a-fA-F]+(?:_+[0-9a-fA-F]+)*|0[oO][0-7]+(?:_+[0-7]+)*|0[bB][01]+(?:_+[01]+)*|[0-9]+(?:_+[0-9]+)*)$/;
+const USIZE_MAX = (BigInt(1) << BigInt(64)) - BigInt(1);
+
+/** Whether Ghostty's Limit parser takes this text; an empty value just means unset. */
+export function isValidLimitText(text: string): boolean {
+  if (text === "" || text === "unlimited") return true;
+  if (!LIMIT_PATTERN.test(text)) return false;
+  const negative = text.startsWith("-");
+  const digits = text.replace(/^[+-]/, "").replaceAll("_", "");
+  // BigInt reads a prefixed number and a decimal with leading zeros the way Zig does.
+  const value = BigInt(digits);
+  return negative ? value === BigInt(0) : value <= USIZE_MAX;
+}
+
+function validateLimitValue(value: unknown): ConfigValidationResult {
+  if (typeof value !== "string") return invalid(["Enter a whole number or unlimited."]);
+  return isValidLimitText(value) ? valid(value) : invalid(["Use a whole number or unlimited."]);
+}
+
 export function validateConfigValue(option: ConfigOption, value: unknown): ConfigValidationResult {
   switch (option.type) {
+    case "string":
+      return LIMIT_STRING_OPTIONS.has(option.id) ? validateLimitValue(value) : valid(value);
     case "color":
       return validateColorValue(option, value);
     case "duration":

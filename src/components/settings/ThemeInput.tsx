@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GHOSTTY_BUILTIN_THEMES } from "@/data/ghostty-builtin-themes";
+import { compareGhosttyVersions, getThemeIntroducedIn, shortGhosttyVersion } from "@/lib/ghostty-versions";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { StringOption } from "@/lib/schema/types";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,8 @@ export function ThemeInput({ option }: ThemeInputProps) {
   const { getValue, setValue, resetValue } = useConfigStore();
   const value = (getValue(option.id) as string) ?? "";
   const modified = useIsModified(option.id);
+  const targetVersion = useConfigStore((state) => state.targetVersion);
+  const hideUnsupported = useConfigStore((state) => state.hideUnsupported);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -91,12 +94,21 @@ export function ThemeInput({ option }: ThemeInputProps) {
                     <Check className={cn("size-4", value === "" ? "opacity-100" : "opacity-0")} />
                     {NONE_LABEL}
                   </CommandItem>
-                  {GHOSTTY_BUILTIN_THEMES.map((name) => (
-                    <CommandItem key={name} value={name} onSelect={() => choose(name)}>
-                      <Check className={cn("size-4", value === name ? "opacity-100" : "opacity-0")} />
-                      {name}
-                    </CommandItem>
-                  ))}
+                  {GHOSTTY_BUILTIN_THEMES.map((name) => {
+                    // Themes a newer Ghostty added are flagged for an older target, or left out when hiding those.
+                    const since = getThemeIntroducedIn(name);
+                    const newer = since !== undefined && compareGhosttyVersions(targetVersion, since) < 0;
+                    if (newer && hideUnsupported && value !== name) return null;
+                    return (
+                      <CommandItem key={name} value={name} onSelect={() => choose(name)}>
+                        <Check className={cn("size-4", value === name ? "opacity-100" : "opacity-0")} />
+                        {name}
+                        {newer && (
+                          <span className="ml-auto text-xs text-muted-foreground">Needs {shortGhosttyVersion(since)}</span>
+                        )}
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
                 {/* Outside the group: cmdk hides a group whose items were all filtered out,
                     and the typed value must stay reachable whatever the search matches. */}

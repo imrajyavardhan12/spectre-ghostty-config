@@ -3,6 +3,7 @@ import {
   evaluateGhosttyDefaultKeybinds,
   extractActionDefaultParams,
   extractKeybindsInitBody,
+  resolveDefaultActionParams,
 } from "@/lib/utils/ghostty-default-keybinds-extract";
 import { GHOSTTY_DEFAULT_KEYBINDS } from "@/data/ghostty-default-keybinds";
 
@@ -102,7 +103,7 @@ describe("evaluateGhosttyDefaultKeybinds", () => {
   });
 });
 
-describe("GHOSTTY_DEFAULT_KEYBINDS (generated from Ghostty v1.3.1)", () => {
+describe("GHOSTTY_DEFAULT_KEYBINDS (generated from Ghostty v1.4.0)", () => {
   const find = (platform: "macos" | "linux", trigger: string) =>
     GHOSTTY_DEFAULT_KEYBINDS[platform].find((binding) => binding.trigger === trigger)?.action;
 
@@ -119,7 +120,7 @@ describe("GHOSTTY_DEFAULT_KEYBINDS (generated from Ghostty v1.3.1)", () => {
       expect(new Set(triggers).size).toBe(triggers.length);
     }
     expect(GHOSTTY_DEFAULT_KEYBINDS.macos).toHaveLength(93);
-    expect(GHOSTTY_DEFAULT_KEYBINDS.linux).toHaveLength(72);
+    expect(GHOSTTY_DEFAULT_KEYBINDS.linux).toHaveLength(74);
   });
 });
 
@@ -150,12 +151,44 @@ pub const Action = union(enum) {
     expect(extractActionDefaultParams(source)).toEqual({ copy_to_clipboard: "mixed", close_tab: "this" });
   });
 
-  it("matches the generated table for Ghostty 1.3.1", async () => {
+  it("matches the generated table for Ghostty 1.4.0", async () => {
     const { GHOSTTY_ACTION_DEFAULT_PARAMS } = await import("@/data/ghostty-default-keybinds");
     expect(GHOSTTY_ACTION_DEFAULT_PARAMS).toEqual({
       copy_to_clipboard: "mixed",
       new_split: "auto",
+      open_config: "os_open",
       close_tab: "this",
     });
+  });
+});
+
+describe("resolveDefaultActionParams", () => {
+  const defaults = { open_config: "os_open", copy_to_clipboard: "mixed" };
+
+  it("spells out a parameter written as .default", () => {
+    expect(
+      resolveDefaultActionParams(
+        [
+          { trigger: "ctrl+,", action: "open_config:default" },
+          { trigger: "ctrl+shift+c", action: "copy_to_clipboard:mixed" },
+          { trigger: "ctrl+t", action: "new_tab" },
+          { trigger: "ctrl+x", action: "unknown_action:default" },
+        ],
+        defaults
+      )
+    ).toEqual([
+      { trigger: "ctrl+,", action: "open_config:os_open" },
+      { trigger: "ctrl+shift+c", action: "copy_to_clipboard:mixed" },
+      { trigger: "ctrl+t", action: "new_tab" },
+      { trigger: "ctrl+x", action: "unknown_action:default" },
+    ]);
+  });
+
+  it("makes the generated open_config defaults match what a bare open_config means", () => {
+    for (const platform of ["macos", "linux"] as const) {
+      const bindings = GHOSTTY_DEFAULT_KEYBINDS[platform].filter((binding) => binding.action.startsWith("open_config"));
+      expect(bindings).toHaveLength(1);
+      expect(bindings[0].action).toBe("open_config:os_open");
+    }
   });
 });

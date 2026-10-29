@@ -37,6 +37,18 @@ export interface BaseConfigOption {
   subcategory?: string;
   platform?: Platform[];
   sinceVersion?: string;
+  /**
+   * Ghostty renamed this option's key in release `in`. Earlier releases only know
+   * `from`, which newer ones still accept, so imports map it here and exports
+   * write it when the target predates the rename.
+   */
+  renamed?: { from: string; in: string };
+  /**
+   * Ghostty changed this option's default in this release. A value equal to
+   * `default` can still differ from what an older release uses, so it is kept
+   * and exported instead of being dropped as unmodified.
+   */
+  defaultChangedIn?: string;
   deprecated?: boolean;
   note?: string;
   hidden?: boolean; // Hide from settings UI (managed elsewhere)
@@ -78,10 +90,19 @@ export interface BooleanOption extends BaseConfigOption {
   default: boolean;
 }
 
+export interface EnumChoice {
+  value: string;
+  label: string;
+  /** Release that introduced this value; absent means it predates 1.0. */
+  sinceVersion?: string;
+  /** Release that superseded this value. Ghostty still accepts it as an alias. */
+  deprecatedIn?: string;
+}
+
 export interface EnumOption extends BaseConfigOption {
   type: "enum";
   default: string;
-  options: { value: string; label: string }[];
+  options: EnumChoice[];
 }
 
 export interface ColorOption extends BaseConfigOption {

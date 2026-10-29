@@ -27,7 +27,7 @@
 - 🎭 **200+ Themes** - Browse and apply themes from iTerm2 Color Schemes with one click
 - 🔤 **Font Configuration** - Configure font families, sizes, styles, and OpenType features
 - ⌨️ **Keybind Manager** - Create and manage custom keyboard shortcuts
-- 📦 **Complete Stable Schema** - All 202 public configuration option IDs from the verified Ghostty stable target, guarded by automated drift checks
+- 📦 **Complete Stable Schema** - All 213 public configuration option IDs from the verified Ghostty stable target, guarded by automated drift checks
 - 💾 **Import/Export** - Review imported settings and line-level diagnostics before replacement, then export ready-to-use config files
 - 🔗 **Readable Share URLs** - Share configurations with human-readable theme slugs while keeping existing links compatible
 - 🌙 **Dark Mode** - Beautiful dark interface that matches your terminal aesthetic
@@ -127,7 +127,7 @@ rapid typing on one setting collapses into a single step, and a new edit clears 
 
 ## Ghostty Source of Truth
 
-Spectre `0.6.x` currently targets [Ghostty 1.3.1](https://ghostty.org/docs/install/release-notes/1-3-1). The local schema contains all 202 public option IDs from that stable release. See the [compatibility policy](COMPATIBILITY.md) for the exact guarantees, version behavior, verification snapshot, and browser-preview limits.
+Spectre `0.6.x` currently targets [Ghostty 1.4.0](https://ghostty.org/docs/install/release-notes/1-4-0). The local schema contains all 213 public option IDs from that stable release. See the [compatibility policy](COMPATIBILITY.md) for the exact guarantees, version behavior, verification snapshot, and browser-preview limits.
 
 Spectre treats the official Ghostty project as the source of truth for configuration behavior:
 

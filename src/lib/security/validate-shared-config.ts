@@ -17,6 +17,7 @@
 import type { ConfigOption } from "@/lib/schema/types";
 import { allOptions } from "@/data/ghostty-options";
 import { validateConfigValue } from "@/lib/utils/config-validation";
+import { resolveRenamedKey } from "@/lib/utils/config-options";
 import { containsUnsafeValueCharacters } from "@/lib/security/config-value-safety";
 
 /** Hard caps applied during validation. Generous enough for any realistic
@@ -46,10 +47,12 @@ function validateValueForOption(
   rawValue: unknown
 ): unknown | null {
   switch (option.type) {
-    case "string":
-      return option.repeatable
-        ? validateRepeatableStringValue(rawValue)
-        : validateStringValue(rawValue);
+    case "string": {
+      if (option.repeatable) return validateRepeatableStringValue(rawValue);
+      const cleaned = validateStringValue(rawValue);
+      // Strings with a grammar of their own (Ghostty's Limit) follow the editor's rules.
+      return cleaned !== null && !validateConfigValue(option, cleaned).valid ? null : cleaned;
+    }
 
     case "number":
       return validateValueUsingEditorRules(option, rawValue);
@@ -61,6 +64,10 @@ function validateValueForOption(
       return null;
 
     case "enum":
+      // Options that grew from a boolean into an enum keep older links' booleans.
+      if (typeof rawValue === "boolean" && option.options.some((o) => o.value === String(rawValue))) {
+        return String(rawValue);
+      }
       if (typeof rawValue !== "string") return null;
       if (!option.options.some((o) => o.value === rawValue)) return null;
       return rawValue;
@@ -247,7 +254,9 @@ export function validateSharedConfig(
   const config: Record<string, unknown> = Object.create(null);
   const dropped: Array<{ key: string; reason: string }> = [];
 
-  for (const [rawKey, rawValue] of entries) {
+  for (const [shareKey, rawValue] of entries) {
+    // Links made before Ghostty renamed an option carry the old key.
+    const rawKey = typeof shareKey === "string" ? resolveRenamedKey(shareKey) : shareKey;
     const keyResult = validateKey(rawKey, ctx);
     if (keyResult.kind === "drop") {
       dropped.push({ key: keyResult.key, reason: keyResult.reason });

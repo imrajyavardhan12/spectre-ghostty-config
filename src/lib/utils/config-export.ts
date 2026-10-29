@@ -1,6 +1,12 @@
 import type { ConfigValues } from "@/lib/schema/types";
 import { getConfigOption, isPathOption } from "@/lib/utils/config-options";
-import { isKnownGhosttyRelease, isOptionSupportedIn } from "@/lib/ghostty-versions";
+import {
+  getOptionKeyForTarget,
+  isChoiceSupportedIn,
+  isKnownGhosttyRelease,
+  isOptionSupportedIn,
+  isThemeValueSupportedIn,
+} from "@/lib/ghostty-versions";
 import { normalizePaletteEntries } from "@/lib/utils/palette";
 import { GHOSTTY_COMPATIBILITY_VERSION } from "@/lib/compatibility";
 import { SPECTRE_VERSION } from "@/lib/version";
@@ -64,6 +70,20 @@ export function exportGhosttyConfig(
       .filter((key) => getConfigOption(key) && !isOptionSupportedIn(key, effectiveTarget))
       .sort()
     : [];
+  // Enum values and built-in themes added after the target release, such as
+  // copy-on-select = both.
+  const newerValues = effectiveTarget
+    ? Object.entries(config)
+      // A value with a line break is omitted from the file, and must not be echoed into a comment either.
+      .filter(([, value]) => !containsConfigLineBreak(value))
+      .filter(([key, value]) =>
+        key === "theme"
+          ? !isThemeValueSupportedIn(value, effectiveTarget)
+          : typeof value === "string" && !isChoiceSupportedIn(key, value, effectiveTarget)
+      )
+      .map(([key, value]) => `${key} = ${value}`)
+      .sort()
+    : [];
   // Values with line breaks would inject extra config lines, so they are
   // omitted and counted instead of written. Share links reject them upstream;
   // this guards every other path into the store.
@@ -85,6 +105,12 @@ export function exportGhosttyConfig(
   if (newerOptions.length > 0 && effectiveTarget) {
     lines.push(
       `# Warning: ${newerOptions.length} ${newerOptions.length === 1 ? "option requires" : "options require"} Ghostty newer than ${effectiveTarget}: ${newerOptions.join(", ")}.`
+    );
+  }
+
+  if (newerValues.length > 0 && effectiveTarget) {
+    lines.push(
+      `# Warning: ${newerValues.length} ${newerValues.length === 1 ? "value requires" : "values require"} Ghostty newer than ${effectiveTarget}: ${newerValues.join(", ")}.`
     );
   }
 
@@ -110,6 +136,8 @@ export function exportGhosttyConfig(
 
     const option = getConfigOption(key);
     const category = option?.category || "other";
+    // A rename leaves older releases knowing only the old key.
+    const outKey = getOptionKeyForTarget(key, effectiveTarget ?? GHOSTTY_COMPATIBILITY_VERSION);
 
     if (!categories.has(category)) {
       categories.set(category, []);
@@ -118,10 +146,10 @@ export function exportGhosttyConfig(
     if (Array.isArray(value)) {
       const items = key === "palette" ? normalizePaletteEntries(value as string[]) : value;
       for (const item of items) {
-        categories.get(category)!.push(`${key} = ${formatValue(key, item)}`);
+        categories.get(category)!.push(`${outKey} = ${formatValue(key, item)}`);
       }
     } else {
-      categories.get(category)!.push(`${key} = ${formatValue(key, value)}`);
+      categories.get(category)!.push(`${outKey} = ${formatValue(key, value)}`);
     }
   }
 

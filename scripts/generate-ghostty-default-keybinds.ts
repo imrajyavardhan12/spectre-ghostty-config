@@ -9,6 +9,7 @@ import {
   evaluateGhosttyDefaultKeybinds,
   extractActionDefaultParams,
   extractKeybindsInitBody,
+  resolveDefaultActionParams,
   type GhosttyPlatform,
 } from "../src/lib/utils/ghostty-default-keybinds-extract";
 
@@ -35,7 +36,7 @@ async function main() {
   const defaultParams = extractActionDefaultParams(bindingSource);
 
   const tables = PLATFORMS.map((platform) => {
-    const rows = evaluateGhosttyDefaultKeybinds(body, platform)
+    const rows = resolveDefaultActionParams(evaluateGhosttyDefaultKeybinds(body, platform), defaultParams)
       .map((binding) => `    { trigger: ${JSON.stringify(binding.trigger)}, action: ${JSON.stringify(binding.action)} },`)
       .join("\n");
     return `  ${platform}: [\n${rows}\n  ],`;

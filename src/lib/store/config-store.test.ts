@@ -52,11 +52,11 @@ describe('config-store', () => {
 
     it('should set a boolean value', () => {
       act(() => {
-        useConfigStore.getState().setValue('cursor-style-blink', true);
+        useConfigStore.getState().setValue('mouse-hide-while-typing', true);
       });
 
       const state = getStoreState();
-      expect(state.config['cursor-style-blink']).toBe(true);
+      expect(state.config['mouse-hide-while-typing']).toBe(true);
     });
 
     it('should remove value if set to default', () => {

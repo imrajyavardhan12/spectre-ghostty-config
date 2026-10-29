@@ -11,6 +11,22 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+### Added
+
+- Ghostty 1.4.0 is the new stable target, with all 213 of its options. New: `scrollback-limit-lines`, `scrollback-compression`, `vt-window-resize-allowed`, `vt-xt-checksum-report`, `vt-xt-checksum-extension`, `link-osc8`, `middle-click-action`, `clipboard-write-limit-bytes`, `drag-handle`, `gtk-tabs-inverted` and `gtk-horizontal-tab-scroll`. The keybind actions `move_tab_to_new_window`, `prompt_window_title`, `set_window_title` and `open_config:new_window` are recognized.
+- `scrollback-limit-lines` is checked for a whole number or `unlimited` on import, in share links and in the editor, which shows an inline error.
+- The 356 built-in themes Ghostty 1.4.0 added appear in the theme picker. For an older target they are marked "Needs 1.4", left out when newer options are hidden, and named in the export warning.
+- Values newer than the target Ghostty version are handled like newer options: labelled with their release in the editor, left out when newer options are hidden, and named in the export warning (for example `copy-on-select = both` on a 1.3 target).
+
+### Changed
+
+- `scrollback-limit` is now `scrollback-limit-bytes`, as in Ghostty 1.4.0, and its default is 50 MB. Configs, share links and saved settings that use the old key are read as the new one, and an export for a target before 1.4 still writes `scrollback-limit`. A value equal to 50 MB is kept and exported, since Ghostty 1.3 defaults to 10 MB.
+- `copy-on-select` offers Ghostty default, None, Primary, Clipboard and Both, and exports every explicit choice, because Ghostty's default now depends on the platform (Primary on Linux, None elsewhere; it was `true` before). `true` and `false` stay valid, and show when a saved config uses them. Clipboard no longer also fills the selection clipboard, as in Ghostty 1.4.0.
+- `window-padding-balance` is a choice of Off, On and Equal instead of a switch. Saved settings and older share links that hold a boolean keep working.
+- The default keybind notes follow Ghostty 1.4.0: on Linux `ctrl+shift+page_up` and `ctrl+shift+page_down` move the tab and `jump_to_prompt` is on `ctrl+shift+arrow_up` and `ctrl+shift+arrow_down`.
+- Turning on `vt-window-resize-allowed` or `vt-xt-checksum-report` is flagged in the import review and on shared links, as other settings that weaken what a program can do are.
+- The Developer preset no longer sets a 50 MB scrollback, which is now Ghostty's default, and Server & Logs sets `scrollback-limit-bytes`.
+
 ## [0.6.1] - 2026-10-27
 
 ### Fixed
