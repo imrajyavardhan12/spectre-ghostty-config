@@ -9,6 +9,7 @@ import { CustomIconPreview } from "./CustomIconPreview";
 import { CustomIconBuilder } from "./CustomIconBuilder";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { ConfigOption } from "@/lib/schema/types";
+import { toCssColor } from "@/lib/utils/ghostty-color";
 
 // Icon metadata for display
 const ICON_INFO: Record<string, { name: string; image: string }> = {
@@ -65,8 +66,8 @@ export function IconInput({ option }: IconInputProps) {
                 {isCustom ? (
                   <CustomIconPreview
                     frameId={frameId}
-                    ghostColor={ghostColor}
-                    screenColor={screenColor}
+                    ghostColor={toCssColor(ghostColor)}
+                    screenColor={toCssColor(screenColor)}
                     size={40}
                     fillParent={true}
                   />

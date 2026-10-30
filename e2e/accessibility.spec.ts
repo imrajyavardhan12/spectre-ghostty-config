@@ -381,7 +381,7 @@ test("editor field errors meet WCAG contrast", async ({ page }) => {
   await page.locator("#option-background input").fill("notacolor");
   await expect(
     page.locator("#option-background").getByRole("alert")
-  ).toContainText("Use #RGB");
+  ).toContainText("Use a hex color such as #RRGGBB");
 
   expect(await findAccessibilityViolations(page)).toEqual([]);
 });

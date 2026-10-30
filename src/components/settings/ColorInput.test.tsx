@@ -29,7 +29,7 @@ describe('ColorInput', () => {
     });
 
     expect(useConfigStore.getState().config.background).toBe('medium spring green');
-    expect(screen.queryByText('Use #RGB, RGB, #RRGGBB, RRGGBB, or a named X11 color.')).toBeNull();
+    expect(screen.queryByText('Use a hex color such as #RRGGBB, rgb:RR/GG/BB, rgbi:0.0/0.5/1.0, or a named X11 color.')).toBeNull();
   });
 
   it('shows an inline error for malformed colors without storing them', () => {
@@ -40,6 +40,6 @@ describe('ColorInput', () => {
     });
 
     expect(useConfigStore.getState().config.background).toBeUndefined();
-    expect(screen.getByText('Use #RGB, RGB, #RRGGBB, RRGGBB, or a named X11 color.')).toBeTruthy();
+    expect(screen.getByText('Use a hex color such as #RRGGBB, rgb:RR/GG/BB, rgbi:0.0/0.5/1.0, or a named X11 color.')).toBeTruthy();
   });
 });

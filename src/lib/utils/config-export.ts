@@ -3,6 +3,7 @@ import { getConfigOption, isPathOption } from "@/lib/utils/config-options";
 import {
   getOptionKeyForTarget,
   isChoiceSupportedIn,
+  isColorValueSupportedIn,
   isKnownGhosttyRelease,
   isOptionSupportedIn,
   isThemeValueSupportedIn,
@@ -50,6 +51,24 @@ function formatValue(key: string, value: unknown): string {
   return String(value);
 }
 
+/** The `key = value` lines of one setting that the target release can't read. */
+function newerValueLines(key: string, value: unknown, target: string): string[] {
+  const option = getConfigOption(key);
+  if (key === "theme") return isThemeValueSupportedIn(value, target) ? [] : [`${key} = ${value}`];
+  // bold-color is a free-text option in Spectre, but Ghostty reads it as a color or `bright`.
+  if (option?.type === "color" || key === "bold-color") {
+    // macos-icon-screen-color holds a comma-separated list of colors.
+    const colors = typeof value === "string" ? value.split(",") : [];
+    return colors.every((color) => isColorValueSupportedIn(color, target)) ? [] : [`${key} = ${value}`];
+  }
+  if (option?.type === "palette" && Array.isArray(value)) {
+    return value
+      .filter((entry) => typeof entry === "string" && !isColorValueSupportedIn(entry.slice(entry.indexOf("=") + 1), target))
+      .map((entry) => `${key} = ${entry}`);
+  }
+  return typeof value === "string" && !isChoiceSupportedIn(key, value, target) ? [`${key} = ${value}`] : [];
+}
+
 export function exportGhosttyConfig(
   config: ConfigValues,
   appliedTheme?: string | null,
@@ -70,18 +89,13 @@ export function exportGhosttyConfig(
       .filter((key) => getConfigOption(key) && !isOptionSupportedIn(key, effectiveTarget))
       .sort()
     : [];
-  // Enum values and built-in themes added after the target release, such as
-  // copy-on-select = both.
+  // Enum values, built-in themes and color syntax added after the target release, such as
+  // copy-on-select = both or background = rgb:ff/00/00.
   const newerValues = effectiveTarget
     ? Object.entries(config)
       // A value with a line break is omitted from the file, and must not be echoed into a comment either.
       .filter(([, value]) => !containsConfigLineBreak(value))
-      .filter(([key, value]) =>
-        key === "theme"
-          ? !isThemeValueSupportedIn(value, effectiveTarget)
-          : typeof value === "string" && !isChoiceSupportedIn(key, value, effectiveTarget)
-      )
-      .map(([key, value]) => `${key} = ${value}`)
+      .flatMap(([key, value]) => newerValueLines(key, value, effectiveTarget))
       .sort()
     : [];
   // Values with line breaks would inject extra config lines, so they are

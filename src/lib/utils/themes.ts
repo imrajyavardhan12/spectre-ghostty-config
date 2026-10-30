@@ -1,6 +1,7 @@
 // Theme utilities for fetching and parsing Ghostty themes
 
 import { parsePaletteEntry } from "@/lib/utils/palette";
+import { toCssColor } from "@/lib/utils/ghostty-color";
 
 const GITHUB_API_BASE = "https://api.github.com/repos/mbadolato/iTerm2-Color-Schemes/contents/ghostty";
 const RAW_CONTENT_BASE = "https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/ghostty";
@@ -118,27 +119,27 @@ export function parseThemeContent(content: string): ThemeColors {
 
     switch (key) {
       case "background":
-        colors.background = value;
+        colors.background = toCssColor(value);
         break;
       case "foreground":
-        colors.foreground = value;
+        colors.foreground = toCssColor(value);
         break;
       case "cursor-color":
-        colors.cursorColor = value;
+        colors.cursorColor = toCssColor(value);
         break;
       case "cursor-text":
-        colors.cursorText = value;
+        colors.cursorText = toCssColor(value);
         break;
       case "selection-background":
-        colors.selectionBackground = value;
+        colors.selectionBackground = toCssColor(value);
         break;
       case "selection-foreground":
-        colors.selectionForeground = value;
+        colors.selectionForeground = toCssColor(value);
         break;
       case "palette": {
         const paletteEntry = parsePaletteEntry(value);
         if (paletteEntry && paletteEntry.index >= 0 && paletteEntry.index < 16) {
-          colors.palette[paletteEntry.index] = paletteEntry.color;
+          colors.palette[paletteEntry.index] = toCssColor(paletteEntry.color);
         }
         break;
       }

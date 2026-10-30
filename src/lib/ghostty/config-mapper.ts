@@ -1,6 +1,7 @@
 import type { ITerminalOptions, ITheme } from "ghostty-web";
 import type { ConfigValues } from "@/lib/store/config-store";
 import { normalizePaletteEntries, parsePaletteEntry } from "@/lib/utils/palette";
+import { toCssColor } from "@/lib/utils/ghostty-color";
 
 const ANSI_COLOR_NAMES = [
   "black",
@@ -23,6 +24,9 @@ const ANSI_COLOR_NAMES = [
 
 type AnsiColorName = (typeof ANSI_COLOR_NAMES)[number];
 
+/** The terminal canvas reads CSS colors, so hex, rgb: and rgbi: forms become #rrggbb. Names pass through. */
+const previewColor = toCssColor;
+
 function mapPaletteToTheme(palette: string[]): Partial<ITheme> {
   const theme: Partial<ITheme> = {};
   
@@ -34,7 +38,7 @@ function mapPaletteToTheme(palette: string[]): Partial<ITheme> {
     
     if (index >= 0 && index < 16) {
       const colorName = ANSI_COLOR_NAMES[index];
-      (theme as Record<AnsiColorName, string>)[colorName] = color;
+      (theme as Record<AnsiColorName, string>)[colorName] = previewColor(color);
     }
   }
   
@@ -132,22 +136,22 @@ export function mapConfigToTheme(config: ConfigValues): ITheme {
   const theme: ITheme = {};
 
   if (config["background"]) {
-    theme.background = config["background"] as string;
+    theme.background = previewColor(config["background"] as string);
   }
   if (config["foreground"]) {
-    theme.foreground = config["foreground"] as string;
+    theme.foreground = previewColor(config["foreground"] as string);
   }
   if (config["cursor-color"]) {
-    theme.cursor = config["cursor-color"] as string;
+    theme.cursor = previewColor(config["cursor-color"] as string);
   }
   if (config["cursor-text"]) {
-    theme.cursorAccent = config["cursor-text"] as string;
+    theme.cursorAccent = previewColor(config["cursor-text"] as string);
   }
   if (config["selection-background"]) {
-    theme.selectionBackground = config["selection-background"] as string;
+    theme.selectionBackground = previewColor(config["selection-background"] as string);
   }
   if (config["selection-foreground"]) {
-    theme.selectionForeground = config["selection-foreground"] as string;
+    theme.selectionForeground = previewColor(config["selection-foreground"] as string);
   }
 
   const palette = config["palette"] as string[] | undefined;

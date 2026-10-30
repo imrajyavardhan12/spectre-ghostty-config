@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ValidationMessages } from "./ValidationMessages";
 import type { ColorOption } from "@/lib/schema/types";
 import { hasValidationErrors, validateConfigValue } from "@/lib/utils/config-validation";
+import { ghosttyColorToHex, toCssColor } from "@/lib/utils/ghostty-color";
 
 const PRESET_COLORS = [
   "#000000", "#1a1a2e", "#16213e", "#0f3460",
@@ -15,10 +16,7 @@ const PRESET_COLORS = [
   "#ffffff", "#f5f5f5", "#dfe6e9", "#b2bec3",
 ];
 
-/** Ghostty accepts bare hex ("ffffff"); CSS and the canvas preview need the "#". */
-export function toCssColor(color: string): string {
-  return /^[0-9a-f]{3}$|^[0-9a-f]{6}$/i.test(color) ? `#${color}` : color;
-}
+export { toCssColor };
 
 interface ColorFieldProps {
   option: ColorOption;
@@ -37,11 +35,9 @@ function swatchColor(color: string): string {
   return css.startsWith("#") ? css : css.replace(/\s+/g, "");
 }
 
-/** "#fff" and "fff" to "#ffffff", which is all a native color picker accepts. */
+/** Any numeric color to "#rrggbb", which is all a native color picker accepts. */
 function pickerColor(color: string | null): string {
-  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color ?? "")?.[1];
-  if (!hex) return "#000000";
-  return `#${hex.length === 3 ? [...hex].map((c) => c + c).join("") : hex}`.toLowerCase();
+  return (color && ghosttyColorToHex(color)) || "#000000";
 }
 
 /**

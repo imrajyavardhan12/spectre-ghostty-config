@@ -12,6 +12,7 @@ import { SettingWrapper } from "./SettingWrapper";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { PaletteOption } from "@/lib/schema/types";
 import { getPaletteColor, normalizePaletteEntries, setPaletteColor } from "@/lib/utils/palette";
+import { ghosttyColorToHex, toCssColor } from "@/lib/utils/ghostty-color";
 
 interface PaletteInputProps {
   option: PaletteOption;
@@ -138,7 +139,7 @@ function PaletteColorButton({
         <Button
           variant="outline"
           className="h-10 w-10 p-0 relative group"
-          style={{ backgroundColor: color }}
+          style={{ backgroundColor: toCssColor(color) }}
           onClick={onEdit}
         >
           <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
@@ -152,7 +153,7 @@ function PaletteColorButton({
           <p className="text-xs text-muted-foreground">Palette index: {index}</p>
           <input
             type="color"
-            value={/^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#000000"}
+            value={ghosttyColorToHex(color) ?? "#000000"}
             onChange={(e) => onChange(e.target.value)}
             className="h-24 w-24 cursor-pointer rounded border-0"
           />
