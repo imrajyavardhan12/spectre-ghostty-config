@@ -98,6 +98,27 @@ palette = 15=#ffffff
     });
   });
 
+  describe('theme files using the color forms of Ghostty 1.4', () => {
+    const content = `
+background = rgb:ff/ff/ff
+foreground = rgbi:0/0/0
+cursor-color = #fff000fff
+palette = 1=rgb:ff/00/00
+`;
+
+    it('are stored as #rrggbb, so the cards that paint them as CSS show them', () => {
+      const colors = parseThemeContent(content);
+      expect(colors.background).toBe('#ffffff');
+      expect(colors.foreground).toBe('#000000');
+      expect(colors.cursorColor).toBe('#ff00ff');
+      expect(colors.palette[1]).toBe('#ff0000');
+    });
+
+    it('are categorized by their real lightness', () => {
+      expect(categorizeTheme({ name: 'Light', raw: content, colors: parseThemeContent(content) })).toBe('light');
+    });
+  });
+
   describe('categorizeTheme', () => {
     it('should categorize dark themes', () => {
       const dark = {

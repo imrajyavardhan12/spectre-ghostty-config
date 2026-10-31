@@ -1,5 +1,5 @@
 import type { ConfigOption } from "@/lib/schema/types";
-import { X11_COLOR_NAMES } from "@/lib/utils/x11-colors";
+import { isGhosttyColorText, trimGhosttyColorText } from "@/lib/utils/ghostty-color";
 
 export interface ConfigValidationResult {
   valid: boolean;
@@ -8,7 +8,6 @@ export interface ConfigValidationResult {
   normalizedValue?: unknown;
 }
 
-const HEX_COLOR_PATTERN = /^#?(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 const TERMINAL_RELATIVE_COLOR_OPTIONS = new Set([
   "cursor-color",
   "cursor-text",
@@ -35,24 +34,18 @@ function invalid(errors: string[], warnings: string[] = []): ConfigValidationRes
   return { valid: false, errors, warnings };
 }
 
-function isGhosttyColor(value: string): boolean {
-  return (
-    HEX_COLOR_PATTERN.test(value) ||
-    X11_COLOR_NAMES.has(value.toLowerCase())
-  );
-}
+const COLOR_FORMS_MESSAGE =
+  "Use a hex color such as #RRGGBB, rgb:RR/GG/BB, rgbi:0.0/0.5/1.0, or a named X11 color.";
 
 export function validateGhosttyColor(value: unknown): ConfigValidationResult {
   if (typeof value !== "string") {
     return invalid(["Enter a color value."]);
   }
 
-  const trimmedValue = value.trim();
+  const trimmedValue = trimGhosttyColorText(value);
   if (trimmedValue === "") return valid("");
-  if (isGhosttyColor(trimmedValue)) return valid(trimmedValue);
-  return invalid([
-    "Use #RGB, RGB, #RRGGBB, RRGGBB, or a named X11 color.",
-  ]);
+  if (isGhosttyColorText(trimmedValue)) return valid(trimmedValue);
+  return invalid([COLOR_FORMS_MESSAGE]);
 }
 
 function validateColorValue(
@@ -63,25 +56,23 @@ function validateColorValue(
     return invalid(["Enter a color value."]);
   }
 
-  const trimmedValue = value.trim();
+  const trimmedValue = trimGhosttyColorText(value);
   if (trimmedValue === "") {
     return valid("");
   }
 
   if (COLOR_LIST_OPTIONS.has(option.id)) {
-    const colors = trimmedValue
-      .split(",")
-      .map((color) => color.trim())
-      .filter(Boolean);
+    // Ghostty skips empty tokens ("red,,blue"), but a token of only spaces ("red, ,blue") is invalid.
+    const colors = trimmedValue.split(",").filter((token) => token !== "");
     if (
       colors.length > 0 &&
       colors.length <= 64 &&
-      colors.every(isGhosttyColor)
+      colors.every(isGhosttyColorText)
     ) {
       return valid(trimmedValue);
     }
     return invalid([
-      "Use up to 64 comma-separated #RGB, RGB, #RRGGBB, RRGGBB, or named X11 colors.",
+      "Use up to 64 comma-separated colors: hex such as #RRGGBB, rgb:RR/GG/BB, rgbi:0.0/0.5/1.0, or named X11 colors.",
     ]);
   }
 
@@ -97,7 +88,7 @@ function validateColorValue(
 
   return TERMINAL_RELATIVE_COLOR_OPTIONS.has(option.id)
     ? invalid([
-        "Use #RGB, RGB, #RRGGBB, RRGGBB, a named X11 color, cell-foreground, or cell-background.",
+        "Use a hex color such as #RRGGBB, rgb:RR/GG/BB, rgbi:0.0/0.5/1.0, a named X11 color, cell-foreground, or cell-background.",
       ])
     : colorValidation;
 }

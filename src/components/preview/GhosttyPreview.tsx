@@ -14,6 +14,7 @@ import { generateDemoContent, isCompactDemoWidth } from "@/lib/ghostty/demo-cont
 import { mergePreviewTheme } from "@/lib/ghostty/preview-theme";
 import { usePreviewTheme } from "./use-preview-theme";
 import { cn } from "@/lib/utils";
+import { toCssColor } from "@/lib/utils/ghostty-color";
 import { detectClientOS, type ClientOS } from "@/lib/platform";
 import type { ITerminalAddon, Terminal as GhosttyTerminal } from "ghostty-web";
 
@@ -307,8 +308,8 @@ export function GhosttyPreview({ onViewConfig }: GhosttyPreviewProps) {
     };
   }, [loadingState, fitAndMeasure, writeContent]);
 
-  const background = (config["background"] as string) || "#1a1b26";
-  const foreground = (config["foreground"] as string) || "#c0caf5";
+  const background = toCssColor((config["background"] as string) || "#1a1b26");
+  const foreground = toCssColor((config["foreground"] as string) || "#c0caf5");
   const backgroundOpacity = (config["background-opacity"] as number) ?? 1;
   const isGtkDecoration = clientOS === "linux";
 

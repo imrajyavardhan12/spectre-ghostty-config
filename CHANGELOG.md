@@ -11,6 +11,14 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+### Added
+
+- Color values accept the forms Ghostty 1.4.0 added: `rgb:RR/GG/BB`, `rgbi:` fractions, and 9 and 12 digit hex such as `#fff000fff`. They work in color options, palette entries, imports and share links, show in swatches and the preview, and an export for an older Ghostty names them in its warning.
+
+### Changed
+
+- In the editor, only spaces and tabs around a color are ignored, as in Ghostty; a form feed or a no-break space makes it invalid instead of being silently trimmed. An import still trims every kind of whitespace around a whole line. Color names are matched with ASCII case folding, so a name written with a Kelvin sign is no longer accepted, and a list of icon colors rejects an entry made only of spaces (`red, ,blue`), as Ghostty does.
+
 ## [0.7.0] - 2026-10-29
 
 ### Added

@@ -73,9 +73,9 @@ describe('validateConfigValue', () => {
     const unknownName = validateConfigValue(colorOption, 'not a real color');
 
     expect(malformedHex.valid).toBe(false);
-    expect(malformedHex.errors).toContain('Use #RGB, RGB, #RRGGBB, RRGGBB, or a named X11 color.');
+    expect(malformedHex.errors).toContain('Use a hex color such as #RRGGBB, rgb:RR/GG/BB, rgbi:0.0/0.5/1.0, or a named X11 color.');
     expect(unknownName.valid).toBe(false);
-    expect(unknownName.errors).toContain('Use #RGB, RGB, #RRGGBB, RRGGBB, or a named X11 color.');
+    expect(unknownName.errors).toContain('Use a hex color such as #RRGGBB, rgb:RR/GG/BB, rgbi:0.0/0.5/1.0, or a named X11 color.');
   });
 
   it('accepts Ghostty duration sequences with documented units', () => {

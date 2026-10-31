@@ -167,6 +167,20 @@ describe('GhosttyPreview lifecycle', () => {
     });
   });
 
+  it('paints the preview window with the color forms of Ghostty 1.4 as CSS can read them', async () => {
+    act(() => {
+      useConfigStore.getState().setValue('background', 'rgb:00/00/ff');
+      useConfigStore.getState().setValue('foreground', 'rgbi:1/1/1');
+    });
+
+    render(<GhosttyPreview />);
+    await waitFor(() => expect(mocks.terminalInstances).toHaveLength(1));
+
+    const previewWindow = screen.getByText(/^Ghostty Preview/).closest('.rounded-xl');
+    expect(previewWindow).toHaveStyle({ backgroundColor: '#0000ff' });
+    expect(screen.getByText(/^Ghostty Preview/)).toHaveStyle({ color: '#ffffff' });
+  });
+
   it('lets a newer config creation supersede an in-flight request', async () => {
     let resolveStaleCreation!: () => void;
     mocks.initGhosttyMock

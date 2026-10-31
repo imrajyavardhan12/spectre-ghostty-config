@@ -25,10 +25,13 @@ function StoreField() {
 }
 
 describe('toCssColor', () => {
-  it('adds the # Ghostty lets you leave off, and leaves everything else alone', () => {
-    expect(toCssColor('fff')).toBe('#fff');
-    expect(toCssColor('1A2b3C')).toBe('#1A2b3C');
+  it('turns every numeric form Ghostty reads into #rrggbb, and leaves names and non-colors alone', () => {
+    expect(toCssColor('fff')).toBe('#ffffff');
+    expect(toCssColor('1A2b3C')).toBe('#1a2b3c');
     expect(toCssColor('#123456')).toBe('#123456');
+    expect(toCssColor('rgb:ff/00/00')).toBe('#ff0000');
+    expect(toCssColor('rgbi:1.0/0/0.5')).toBe('#ff007f');
+    expect(toCssColor('#fff000fff')).toBe('#ff00ff');
     expect(toCssColor('red')).toBe('red');
     expect(toCssColor('12345')).toBe('12345');
   });
@@ -53,6 +56,24 @@ describe('ColorField', () => {
 
     fireEvent.change(input, { target: { value: 'navy blue' } });
     expect(useConfigStore.getState().config.background).toBe('navy blue');
+  });
+
+  it('accepts the rgb: and rgbi: forms of Ghostty 1.4, and paints the swatch with them', () => {
+    render(<StoreField />);
+    const input = screen.getByLabelText('Background') as HTMLInputElement;
+    const swatch = () => screen.getByRole('button', { name: 'Choose Background' }).firstElementChild as HTMLElement;
+
+    fireEvent.change(input, { target: { value: 'rgb:00/80/ff' } });
+    expect(useConfigStore.getState().config.background).toBe('rgb:00/80/ff');
+    expect(swatch().style.backgroundColor).toBe('rgb(0, 128, 255)');
+
+    fireEvent.change(input, { target: { value: 'rgbi:1.0/0/0' } });
+    expect(useConfigStore.getState().config.background).toBe('rgbi:1.0/0/0');
+    expect(swatch().style.backgroundColor).toBe('rgb(255, 0, 0)');
+
+    fireEvent.change(input, { target: { value: 'rgbi:2/0/0' } });
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(useConfigStore.getState().config.background).toBe('rgbi:1.0/0/0');
   });
 
   it('lets a change from elsewhere win over text that is not a color yet', () => {

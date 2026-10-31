@@ -1,5 +1,6 @@
 import type { ConfigOption, EnumChoice, EnumOption } from "@/lib/schema/types";
 import { GHOSTTY_BUILTIN_THEMES_ADDED_IN } from "@/data/ghostty-builtin-themes";
+import { colorNeedsGhostty14 } from "@/lib/utils/ghostty-color";
 import { resolvePreviewThemeName } from "@/lib/ghostty/preview-theme";
 import { getConfigOption } from "@/lib/utils/config-options";
 
@@ -120,4 +121,13 @@ export function isThemeValueSupportedIn(value: unknown, targetVersion: string): 
     const since = name === null ? undefined : getThemeIntroducedIn(name);
     return since === undefined || compareGhosttyVersions(targetVersion, since) >= 0;
   });
+}
+
+/** The release that began reading rgb:, rgbi: and 9 or 12 digit hex colors. */
+const EXTENDED_COLOR_SYNTAX_SINCE = "1.4.0";
+
+/** Whether the target reads this color's syntax. Anything that isn't a string, or isn't a color, counts as supported. */
+export function isColorValueSupportedIn(value: unknown, targetVersion: string): boolean {
+  if (typeof value !== "string" || !colorNeedsGhostty14(value)) return true;
+  return compareGhosttyVersions(targetVersion, EXTENDED_COLOR_SYNTAX_SINCE) >= 0;
 }
