@@ -11,6 +11,8 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+## [0.7.1] - 2026-11-01
+
 ### Added
 
 - Color values accept the forms Ghostty 1.4.0 added: `rgb:RR/GG/BB`, `rgbi:` fractions, and 9 and 12 digit hex such as `#fff000fff`. They work in color options, palette entries, imports and share links, show in swatches and the preview, and an export for an older Ghostty names them in its warning.
