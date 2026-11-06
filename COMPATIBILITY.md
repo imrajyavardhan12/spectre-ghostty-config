@@ -30,6 +30,8 @@ The machine-readable source for this row is [`compatibility.json`](compatibility
 
 Spectre currently uses [`ghostty-web@0.4.0`](https://github.com/coder/ghostty-web/tree/v0.4.0) (`v0.4.0`), whose Ghostty submodule points to a separate [Ghostty source snapshot](https://github.com/ghostty-org/ghostty/commit/5714ed07a1012573261b7b7e3ed2add9c1504496). That preview engine is versioned independently from Ghostty's stable desktop release.
 
+[libghostty-vt 1.0.0](https://mitchellh.com/writing/libghostty-1-0) shipped on 2026-11-06 with a stable C ABI and official WebAssembly builds. `ghostty-web@0.4.0` bundles a pre-1.0 build with a different API, so the preview stays on `ghostty-web` until it releases a version built on libghostty-vt 1.0.
+
 The browser preview maps these settings:
 
 - font family and font size
