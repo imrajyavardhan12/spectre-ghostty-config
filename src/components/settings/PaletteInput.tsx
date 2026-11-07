@@ -12,7 +12,7 @@ import { SettingWrapper } from "./SettingWrapper";
 import { useConfigStore, useIsModified } from "@/lib/store/config-store";
 import { PaletteOption } from "@/lib/schema/types";
 import { getPaletteColor, normalizePaletteEntries, setPaletteColor } from "@/lib/utils/palette";
-import { ghosttyColorToHex, toCssColor } from "@/lib/utils/ghostty-color";
+import { toCssColor, toPickerColor } from "@/lib/utils/ghostty-color";
 
 interface PaletteInputProps {
   option: PaletteOption;
@@ -153,7 +153,7 @@ function PaletteColorButton({
           <p className="text-xs text-muted-foreground">Palette index: {index}</p>
           <input
             type="color"
-            value={ghosttyColorToHex(color) ?? "#000000"}
+            value={toPickerColor(color)}
             onChange={(e) => onChange(e.target.value)}
             className="h-24 w-24 cursor-pointer rounded border-0"
           />

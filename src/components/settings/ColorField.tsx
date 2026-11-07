@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ValidationMessages } from "./ValidationMessages";
 import type { ColorOption } from "@/lib/schema/types";
 import { hasValidationErrors, validateConfigValue } from "@/lib/utils/config-validation";
-import { ghosttyColorToHex, toCssColor } from "@/lib/utils/ghostty-color";
+import { toCssColor, toPickerColor } from "@/lib/utils/ghostty-color";
 
 const PRESET_COLORS = [
   "#000000", "#1a1a2e", "#16213e", "#0f3460",
@@ -27,11 +27,6 @@ interface ColorFieldProps {
   value: string;
   /** Called with a color Ghostty accepts, or "" to go back to the default. */
   onChange: (color: string) => void;
-}
-
-/** Any color Ghostty accepts, names included, as "#rrggbb", which is all a native color picker accepts. */
-function pickerColor(color: string | null): string {
-  return (color && ghosttyColorToHex(color)) || "#000000";
 }
 
 /**
@@ -92,7 +87,7 @@ export function ColorField({ option, id, label, value, onChange }: ColorFieldPro
             <input
               type="color"
               aria-label={`${label} picker`}
-              value={pickerColor(cssColor)}
+              value={toPickerColor(cssColor)}
               onChange={(e) => pick(e.target.value)}
               className="block h-24 w-full cursor-pointer rounded-md border-0 bg-transparent p-0"
             />
