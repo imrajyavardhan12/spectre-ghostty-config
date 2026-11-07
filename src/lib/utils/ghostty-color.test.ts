@@ -3,6 +3,7 @@ import {
   colorNeedsGhostty14,
   ghosttyColorToHex,
   toCssColor,
+  toPickerColor,
   isGhosttyColorText,
   parseGhosttyColor,
   trimGhosttyColorText,
@@ -108,6 +109,17 @@ describe("cost", () => {
     expect(trimGhosttyColorText(" ".repeat(60_000))).toBe("");
     // A regex like /[ \t]+$/ takes seconds on this input; the loop takes well under a tenth of one.
     expect(performance.now() - started).toBeLessThan(250);
+  });
+});
+
+describe("toPickerColor", () => {
+  it("gives a native color picker #rrggbb for any color, and black otherwise", () => {
+    expect(toPickerColor("rgb:ff/00/00")).toBe("#ff0000");
+    expect(toPickerColor("dark slate gray")).toBe("#2f4f4f");
+    expect(toPickerColor("not a color")).toBe("#000000");
+    expect(toPickerColor("")).toBe("#000000");
+    expect(toPickerColor(null)).toBe("#000000");
+    expect(toPickerColor(undefined)).toBe("#000000");
   });
 });
 

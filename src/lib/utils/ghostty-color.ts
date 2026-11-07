@@ -155,6 +155,11 @@ export function ghosttyColorToHex(value: string): string | undefined {
   return rgb && `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
 }
 
+/** A color for a native color picker, which takes only "#rrggbb": black when there is no color. */
+export function toPickerColor(color: string | null | undefined): string {
+  return (color && ghosttyColorToHex(color)) || "#000000";
+}
+
 /** Whether a color value uses a form that only Ghostty 1.4.0 and newer reads. */
 export function colorNeedsGhostty14(value: string): boolean {
   return parseGhosttyColor(value)?.needsGhostty14 === true;
