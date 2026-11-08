@@ -43,6 +43,7 @@ Open <http://localhost:3000>.
 | `bun run schema:check` | Compare local options with Ghostty's reference |
 | `bun run keybinds:defaults` | Regenerate Ghostty's default keybinds from the pinned source (`--check` to verify) |
 | `bun run themes:builtin` | Regenerate the pinned release's built-in theme names (`--check` to verify) |
+| `bun run colors:x11` | Regenerate the pinned release's X11 color names and values (`--check` to verify) |
 
 Install Playwright's Chromium build before running browser tests for the first time:
 

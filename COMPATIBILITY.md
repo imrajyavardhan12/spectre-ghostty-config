@@ -80,9 +80,9 @@ Existing options usually continue to work, but compatibility is unverified until
 
 `bun run keybinds:defaults --check` re-generates the default keybind tables from the pinned `Config.zig` and fails if the committed tables differ; the evaluator rejects any construct it does not recognize instead of guessing. Run `bun run keybinds:defaults` to regenerate after changing the pinned commit.
 
-`bun run themes:builtin --check` does the same for the built-in theme names.
+`bun run themes:builtin --check` does the same for the built-in theme names, and `bun run colors:x11 --check` for the X11 color names and values in `rgb.txt`.
 
-The weekly [Ghostty Schema Drift workflow](.github/workflows/schema-drift.yml) runs all three commands. Full compatibility updates also require maintainers to:
+The weekly [Ghostty Schema Drift workflow](.github/workflows/schema-drift.yml) runs all four commands. Full compatibility updates also require maintainers to:
 
 1. review Ghostty release notes and source changes;
 2. update option types, defaults, values, platform restrictions, and availability metadata where needed;

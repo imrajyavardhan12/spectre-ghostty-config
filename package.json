@@ -15,6 +15,7 @@
     "schema:check": "bun run scripts/check-ghostty-schema-drift.ts",
     "keybinds:defaults": "bun run scripts/generate-ghostty-default-keybinds.ts",
     "themes:builtin": "bun run scripts/generate-ghostty-builtin-themes.ts",
+    "colors:x11": "bun run scripts/generate-ghostty-x11-colors.ts",
     "postinstall": "cp node_modules/ghostty-web/ghostty-vt.wasm public/ 2>/dev/null || true",
     "test": "vitest",
     "test:watch": "vitest watch",

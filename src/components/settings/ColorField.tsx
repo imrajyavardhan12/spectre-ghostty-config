@@ -29,13 +29,7 @@ interface ColorFieldProps {
   onChange: (color: string) => void;
 }
 
-/** The color as CSS reads it: bare hex gets its "#", and X11 names lose their spaces. */
-function swatchColor(color: string): string {
-  const css = toCssColor(color.trim());
-  return css.startsWith("#") ? css : css.replace(/\s+/g, "");
-}
-
-/** Any numeric color to "#rrggbb", which is all a native color picker accepts. */
+/** Any color Ghostty accepts, names included, as "#rrggbb", which is all a native color picker accepts. */
 function pickerColor(color: string | null): string {
   return (color && ghosttyColorToHex(color)) || "#000000";
 }
@@ -44,8 +38,8 @@ function pickerColor(color: string | null): string {
  * A swatch that opens a picker, beside a text field. Typing reaches the config only once the
  * text is a color Ghostty accepts. The typed text stays on screen while the field is being
  * edited, so "medium" doesn't swallow the space in "medium spring green". A change from
- * elsewhere, such as undo or reset, replaces it. The swatch paints what CSS understands, so
- * a few valid Ghostty names, like "cell-background", leave it blank.
+ * elsewhere, such as undo or reset, replaces it. The swatch paints the value Ghostty gives a
+ * color; values that aren't colors, like "cell-background", leave it blank.
  */
 export function ColorField({ option, id, label, value, onChange }: ColorFieldProps) {
   const [open, setOpen] = useState(false);
@@ -63,7 +57,7 @@ export function ColorField({ option, id, label, value, onChange }: ColorFieldPro
 
   const validation = draftIsCurrent && draftResult ? draftResult : validateConfigValue(option, shown);
   const hasErrors = hasValidationErrors(validation);
-  const cssColor = hasErrors || shown === "" ? null : swatchColor(shown);
+  const cssColor = hasErrors || shown === "" ? null : toCssColor(shown);
 
   function type(next: string) {
     const result = validateConfigValue(option, next);

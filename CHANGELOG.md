@@ -11,6 +11,10 @@ Ghostty configuration changes should be traceable to the official Ghostty docs o
 
 ## Unreleased
 
+### Fixed
+
+- X11 color names are painted with the value Ghostty gives them. Swatches, the preview window, palette entries, the icon preview and theme cards used to hand the name to CSS, which shows nothing for names it lacks (`dark slate gray`, `gray50`, `light goldenrod`) and a different color for names it defines differently (`green`, `gray`, `maroon`, `purple`). The color picker now opens on a named color's value instead of black. The names and values are generated from Ghostty's `rgb.txt` at the pinned release (`bun run colors:x11`).
+
 ## [0.7.1] - 2026-11-01
 
 ### Added

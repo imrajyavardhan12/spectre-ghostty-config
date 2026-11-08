@@ -1,4 +1,4 @@
-import { X11_COLOR_NAMES } from "@/lib/utils/x11-colors";
+import { GHOSTTY_X11_COLORS } from "@/data/ghostty-x11-colors";
 
 // Ghostty's color grammar, as `RGB.parse` in src/terminal/color.zig reads it (Ghostty 1.4.0):
 //
@@ -6,7 +6,7 @@ import { X11_COLOR_NAMES } from "@/lib/utils/x11-colors";
 //   rgb   rrggbb                               the same two shorter forms without the #
 //   rgb:<r>/<g>/<b>                            1 to 4 hex digits per channel
 //   rgbi:<r>/<g>/<b>                           fractions from 0.0 to 1.0
-//   an X11 color name
+//   an X11 color name, from Ghostty's rgb.txt (src/data/ghostty-x11-colors.ts)
 //
 // Spaces and tabs around the value are ignored. Before 1.4.0 only the first two hex lengths
 // (with or without #) and the names were accepted.
@@ -21,8 +21,8 @@ export type GhosttyColorKind = "hex" | "bare-hex" | "rgb" | "rgbi" | "name";
 
 export interface ParsedGhosttyColor {
   kind: GhosttyColorKind;
-  /** The channels, except for a named color: the name's value isn't in Spectre's list. */
-  rgb?: GhosttyRgb;
+  /** The channels Ghostty uses; a name's come from rgb.txt. */
+  rgb: GhosttyRgb;
   /** True when only Ghostty 1.4.0 or newer reads this form. */
   needsGhostty14: boolean;
 }
@@ -116,7 +116,11 @@ export function parseGhosttyColor(value: string): ParsedGhosttyColor | null {
     return rgb && { kind: "hex", rgb, needsGhostty14: width > 2 };
   }
 
-  if (X11_COLOR_NAMES.has(lowerAscii(input))) return { kind: "name", needsGhostty14: false };
+  const named = GHOSTTY_X11_COLORS.get(lowerAscii(input));
+  if (named) {
+    const channel = (at: number) => parseInt(named.slice(at, at + 2), 16);
+    return { kind: "name", rgb: { r: channel(1), g: channel(3), b: channel(5) }, needsGhostty14: false };
+  }
 
   if (input.length === 3 || input.length === 6) {
     const width = input.length / 3;
@@ -145,7 +149,7 @@ function toHex(channel: number): string {
   return channel.toString(16).padStart(2, "0");
 }
 
-/** "#rrggbb" for a color given as numbers; undefined for a name or anything Ghostty rejects. */
+/** "#rrggbb" for any color Ghostty accepts, names included; undefined for anything it rejects. */
 export function ghosttyColorToHex(value: string): string | undefined {
   const rgb = parseGhosttyColor(value)?.rgb;
   return rgb && `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
@@ -157,9 +161,10 @@ export function colorNeedsGhostty14(value: string): boolean {
 }
 
 /**
- * A color as CSS reads it, for painting swatches, the preview window and theme cards:
- * every numeric form Ghostty reads (bare hex, rgb:, rgbi:, long hex) becomes #rrggbb.
- * Names, and anything that isn't a color, come back unchanged.
+ * A color as CSS reads it, for painting swatches, the preview window and theme cards: every
+ * form Ghostty reads becomes #rrggbb. X11 names go through rgb.txt too, because CSS lacks many
+ * of them ("dark slate gray", "gray50") and gives others a different value ("green", "gray").
+ * Anything that isn't a color comes back unchanged.
  */
 export function toCssColor(color: string): string {
   return ghosttyColorToHex(color) ?? color;

@@ -27,6 +27,7 @@ describe("parseGhosttyColor", () => {
     "rgb:f/f", "rgb:f/f/f/f", "rgb:/f/f", "rgb:f//f", "rgb:fffff/0/0", "rgb:+f/0/0", "rgb:f_f/0/0", "rgb:f/f/ f", "RGB:f/f/f", "rgb f/f/f",
     "rgbi:2/0/0", "rgbi:-0.5/0/0", "rgbi:1.0000001/0/0", "rgbi:1e0/0/0", "rgbi:./0/0", "rgbi:+/0/0", "rgbi:0.5.5/0/0", "rgbi:nan/0/0", "rgbi:0x1/0/0",
     "rgbj:f/f/f", "reddish", "gray101", " #fff", "#fff ", "\f#fff", "#fff\v", " red",
+    "constructor", "__proto__", "toString", "hasOwnProperty",
   ])("rejects %j", (value) => {
     expect(isGhosttyColorText(value)).toBe(false);
   });
@@ -73,9 +74,28 @@ describe("ghosttyColorToHex", () => {
     expect(ghosttyColorToHex(value)).toBe(hex);
   });
 
-  it("has no hex for a name or a value Ghostty rejects", () => {
-    expect(ghosttyColorToHex("red")).toBeUndefined();
+  // X11 names take their value from Ghostty's rgb.txt, which differs from CSS for some names.
+  it.each([
+    ["red", "#ff0000"],
+    ["dark slate gray", "#2f4f4f"],
+    ["DarkSlateGray", "#2f4f4f"],
+    ["Medium Spring Green", "#00fa9a"],
+    ["green", "#00ff00"],
+    ["gray", "#bebebe"],
+    ["maroon", "#b03060"],
+    ["purple", "#a020f0"],
+    ["gray50", "#7f7f7f"],
+    ["light goldenrod", "#eedd82"],
+    ["DarkSeaGreen1", "#c1ffc1"],
+    ["\tnavy blue ", "#000080"],
+  ])("%j is %s, the value Ghostty's rgb.txt gives it", (value, hex) => {
+    expect(ghosttyColorToHex(value)).toBe(hex);
+  });
+
+  it("has no hex for a value Ghostty rejects", () => {
     expect(ghosttyColorToHex("rgb:f/f")).toBeUndefined();
+    expect(ghosttyColorToHex("reddish")).toBeUndefined();
+    expect(ghosttyColorToHex("constructor")).toBeUndefined();
   });
 });
 
@@ -95,7 +115,13 @@ describe("toCssColor", () => {
   it("is what every painted color goes through", () => {
     expect(toCssColor("rgb:ff/00/00")).toBe("#ff0000");
     expect(toCssColor("ffffff")).toBe("#ffffff");
-    expect(toCssColor("red")).toBe("red");
     expect(toCssColor("not a color")).toBe("not a color");
+  });
+
+  it("paints X11 names as Ghostty does, which CSS names alone would not", () => {
+    // "dark slate gray" is not valid CSS, "green" is #008000 in CSS, and "gray50" is not a CSS name.
+    expect(toCssColor("dark slate gray")).toBe("#2f4f4f");
+    expect(toCssColor("green")).toBe("#00ff00");
+    expect(toCssColor("gray50")).toBe("#7f7f7f");
   });
 });

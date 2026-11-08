@@ -13,6 +13,7 @@ bun run build                        # CI runs this too
 bun run schema:check                 # options vs Ghostty's reference (needs network)
 bun run keybinds:defaults --check    # generated default keybinds match the pinned Ghostty
 bun run themes:builtin --check       # generated built-in theme names match the pinned Ghostty
+bun run colors:x11 --check           # generated X11 color table matches the pinned Ghostty
 ```
 
 Plain `bun run test` starts watch mode; pass `-- --run` for a single run.
@@ -26,8 +27,8 @@ Plain `bun run test` starts watch mode; pass `-- --run` for a single run.
   `screenshots/`. Put before/after screenshots in the PR.
 - Option schema: check behaviour against Ghostty itself. With Ghostty installed,
   `ghostty +validate-config --config-file=<exported file>` proves an exported config parses.
-- Generated files (`src/data/ghostty-default-keybinds.ts`, `src/data/ghostty-builtin-themes.ts`): regenerate,
-  never hand-edit.
+- Generated files (`src/data/ghostty-default-keybinds.ts`, `src/data/ghostty-builtin-themes.ts`,
+  `src/data/ghostty-x11-colors.ts`): regenerate, never hand-edit.
 - Bug fix: add the test that fails without the fix. Tests sit next to the code (`*.test.ts(x)`).
 
 ## Releasing
