@@ -24,7 +24,7 @@ const ANSI_COLOR_NAMES = [
 
 type AnsiColorName = (typeof ANSI_COLOR_NAMES)[number];
 
-/** The terminal canvas reads CSS colors, so hex, rgb: and rgbi: forms become #rrggbb. Names pass through. */
+/** The terminal canvas reads CSS colors, so every color form, X11 names included, becomes #rrggbb. */
 const previewColor = toCssColor;
 
 function mapPaletteToTheme(palette: string[]): Partial<ITheme> {

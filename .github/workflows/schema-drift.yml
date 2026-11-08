@@ -38,3 +38,6 @@ jobs:
 
       - name: Check Ghostty built-in themes
         run: bun run themes:builtin --check
+
+      - name: Check Ghostty X11 colors
+        run: bun run colors:x11 --check

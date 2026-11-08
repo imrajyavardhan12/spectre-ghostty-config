@@ -64,7 +64,7 @@ describe("the color forms Ghostty 1.4.0 added", () => {
         foreground: "rgbi:1/1/1",
         "cursor-color": "#fff000fff",
         "selection-background": "abc",
-        palette: ["1=rgb:ff/00/00", "2=red"],
+        palette: ["1=rgb:ff/00/00", "2=dark slate gray"],
       })
     ).toMatchObject({
       background: "#0000ff",
@@ -72,7 +72,7 @@ describe("the color forms Ghostty 1.4.0 added", () => {
       cursor: "#ff00ff",
       selectionBackground: "#aabbcc",
       red: "#ff0000",
-      green: "red",
+      green: "#2f4f4f",
     });
   });
 });

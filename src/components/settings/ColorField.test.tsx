@@ -25,14 +25,14 @@ function StoreField() {
 }
 
 describe('toCssColor', () => {
-  it('turns every numeric form Ghostty reads into #rrggbb, and leaves names and non-colors alone', () => {
+  it('turns every form Ghostty reads into #rrggbb, and leaves non-colors alone', () => {
     expect(toCssColor('fff')).toBe('#ffffff');
     expect(toCssColor('1A2b3C')).toBe('#1a2b3c');
     expect(toCssColor('#123456')).toBe('#123456');
     expect(toCssColor('rgb:ff/00/00')).toBe('#ff0000');
     expect(toCssColor('rgbi:1.0/0/0.5')).toBe('#ff007f');
     expect(toCssColor('#fff000fff')).toBe('#ff00ff');
-    expect(toCssColor('red')).toBe('red');
+    expect(toCssColor('red')).toBe('#ff0000');
     expect(toCssColor('12345')).toBe('12345');
   });
 });
@@ -91,13 +91,13 @@ describe('ColorField', () => {
     expect(input.getAttribute('aria-invalid')).toBe('false');
   });
 
-  it('paints a spaced X11 name that CSS spells without the spaces', () => {
+  it('paints a spaced X11 name with the value Ghostty gives it', () => {
     render(<StoreField />);
 
     fireEvent.change(screen.getByLabelText('Background'), { target: { value: 'medium spring green' } });
 
     const swatch = screen.getByRole('button', { name: 'Choose Background' }).firstElementChild as HTMLElement;
-    expect(swatch.style.backgroundColor).toBe('mediumspringgreen');
+    expect(swatch.style.backgroundColor).toBe('rgb(0, 250, 154)');
   });
 
   it('opens the native picker on the stored color, short hex included', () => {
