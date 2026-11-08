@@ -34,6 +34,7 @@ Spectre's goal is to be the most trustworthy and approachable way to create a Gh
 - Local configuration history and safer recovery.
 - Installable PWA support where it improves real workflows.
 - More advanced preview scenarios and configuration comparisons.
+- Move the preview to libghostty-vt 1.0, which shipped on 2026-11-06 with a stable C ABI, once `ghostty-web` releases a build on it. `ghostty-web` 0.4.0 bundles a pre-1.0 build whose API differs, so the 1.0 WASM is not a drop-in replacement.
 
 ## How priorities are chosen
 
