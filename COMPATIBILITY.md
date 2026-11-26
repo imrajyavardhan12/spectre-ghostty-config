@@ -80,11 +80,13 @@ Existing options usually continue to work, but compatibility is unverified until
 1. compares local option IDs with the moving official Ghostty config reference, catching upstream additions and removals;
 2. verifies that the declared release tag and immutable commit contain the same `Config.zig`, then compares its public option IDs with the local schema.
 
+The website can trail a Ghostty release by weeks. When the site lacks exactly the options the stable release line added or renamed, and otherwise lists only old names that line replaced, the first check reports `REFERENCE BEHIND GHOSTTY <version>` and passes with a warning. Any other difference, such as an older option missing from the site or an option Spectre lacks, still fails. The second check is the authority for the stable target and always fails on a mismatch.
+
 `bun run keybinds:defaults --check` re-generates the default keybind tables from the pinned `Config.zig` and fails if the committed tables differ; the evaluator rejects any construct it does not recognize instead of guessing. Run `bun run keybinds:defaults` to regenerate after changing the pinned commit.
 
 `bun run themes:builtin --check` does the same for the built-in theme names, and `bun run colors:x11 --check` for the X11 color names and values in `rgb.txt`.
 
-The weekly [Ghostty Schema Drift workflow](.github/workflows/schema-drift.yml) runs all four commands. Full compatibility updates also require maintainers to:
+The weekly [Ghostty Schema Drift workflow](.github/workflows/schema-drift.yml) runs all four commands, each one even when an earlier one fails. Full compatibility updates also require maintainers to:
 
 1. review Ghostty release notes and source changes;
 2. update option types, defaults, values, platform restrictions, and availability metadata where needed;

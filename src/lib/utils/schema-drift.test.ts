@@ -4,6 +4,8 @@ import {
   createGhosttySchemaDriftReport,
   extractGhosttyConfigSourceOptionIds,
   extractGhosttyReferenceAnchorIds,
+  findReferenceLag,
+  formatGhosttySchemaDriftReport,
 } from '@/lib/utils/schema-drift';
 
 describe('Ghostty schema drift utilities', () => {
@@ -116,5 +118,83 @@ pub const Nested = struct {
 
     expect(report.ok).toBe(false);
     expect(report.staleReferenceAnchorIdAliases).toEqual(['shell-integration-3']);
+  });
+});
+
+// ghostty.org can lag behind a Ghostty release. That shows up as options Spectre has and the site doesn't
+// (new in the release) and old names the site still lists (renamed in the release). It is not drift.
+describe('findReferenceLag', () => {
+  const localOptions = [
+    { id: 'font-family' },
+    { id: 'link-osc8', sinceVersion: '1.4.0' },
+    { id: 'drag-handle', sinceVersion: '1.4.0' },
+    { id: 'scrollback-limit-bytes', renamed: { from: 'scrollback-limit', in: '1.4.0' } },
+    { id: 'quick-terminal-size', sinceVersion: '1.2.0' },
+  ];
+  const ids = localOptions.map((option) => option.id);
+  const report = (referenceAnchorIds: string[], localOptionIds = ids) =>
+    createGhosttySchemaDriftReport({ referenceAnchorIds, localOptionIds, docsOnlyAnchorIds: [], referenceAnchorIdAliases: {} });
+
+  it('explains a site that has not published the stable release yet', () => {
+    const lag = findReferenceLag(report(['font-family', 'scrollback-limit', 'quick-terminal-size']), localOptions, '1.4.0');
+
+    expect(lag).toEqual({
+      stableVersion: '1.4.0',
+      newOptionIds: ['link-osc8', 'drag-handle', 'scrollback-limit-bytes'],
+      oldNameIds: ['scrollback-limit'],
+    });
+  });
+
+  it('still explains it once the stable target is a patch release of that line', () => {
+    expect(findReferenceLag(report(['font-family', 'scrollback-limit', 'quick-terminal-size']), localOptions, '1.4.2')).not.toBeNull();
+  });
+
+  it('is null when the site matches', () => {
+    expect(findReferenceLag(report(ids), localOptions, '1.4.0')).toBeNull();
+  });
+
+  it('is null when the site has published the release but lacks one of its options, which may have been removed', () => {
+    expect(
+      findReferenceLag(report(['font-family', 'link-osc8', 'scrollback-limit-bytes', 'quick-terminal-size']), localOptions, '1.4.0')
+    ).toBeNull();
+  });
+
+  it('is null when the site lists a name a newer release took away without a rename', () => {
+    expect(
+      findReferenceLag(report(['font-family', 'scrollback-limit', 'removed-option', 'quick-terminal-size']), localOptions, '1.4.0')
+    ).toBeNull();
+  });
+
+  it('is null when the site lacks an option older than the stable release, so it may have been removed', () => {
+    expect(findReferenceLag(report(['scrollback-limit', 'link-osc8', 'drag-handle']), localOptions, '1.4.0')).toBeNull();
+  });
+
+  it('is null when the site lists an option Spectre does not have', () => {
+    expect(
+      findReferenceLag(report([...ids, 'scrollback-limit', 'brand-new-option']), localOptions, '1.4.0')
+    ).toBeNull();
+  });
+
+  it('is null once the release the site lacks is no longer the stable line', () => {
+    expect(findReferenceLag(report(['font-family', 'scrollback-limit', 'quick-terminal-size']), localOptions, '1.5.0')).toBeNull();
+  });
+
+  it('is null when the docs-only allowlist or an alias is stale, whatever else differs', () => {
+    const stale = createGhosttySchemaDriftReport({
+      referenceAnchorIds: ['font-family', 'scrollback-limit', 'quick-terminal-size'],
+      localOptionIds: ids,
+      docsOnlyAnchorIds: ['key-tables'],
+      referenceAnchorIdAliases: {},
+    });
+    expect(findReferenceLag(stale, localOptions, '1.4.0')).toBeNull();
+  });
+
+  it('says in the report that a lagging site is not drift', () => {
+    const lagging = report(['font-family', 'scrollback-limit', 'quick-terminal-size']);
+    const text = formatGhosttySchemaDriftReport(lagging, findReferenceLag(lagging, localOptions, '1.4.0'));
+
+    expect(text).toContain('Result: REFERENCE BEHIND GHOSTTY 1.4.0');
+    expect(text).not.toContain('DRIFT DETECTED');
+    expect(formatGhosttySchemaDriftReport(lagging)).toContain('Result: DRIFT DETECTED');
   });
 });

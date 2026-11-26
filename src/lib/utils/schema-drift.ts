@@ -164,11 +164,79 @@ export function createGhosttySchemaDriftReport({
   };
 }
 
+/** The release metadata findReferenceLag needs from each local option. */
+export interface LocalOptionReleaseInfo {
+  id: string;
+  /** Release that added the option; absent means the 1.0 baseline. */
+  sinceVersion?: string;
+  renamed?: { from: string; in: string };
+}
+
+/** The differences a site that hasn't caught up with the stable release explains. */
+export interface ReferenceLag {
+  /** The stable target whose release line the site hasn't published. */
+  stableVersion: string;
+  /** Options the release added or renamed, which the site doesn't list yet. */
+  newOptionIds: string[];
+  /** Names the release replaced, which the site still lists. */
+  oldNameIds: string[];
+}
+
+const releaseLine = (version: string) => version.split(".").slice(0, 2).join(".");
+
+/**
+ * Whether the differences between the live reference and the local schema are exactly what a site
+ * that hasn't published the stable release line (1.4.x for a 1.4.2 target) looks like: it lacks every
+ * option that line added or renamed, and nothing else, and the only options it lists that Spectre
+ * lacks are names that line replaced. A partial difference is drift, not lag: once the site lists any
+ * of the line's new options it has published the release, so a missing one may have been removed.
+ * Returns null for drift, and when nothing differs.
+ *
+ * The stable source check, which compares against the pinned Config.zig, stays the authority; this
+ * only decides whether the moving website's view is drift or lag.
+ */
+export function findReferenceLag(
+  report: GhosttySchemaDriftReport,
+  localOptions: readonly LocalOptionReleaseInfo[],
+  stableVersion: string
+): ReferenceLag | null {
+  if (report.ok) return null;
+  if (report.staleDocsOnlyAnchorIds.length > 0 || report.staleReferenceAnchorIdAliases.length > 0) return null;
+
+  const line = releaseLine(stableVersion);
+  const inStableLine = (version: string | undefined) => version !== undefined && releaseLine(version) === line;
+
+  const newInLine = new Set(
+    localOptions
+      .filter((option) => inStableLine(option.sinceVersion) || inStableLine(option.renamed?.in))
+      .map((option) => option.id)
+  );
+  const replacedNames = new Set(
+    localOptions.filter((option) => inStableLine(option.renamed?.in)).map((option) => option.renamed!.from)
+  );
+  const extra = new Set(report.extraLocalOptionIds);
+
+  const lacksExactlyTheLine =
+    newInLine.size > 0 && extra.size === newInLine.size && [...newInLine].every((id) => extra.has(id));
+  const listsOnlyReplacedNames = report.missingLocalOptionIds.every((id) => replacedNames.has(id));
+
+  return lacksExactlyTheLine && listsOnlyReplacedNames
+    ? { stableVersion, newOptionIds: report.extraLocalOptionIds, oldNameIds: report.missingLocalOptionIds }
+    : null;
+}
+
 function formatList(ids: string[]): string {
   return ids.length === 0 ? "  none" : ids.map((id) => `  - ${id}`).join("\n");
 }
 
-export function formatGhosttySchemaDriftReport(report: GhosttySchemaDriftReport): string {
+/**
+ * The report as text. Pass the lag findReferenceLag found to describe a site that is behind the stable
+ * release as such instead of as drift.
+ */
+export function formatGhosttySchemaDriftReport(
+  report: GhosttySchemaDriftReport,
+  lag: ReferenceLag | null = null
+): string {
   const lines = [
     "Ghostty schema drift check",
     `Reference anchors: ${report.referenceAnchorIds.length}`,
@@ -199,7 +267,18 @@ export function formatGhosttySchemaDriftReport(report: GhosttySchemaDriftReport)
     );
   }
 
-  lines.push("", report.ok ? "Result: OK" : "Result: DRIFT DETECTED");
+  if (!report.ok && lag) {
+    lines.push(
+      "",
+      `Every difference is Ghostty ${lag.stableVersion} work the site hasn't published yet: options added or`,
+      "renamed in that release line, and the old names it replaced. The stable source check below is the",
+      "authority for the target.",
+      "",
+      `Result: REFERENCE BEHIND GHOSTTY ${lag.stableVersion}`
+    );
+  } else {
+    lines.push("", report.ok ? "Result: OK" : "Result: DRIFT DETECTED");
+  }
 
   return lines.join("\n");
 }

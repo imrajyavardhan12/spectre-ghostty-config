@@ -28,16 +28,22 @@ jobs:
           bun-version: 1.2.22
 
       - name: Install dependencies
+        id: install
         run: bun install --frozen-lockfile
 
+      # Each check below runs even when an earlier one fails, so one failure can't hide the others.
       - name: Check Ghostty schema drift
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: bun run schema:check
 
       - name: Check Ghostty default keybinds
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: bun run keybinds:defaults --check
 
       - name: Check Ghostty built-in themes
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: bun run themes:builtin --check
 
       - name: Check Ghostty X11 colors
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: bun run colors:x11 --check

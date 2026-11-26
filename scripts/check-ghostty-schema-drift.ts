@@ -6,6 +6,7 @@ import {
   createGhosttySchemaDriftReport,
   extractGhosttyConfigSourceOptionIds,
   extractGhosttyReferenceAnchorIds,
+  findReferenceLag,
   formatGhosttySchemaDriftReport,
   GHOSTTY_CONFIG_REFERENCE_URL,
 } from "../src/lib/utils/schema-drift";
@@ -95,7 +96,13 @@ async function main() {
   const stableSourceOk =
     stableSourceReport.ok && manifestCountMatches && tagSourceMatchesCommit;
 
-  console.log(formatGhosttySchemaDriftReport(referenceReport));
+  // ghostty.org can trail a release by weeks. When every difference is the stable release line the
+  // site hasn't published yet, say so and warn instead of failing: the stable source check is the
+  // authority, and a red job every week would hide the checks that run after this one.
+  const stableVersion = compatibility.ghostty.stableVersion;
+  const referenceLag = findReferenceLag(referenceReport, allOptions, stableVersion);
+
+  console.log(formatGhosttySchemaDriftReport(referenceReport, referenceLag));
   console.log("");
   console.log("Ghostty stable source compatibility check");
   console.log(
@@ -123,7 +130,17 @@ async function main() {
       : "Result: STABLE SOURCE DRIFT DETECTED"
   );
 
-  if (!referenceReport.ok || !stableSourceOk) {
+  if (referenceLag && process.env.GITHUB_ACTIONS === "true") {
+    const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
+    const oldNames = referenceLag.oldNameIds.length
+      ? ` and still lists ${count(referenceLag.oldNameIds.length, "old name")} it replaced`
+      : "";
+    console.log(
+      `::warning title=Ghostty reference behind ${stableVersion}::ghostty.org lacks the ${count(referenceLag.newOptionIds.length, "option")} Ghostty ${stableVersion} added or renamed${oldNames}. Not drift: the site hasn't published that release yet.`
+    );
+  }
+
+  if ((!referenceReport.ok && !referenceLag) || !stableSourceOk) {
     process.exitCode = 1;
   }
 }
